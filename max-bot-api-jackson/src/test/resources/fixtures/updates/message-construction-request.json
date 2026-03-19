@@ -1,0 +1,9 @@
+{
+  "update_type": "message_construction_request",
+  "timestamp": 1700002100000,
+  "user": {"user_id": 99001, "name": "John Doe", "is_bot": false, "last_activity_time": 1700000100000},
+  "user_locale": "en",
+  "session_id": "session_abc123",
+  "data": "step1",
+  "input": "user input text"
+}

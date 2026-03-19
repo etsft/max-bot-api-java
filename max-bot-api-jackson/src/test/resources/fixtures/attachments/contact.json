@@ -1,0 +1,1 @@
+{"type":"contact","payload":{"vcf_info":"BEGIN:VCARD\nFN:John\nEND:VCARD","tam_info":{"user_id":99001,"name":"John Doe","is_bot":false,"last_activity_time":1700000100000}}}

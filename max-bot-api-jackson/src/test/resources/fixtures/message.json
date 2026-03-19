@@ -1,0 +1,19 @@
+{
+  "sender": {
+    "user_id": 99001,
+    "name": "John Doe",
+    "username": "johndoe",
+    "is_bot": false,
+    "last_activity_time": 1700000100000
+  },
+  "recipient": {
+    "chat_id": 50001,
+    "chat_type": "chat"
+  },
+  "timestamp": 1700000500000,
+  "body": {
+    "mid": "msg_001",
+    "seq": 1,
+    "text": "Hello, world!"
+  }
+}

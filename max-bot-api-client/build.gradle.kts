@@ -1,3 +1,8 @@
+plugins {
+    `java-library`
+}
+
 dependencies {
-    implementation(project(":max-bot-api-core"))
+    api(project(":max-bot-api-core"))
+    implementation("org.slf4j:slf4j-api:2.0.16")
 }

@@ -1,0 +1,15 @@
+{
+  "update_type": "message_chat_created",
+  "timestamp": 1700002300000,
+  "chat": {
+    "chat_id": 50003,
+    "type": "chat",
+    "status": "active",
+    "title": "New Chat",
+    "last_event_time": 1700002300000,
+    "participants_count": 2,
+    "is_public": false
+  },
+  "message_id": "msg_020",
+  "start_payload": "start_data"
+}

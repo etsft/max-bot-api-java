@@ -1,0 +1,28 @@
+{
+  "sender": {
+    "user_id": 99001,
+    "name": "John Doe",
+    "is_bot": false,
+    "last_activity_time": 1700000100000
+  },
+  "recipient": {
+    "chat_id": 50001,
+    "chat_type": "chat"
+  },
+  "timestamp": 1700000600000,
+  "body": {
+    "mid": "msg_002",
+    "seq": 2,
+    "text": "Look at this photo",
+    "attachments": [
+      {
+        "type": "image",
+        "payload": {
+          "url": "https://example.com/photo.jpg",
+          "token": "photo_token_123",
+          "photo_id": 7001
+        }
+      }
+    ]
+  }
+}

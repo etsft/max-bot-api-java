@@ -1,0 +1,8 @@
+{
+  "update_type": "user_added",
+  "timestamp": 1700001600000,
+  "chat_id": 50001,
+  "user": {"user_id": 99002, "name": "Jane Smith", "is_bot": false, "last_activity_time": 1700000200000},
+  "inviter_id": 99001,
+  "is_channel": false
+}

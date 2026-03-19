@@ -1,0 +1,1 @@
+{"type":"inline_keyboard","payload":{"buttons":[[{"type":"callback","text":"OK","payload":"ok"},{"type":"callback","text":"Cancel","payload":"cancel"}]]}}

@@ -1,0 +1,14 @@
+{
+  "user_id": 12345,
+  "name": "TestBot",
+  "username": "test_bot",
+  "is_bot": true,
+  "last_activity_time": 1700000000000,
+  "description": "A test bot",
+  "avatar_url": "https://example.com/avatar_small.jpg",
+  "full_avatar_url": "https://example.com/avatar_full.jpg",
+  "commands": [
+    {"name": "start", "description": "Start the bot"},
+    {"name": "help", "description": "Show help"}
+  ]
+}

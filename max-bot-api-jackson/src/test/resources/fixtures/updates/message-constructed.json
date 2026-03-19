@@ -1,0 +1,10 @@
+{
+  "update_type": "message_constructed",
+  "timestamp": 1700002200000,
+  "user": {"user_id": 99001, "name": "John Doe", "is_bot": false, "last_activity_time": 1700000100000},
+  "session_id": "session_abc123",
+  "message": {
+    "timestamp": 1700002200000,
+    "body": {"mid": "cmsg_001", "seq": 1, "text": "Constructed message text"}
+  }
+}

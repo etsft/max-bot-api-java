@@ -1,0 +1,7 @@
+{
+  "update_type": "chat_title_changed",
+  "timestamp": 1700002000000,
+  "chat_id": 50001,
+  "user": {"user_id": 99001, "name": "John Doe", "is_bot": false, "last_activity_time": 1700000100000},
+  "title": "New Group Title"
+}
