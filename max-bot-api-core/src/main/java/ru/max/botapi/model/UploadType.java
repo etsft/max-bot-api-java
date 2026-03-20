@@ -18,18 +18,38 @@ package ru.max.botapi.model;
 
 /**
  * Type of file to upload to MAX platform.
+ *
+ * <p>The {@link #value()} method returns the exact string the MAX API expects in the
+ * {@code type} query parameter of {@code POST /uploads}. Always use {@code value()} rather
+ * than {@code name().toLowerCase()} so that the mapping is explicit and survives future
+ * enum renames.</p>
  */
 public enum UploadType {
 
-    /** Image upload. */
-    IMAGE,
+    /** Image upload — API value {@code "image"}. */
+    IMAGE("image"),
 
-    /** Video upload. */
-    VIDEO,
+    /** Video upload — API value {@code "video"}. */
+    VIDEO("video"),
 
-    /** Audio upload. */
-    AUDIO,
+    /** Audio upload — API value {@code "audio"}. */
+    AUDIO("audio"),
 
-    /** Generic file upload. */
-    FILE
+    /** Generic file upload — API value {@code "file"}. */
+    FILE("file");
+
+    private final String apiValue;
+
+    UploadType(String apiValue) {
+        this.apiValue = apiValue;
+    }
+
+    /**
+     * Returns the string value expected by the MAX API for this upload type.
+     *
+     * @return the API-level type string, e.g. {@code "image"}
+     */
+    public String value() {
+        return apiValue;
+    }
 }
