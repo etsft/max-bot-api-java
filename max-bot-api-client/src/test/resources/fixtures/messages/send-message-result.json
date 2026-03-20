@@ -1,0 +1,20 @@
+{
+  "message": {
+    "sender": {
+      "user_id": 12345,
+      "name": "TestBot",
+      "is_bot": true,
+      "last_activity_time": 1700000000000
+    },
+    "recipient": {
+      "chat_id": 50001,
+      "chat_type": "chat"
+    },
+    "timestamp": 1700000900000,
+    "body": {
+      "mid": "msg_sent_001",
+      "seq": 100,
+      "text": "Hello from bot"
+    }
+  }
+}

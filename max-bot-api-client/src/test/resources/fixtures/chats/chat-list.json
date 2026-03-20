@@ -1,0 +1,23 @@
+{
+  "chats": [
+    {
+      "chat_id": 50001,
+      "type": "chat",
+      "status": "active",
+      "title": "Test Group",
+      "last_event_time": 1700000200000,
+      "participants_count": 5,
+      "owner_id": 99001,
+      "is_public": false
+    },
+    {
+      "chat_id": 50002,
+      "type": "dialog",
+      "status": "active",
+      "last_event_time": 1700000300000,
+      "participants_count": 2,
+      "is_public": false
+    }
+  ],
+  "marker": 12345
+}

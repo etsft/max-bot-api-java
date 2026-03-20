@@ -1,0 +1,8 @@
+{
+  "url": "https://cdn.example.com/video/abc.mp4",
+  "token": "vtoken",
+  "thumbnail": "https://cdn.example.com/thumb/abc.jpg",
+  "width": 1280,
+  "height": 720,
+  "duration": 60
+}

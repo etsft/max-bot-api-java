@@ -1,0 +1,12 @@
+{
+  "chat_id": 50004,
+  "type": "channel",
+  "status": "active",
+  "title": "Test Channel",
+  "last_event_time": 1700000500000,
+  "participants_count": 150,
+  "owner_id": 99001,
+  "is_public": true,
+  "link": "test_channel",
+  "description": "A test channel"
+}

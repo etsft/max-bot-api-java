@@ -1,0 +1,15 @@
+{
+  "user_id": 123,
+  "name": "Test",
+  "username": "test",
+  "is_bot": false,
+  "last_activity_time": 170000,
+  "description": null,
+  "avatar_url": null,
+  "full_avatar_url": null,
+  "last_access_time": 170000,
+  "is_owner": true,
+  "is_admin": true,
+  "join_time": 1600000,
+  "permissions": null
+}

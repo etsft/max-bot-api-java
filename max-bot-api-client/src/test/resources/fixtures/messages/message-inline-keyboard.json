@@ -1,0 +1,34 @@
+{
+  "sender": {
+    "user_id": 12345,
+    "name": "TestBot",
+    "is_bot": true,
+    "last_activity_time": 1700000000000
+  },
+  "recipient": {
+    "chat_id": 50001,
+    "chat_type": "chat"
+  },
+  "timestamp": 1700000800000,
+  "body": {
+    "mid": "msg_004",
+    "seq": 4,
+    "text": "Choose an option:",
+    "attachments": [
+      {
+        "type": "inline_keyboard",
+        "payload": {
+          "buttons": [
+            [
+              {"type": "callback", "text": "OK", "payload": "ok"},
+              {"type": "callback", "text": "Cancel", "payload": "cancel"}
+            ],
+            [
+              {"type": "link", "text": "Visit Site", "url": "https://example.com"}
+            ]
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "subscriptions": [
+    {
+      "url": "https://example.com/webhook",
+      "update_types": ["message_created", "message_callback"]
+    },
+    {
+      "url": "https://example.com/webhook2",
+      "update_types": null
+    }
+  ]
+}

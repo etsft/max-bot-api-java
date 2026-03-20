@@ -1,0 +1,11 @@
+{
+  "chat_id": 50001,
+  "type": "chat",
+  "status": "active",
+  "title": "Test Group",
+  "last_event_time": 1700000200000,
+  "participants_count": 5,
+  "owner_id": 99001,
+  "is_public": false,
+  "description": "A test group chat"
+}

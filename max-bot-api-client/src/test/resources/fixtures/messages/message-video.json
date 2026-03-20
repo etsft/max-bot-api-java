@@ -1,0 +1,32 @@
+{
+  "sender": {
+    "user_id": 99001,
+    "name": "John Doe",
+    "username": "johndoe",
+    "is_bot": false,
+    "last_activity_time": 1700000100000
+  },
+  "recipient": {
+    "chat_id": 50001,
+    "chat_type": "chat"
+  },
+  "timestamp": 1700000700000,
+  "body": {
+    "mid": "msg_003",
+    "seq": 3,
+    "text": "Check out this video",
+    "attachments": [
+      {
+        "type": "video",
+        "payload": {
+          "url": "https://example.com/video.mp4",
+          "token": "video_token_456"
+        },
+        "thumbnail": "https://example.com/thumb.jpg",
+        "width": 1920,
+        "height": 1080,
+        "duration": 120
+      }
+    ]
+  }
+}

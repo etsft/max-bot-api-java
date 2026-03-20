@@ -1,0 +1,35 @@
+{
+  "members": [
+    {
+      "user_id": 123,
+      "name": "Test User",
+      "username": "testuser",
+      "is_bot": false,
+      "last_activity_time": 170000,
+      "description": null,
+      "avatar_url": null,
+      "full_avatar_url": null,
+      "last_access_time": 170000,
+      "is_owner": true,
+      "is_admin": true,
+      "join_time": 1600000,
+      "permissions": null
+    },
+    {
+      "user_id": 456,
+      "name": "Another User",
+      "username": "another",
+      "is_bot": false,
+      "last_activity_time": 170000,
+      "description": null,
+      "avatar_url": null,
+      "full_avatar_url": null,
+      "last_access_time": 170000,
+      "is_owner": false,
+      "is_admin": false,
+      "join_time": 1610000,
+      "permissions": null
+    }
+  ],
+  "marker": 12346
+}

@@ -1,0 +1,18 @@
+{
+  "chat_id": 50003,
+  "type": "dialog",
+  "status": "active",
+  "last_event_time": 1700000400000,
+  "participants_count": 2,
+  "is_public": false,
+  "dialog_with_user": {
+    "user_id": 99001,
+    "name": "John Doe",
+    "username": "johndoe",
+    "is_bot": false,
+    "last_activity_time": 1700000100000,
+    "description": "Regular user",
+    "avatar_url": "https://example.com/john_small.jpg",
+    "full_avatar_url": "https://example.com/john_full.jpg"
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "url": "https://example.com/webhook",
+  "update_types": ["message_created", "message_callback"]
+}

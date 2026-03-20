@@ -1,0 +1,25 @@
+{
+  "members": [
+    {
+      "user_id": 123,
+      "name": "Admin One",
+      "is_bot": false,
+      "last_activity_time": 1700000100000,
+      "last_access_time": 1700000100000,
+      "is_owner": false,
+      "is_admin": true,
+      "join_time": 1699000000000
+    },
+    {
+      "user_id": 456,
+      "name": "Admin Two",
+      "is_bot": false,
+      "last_activity_time": 1700000200000,
+      "last_access_time": 1700000200000,
+      "is_owner": true,
+      "is_admin": true,
+      "join_time": 1698000000000
+    }
+  ],
+  "marker": null
+}
