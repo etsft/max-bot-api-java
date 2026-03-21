@@ -70,6 +70,7 @@ public class JdkHttpMaxTransportClient implements MaxTransportClient {
                 .build();
     }
 
+    /** {@inheritDoc} */
     @Override
     public MaxResponse execute(MaxRequest request) throws MaxClientException {
         try {
@@ -86,6 +87,7 @@ public class JdkHttpMaxTransportClient implements MaxTransportClient {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     public CompletableFuture<MaxResponse> executeAsync(MaxRequest request) {
         HttpRequest httpRequest = buildHttpRequest(request);
@@ -95,6 +97,7 @@ public class JdkHttpMaxTransportClient implements MaxTransportClient {
                         response.headers().map()));
     }
 
+    /** {@inheritDoc} */
     @Override
     public void close() {
         virtualThreadExecutor.shutdown();

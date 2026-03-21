@@ -46,6 +46,7 @@ public class JacksonMaxSerializer implements MaxSerializer {
     /**
      * Creates a new JacksonMaxSerializer with default configuration.
      */
+    @SuppressWarnings("deprecation") // serializationInclusion deprecated in Jackson 2.21
     public JacksonMaxSerializer() {
         this.mapper = JsonMapper.builder()
                 .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
@@ -69,6 +70,7 @@ public class JacksonMaxSerializer implements MaxSerializer {
         return mapper;
     }
 
+    /** {@inheritDoc} */
     @Override
     public <T> String serialize(T object) {
         try {
@@ -78,6 +80,7 @@ public class JacksonMaxSerializer implements MaxSerializer {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     public <T> T deserialize(String json, Class<T> type) {
         try {
@@ -87,6 +90,7 @@ public class JacksonMaxSerializer implements MaxSerializer {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     public <T> T deserialize(String json, TypeReference<T> type) {
         try {

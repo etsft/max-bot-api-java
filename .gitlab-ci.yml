@@ -1,0 +1,105 @@
+stages:
+  - build
+  - quality
+  - publish
+
+variables:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.caching=false"
+  GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
+
+# Cache Gradle wrapper and dependencies between jobs
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - .gradle/wrapper
+    - .gradle/caches
+
+# ---------------------------------------------------------------------------
+# Build & Test matrix: JDK 21 + JDK 25
+# ---------------------------------------------------------------------------
+.build_template: &build_template
+  stage: build
+  script:
+    - gradle build --stacktrace
+    - gradle jacocoTestReport
+    - gradle jacocoTestCoverageVerification
+  artifacts:
+    when: always
+    paths:
+      - "**/build/reports/"
+      - "**/build/test-results/"
+    reports:
+      junit: "**/build/test-results/test/TEST-*.xml"
+    expire_in: 7 days
+
+build:jdk21:
+  <<: *build_template
+  image: gradle:9.4.1-jdk21
+
+build:jdk25:
+  <<: *build_template
+  image: gradle:9.4.1-jdk25
+  allow_failure: true
+
+# ---------------------------------------------------------------------------
+# Quality gates (run on JDK 21 after build)
+# ---------------------------------------------------------------------------
+checkstyle:
+  stage: quality
+  image: gradle:9.4.1-jdk21
+  needs:
+    - build:jdk21
+  script:
+    - gradle checkstyleMain checkstyleTest --stacktrace
+  artifacts:
+    when: always
+    paths:
+      - "**/build/reports/checkstyle/"
+    expire_in: 7 days
+
+spotbugs:
+  stage: quality
+  image: gradle:9.4.1-jdk21
+  needs:
+    - build:jdk21
+  script:
+    - gradle spotbugsMain --stacktrace
+  artifacts:
+    when: always
+    paths:
+      - "**/build/reports/spotbugs/"
+    expire_in: 7 days
+
+jacoco:
+  stage: quality
+  image: gradle:9.4.1-jdk21
+  needs:
+    - build:jdk21
+  script:
+    - gradle jacocoTestReport testCodeCoverageReport jacocoTestCoverageVerification --stacktrace
+  artifacts:
+    when: always
+    reports:
+      coverage_report:
+        coverage_format: jacoco
+        path: build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml
+    expire_in: 7 days
+  coverage: '/Total.*?([0-9]{1,3})%/'
+
+# ---------------------------------------------------------------------------
+# Publish to Maven Central (only on tags matching vX.Y.Z)
+# ---------------------------------------------------------------------------
+publish:
+  stage: publish
+  image: gradle:9.4.1-jdk21
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/'
+  needs:
+    - build:jdk21
+    - checkstyle
+    - spotbugs
+    - jacoco
+  script:
+    - gradle publish --stacktrace
+  environment:
+    name: maven-central
