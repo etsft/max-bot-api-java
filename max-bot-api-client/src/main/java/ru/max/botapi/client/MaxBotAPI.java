@@ -85,6 +85,7 @@ public class MaxBotAPI implements AutoCloseable {
 
     private final MaxClient client;
     private final MaxTransportClient transport;
+    private final MaxClientConfig config;
 
     /**
      * Creates a {@code MaxBotAPI} wrapping an existing {@link MaxClient}.
@@ -95,8 +96,7 @@ public class MaxBotAPI implements AutoCloseable {
      * @param client the configured MAX client; must not be {@code null}
      */
     public MaxBotAPI(MaxClient client) {
-        this.client = Objects.requireNonNull(client, "client must not be null");
-        this.transport = null;
+        this(client, null, MaxClientConfig.defaults());
     }
 
     /**
@@ -104,10 +104,21 @@ public class MaxBotAPI implements AutoCloseable {
      *
      * @param client    the configured MAX client; must not be {@code null}
      * @param transport the transport to close when this instance is closed; may be {@code null}
+     * @param config    the client configuration; must not be {@code null}
      */
-    private MaxBotAPI(MaxClient client, MaxTransportClient transport) {
+    private MaxBotAPI(MaxClient client, MaxTransportClient transport, MaxClientConfig config) {
         this.client = Objects.requireNonNull(client, "client must not be null");
         this.transport = transport;
+        this.config = Objects.requireNonNull(config, "config must not be null");
+    }
+
+    /**
+     * Returns the configuration used to create this instance.
+     *
+     * @return the client configuration; never {@code null}
+     */
+    public MaxClientConfig config() {
+        return config;
     }
 
     /**
@@ -143,7 +154,7 @@ public class MaxBotAPI implements AutoCloseable {
         MaxSerializer serializer = loadJacksonSerializer();
         JdkHttpMaxTransportClient transport = new JdkHttpMaxTransportClient(accessToken, config);
         MaxClient client = new MaxClient(transport, serializer, config);
-        return new MaxBotAPI(client, transport);
+        return new MaxBotAPI(client, transport, config);
     }
 
     /**

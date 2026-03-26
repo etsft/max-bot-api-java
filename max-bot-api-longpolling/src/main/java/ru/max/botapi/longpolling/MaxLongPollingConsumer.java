@@ -55,7 +55,6 @@ public class MaxLongPollingConsumer implements AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(MaxLongPollingConsumer.class);
 
-    private static final int DEFAULT_POLL_TIMEOUT = 30;
     private static final long MAX_BACKOFF_MS = 30_000L;
 
     private final MaxBotAPI api;
@@ -227,7 +226,7 @@ public class MaxLongPollingConsumer implements AutoCloseable {
         private MaxBotAPI api;
         private UpdateHandler handler;
         private Set<String> updateTypes;
-        private int pollTimeout = DEFAULT_POLL_TIMEOUT;
+        private Integer pollTimeout;
 
         private Builder() {
         }
@@ -267,7 +266,8 @@ public class MaxLongPollingConsumer implements AutoCloseable {
         }
 
         /**
-         * Sets the long-poll timeout in seconds. Defaults to {@value DEFAULT_POLL_TIMEOUT}.
+         * Sets the long-poll timeout in seconds.
+         * If not set, defaults to {@code api.config().longPollTimeout()} (30 seconds by default).
          *
          * @param pollTimeout the timeout in seconds; must be positive
          * @return this builder
@@ -284,10 +284,17 @@ public class MaxLongPollingConsumer implements AutoCloseable {
         /**
          * Builds and returns a new {@link MaxLongPollingConsumer}.
          *
+         * <p>If {@link #pollTimeout(int)} was not called, the timeout defaults to
+         * {@code api.config().longPollTimeout()} (30 seconds by default).</p>
+         *
          * @return a new consumer
          * @throws NullPointerException if {@code api} or {@code handler} was not set
          */
         public MaxLongPollingConsumer build() {
+            Objects.requireNonNull(api, "api must not be null");
+            if (pollTimeout == null) {
+                pollTimeout = (int) api.config().longPollTimeout().toSeconds();
+            }
             return new MaxLongPollingConsumer(this);
         }
     }

@@ -33,8 +33,8 @@ class MaxClientConfigTest {
         MaxClientConfig config = MaxClientConfig.defaults();
         assertThat(config.baseUrl()).isEqualTo("https://platform-api.max.ru");
         assertThat(config.connectTimeout()).isEqualTo(Duration.ofSeconds(10));
-        assertThat(config.requestTimeout()).isEqualTo(Duration.ofSeconds(30));
-        assertThat(config.longPollTimeout()).isEqualTo(Duration.ofSeconds(90));
+        assertThat(config.requestTimeout()).isEqualTo(Duration.ofSeconds(60));
+        assertThat(config.longPollTimeout()).isEqualTo(Duration.ofSeconds(30));
         assertThat(config.maxRetries()).isEqualTo(3);
         assertThat(config.enableRateLimiting()).isTrue();
         assertThat(config.maxRequestsPerSecond()).isEqualTo(30);
@@ -45,7 +45,7 @@ class MaxClientConfigTest {
         MaxClientConfig config = MaxClientConfig.builder()
                 .baseUrl("https://custom.api.ru")
                 .connectTimeout(Duration.ofSeconds(5))
-                .requestTimeout(Duration.ofSeconds(15))
+                .requestTimeout(Duration.ofSeconds(120))
                 .longPollTimeout(Duration.ofSeconds(60))
                 .maxRetries(5)
                 .enableRateLimiting(false)
@@ -53,7 +53,7 @@ class MaxClientConfigTest {
                 .build();
         assertThat(config.baseUrl()).isEqualTo("https://custom.api.ru");
         assertThat(config.connectTimeout()).isEqualTo(Duration.ofSeconds(5));
-        assertThat(config.requestTimeout()).isEqualTo(Duration.ofSeconds(15));
+        assertThat(config.requestTimeout()).isEqualTo(Duration.ofSeconds(120));
         assertThat(config.longPollTimeout()).isEqualTo(Duration.ofSeconds(60));
         assertThat(config.maxRetries()).isEqualTo(5);
         assertThat(config.enableRateLimiting()).isFalse();
@@ -71,5 +71,25 @@ class MaxClientConfigTest {
     void nullBaseUrlThrows() {
         assertThatThrownBy(() -> MaxClientConfig.builder().baseUrl(null).build())
                 .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void longPollTimeoutGreaterThanRequestTimeoutThrows() {
+        assertThatThrownBy(() -> MaxClientConfig.builder()
+                .requestTimeout(Duration.ofSeconds(30))
+                .longPollTimeout(Duration.ofSeconds(30))
+                .build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("longPollTimeout")
+                .hasMessageContaining("requestTimeout");
+    }
+
+    @Test
+    void longPollTimeoutEqualToRequestTimeoutThrows() {
+        assertThatThrownBy(() -> MaxClientConfig.builder()
+                .requestTimeout(Duration.ofSeconds(30))
+                .longPollTimeout(Duration.ofSeconds(31))
+                .build())
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

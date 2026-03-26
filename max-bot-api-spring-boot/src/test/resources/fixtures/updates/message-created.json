@@ -1,0 +1,11 @@
+{
+  "update_type": "message_created",
+  "timestamp": 1700001000000,
+  "message": {
+    "sender": {"user_id": 99001, "name": "John Doe", "is_bot": false, "last_activity_time": 1700000100000},
+    "recipient": {"chat_id": 50001, "chat_type": "chat"},
+    "timestamp": 1700001000000,
+    "body": {"mid": "msg_010", "seq": 10, "text": "New message"}
+  },
+  "user_locale": "ru"
+}

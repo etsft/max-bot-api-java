@@ -43,16 +43,23 @@ public record MaxClientConfig(
     /**
      * Creates a MaxClientConfig.
      *
-     * @param baseUrl        must not be {@code null}
-     * @param connectTimeout must not be {@code null}
-     * @param requestTimeout must not be {@code null}
-     * @param longPollTimeout must not be {@code null}
+     * @param baseUrl         must not be {@code null}
+     * @param connectTimeout  must not be {@code null}
+     * @param requestTimeout  must not be {@code null}
+     * @param longPollTimeout must not be {@code null}; must be less than {@code requestTimeout}
+     * @throws IllegalArgumentException if {@code longPollTimeout >= requestTimeout}
      */
     public MaxClientConfig {
         Objects.requireNonNull(baseUrl, "baseUrl must not be null");
         Objects.requireNonNull(connectTimeout, "connectTimeout must not be null");
         Objects.requireNonNull(requestTimeout, "requestTimeout must not be null");
         Objects.requireNonNull(longPollTimeout, "longPollTimeout must not be null");
+        if (longPollTimeout.compareTo(requestTimeout) >= 0) {
+            throw new IllegalArgumentException(
+                    "longPollTimeout (" + longPollTimeout.toSeconds() + "s) must be less than "
+                    + "requestTimeout (" + requestTimeout.toSeconds() + "s); otherwise the HTTP "
+                    + "request will time out before the server can respond");
+        }
     }
 
     /**
@@ -64,8 +71,8 @@ public record MaxClientConfig(
         return new MaxClientConfig(
                 "https://platform-api.max.ru",
                 Duration.ofSeconds(10),
+                Duration.ofSeconds(60),
                 Duration.ofSeconds(30),
-                Duration.ofSeconds(90),
                 3,
                 true,
                 30
@@ -88,8 +95,8 @@ public record MaxClientConfig(
 
         private String baseUrl = "https://platform-api.max.ru";
         private Duration connectTimeout = Duration.ofSeconds(10);
-        private Duration requestTimeout = Duration.ofSeconds(30);
-        private Duration longPollTimeout = Duration.ofSeconds(90);
+        private Duration requestTimeout = Duration.ofSeconds(60);
+        private Duration longPollTimeout = Duration.ofSeconds(30);
         private int maxRetries = 3;
         private boolean enableRateLimiting = true;
         private int maxRequestsPerSecond = 30;

@@ -47,6 +47,9 @@ dependencies {
 
     // Опционально: поддержка webhook
     // implementation("ru.etsft.max.botapi:max-bot-api-webhook:0.1.0-SNAPSHOT")
+
+    // Опционально: автоконфигурация Spring Boot (webhook + long polling)
+    // implementation("ru.etsft.max.botapi:max-bot-api-spring-boot:0.1.0-SNAPSHOT")
 }
 ```
 
@@ -69,6 +72,14 @@ dependencies {
         <artifactId>max-bot-api-longpolling</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </dependency>
+    <!-- Опционально: автоконфигурация Spring Boot (webhook + long polling) -->
+    <!--
+    <dependency>
+        <groupId>ru.etsft.max.botapi</groupId>
+        <artifactId>max-bot-api-spring-boot</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </dependency>
+    -->
 </dependencies>
 ```
 
@@ -167,6 +178,7 @@ api.sendMessage(new NewMessageBody(
 | `max-bot-api-longpolling` | Потребитель long polling на базе виртуальных потоков с экспоненциальным откатом. |
 | `max-bot-api-webhook` | HTTPS-сервер webhook с проверкой секретного заголовка. |
 | `max-bot-api-test-support` | WireMock-заглушки, JSON-фикстуры и вспомогательные классы для интеграционных тестов. |
+| `max-bot-api-spring-boot` | Автоконфигурация Spring Boot для режимов webhook и long polling — контроллер, регистрация подписки, управление жизненным циклом. |
 | `max-bot-api-examples` | Запускаемые примеры: `EchoBot`, `KeyboardBot`, `FileUploadBot`. |
 
 ---
@@ -216,6 +228,107 @@ server.start();
 
 Убедитесь, что TLS-сертификат, обслуживаемый на заданном порту, является доверенным для платформы MAX, либо используйте обратный прокси (например, nginx) для терминирования TLS.
 
+### Интеграция со Spring Boot
+
+Модуль `max-bot-api-spring-boot` обеспечивает настройку как webhook, так и long polling режимов без шаблонного кода благодаря автоконфигурации. Добавьте зависимость и выберите подходящий режим для вашего развёртывания.
+
+#### Режим Webhook
+
+Настройте `application.yml`:
+
+```yaml
+max:
+  bot:
+    mode: webhook
+    webhook:
+      token: "your-bot-token"
+      url: "https://your-app.example.com/max-bot/webhook"
+      secret: "your-shared-secret"
+```
+
+Стартер автоматически:
+
+- Регистрирует `@RestController` endpoint по пути `/max-bot/webhook` (настраивается через `max.bot.webhook.path`).
+- Проверяет заголовок `X-Max-Bot-Api-Secret` с использованием сравнения за константное время.
+- Подписывает webhook URL на платформе MAX при запуске приложения.
+- Отписывается при корректном завершении работы.
+
+Определите бин `WebhookHandler` для обработки входящих обновлений:
+
+```java
+@Bean
+WebhookHandler webhookHandler() {
+    return update -> {
+        if (update instanceof MessageCreatedUpdate msg) {
+            // обработать сообщение
+        }
+    };
+}
+```
+
+##### Свойства конфигурации Webhook
+
+| Свойство | По умолчанию | Описание |
+|---|---|---|
+| `max.bot.webhook.token` | — | Токен доступа бота (обязательный). |
+| `max.bot.webhook.path` | `/max-bot/webhook` | Путь endpoint-а контроллера. |
+| `max.bot.webhook.secret` | — | Общий секрет для проверки заголовка. |
+| `max.bot.webhook.url` | — | Публичный URL для автоматической регистрации webhook. |
+| `max.bot.webhook.auto-register` | `true` | Регистрировать подписку webhook при запуске. |
+| `max.bot.webhook.auto-unregister` | `true` | Отписываться при завершении работы приложения. |
+| `max.bot.webhook.update-types` | — | Список типов обновлений для подписки (пустой = все). |
+
+#### Режим Long Polling
+
+Настройте `application.yml`:
+
+```yaml
+max:
+  bot:
+    mode: longpolling
+    longpolling:
+      token: "your-bot-token"
+      poll-timeout: 30
+      update-types:
+        - message_created
+        - message_callback
+```
+
+Стартер автоматически:
+
+- Создаёт экземпляр `MaxBotAPI` из настроенного токена.
+- Оборачивает `MaxLongPollingConsumer` в бин `SmartLifecycle`, который запускается и останавливается вместе с контекстом приложения.
+- Передаёт `poll-timeout` и `update-types` потребителю.
+
+Определите бин `UpdateHandler` для обработки входящих обновлений:
+
+```java
+@Bean
+MaxLongPollingConsumer.UpdateHandler updateHandler() {
+    return update -> {
+        if (update instanceof MessageCreatedUpdate msg) {
+            // обработать сообщение
+        }
+    };
+}
+```
+
+##### Свойства конфигурации Long Polling
+
+| Свойство | По умолчанию | Описание |
+|---|---|---|
+| `max.bot.longpolling.token` | — | Токен доступа бота (обязательный). |
+| `max.bot.longpolling.poll-timeout` | — | Таймаут опроса в секундах (по умолчанию из `MaxClientConfig`, 30 сек). |
+| `max.bot.longpolling.update-types` | — | Список типов обновлений для получения (пустой = все). |
+
+#### Выбор между режимами
+
+Свойство `max.bot.mode` выбирает механизм доставки обновлений. Оно принимает два значения: `webhook` или `longpolling`. Одновременно может быть активен только один режим — если свойство не задано, ни одна автоконфигурация не активируется.
+
+| Свойство | Значения | Описание |
+|---|---|---|
+| `max.bot.mode` | `webhook`, `longpolling` | Режим доставки обновлений (обязательный). |
+
 ---
 
 ## Загрузка файлов
@@ -253,15 +366,15 @@ api.sendMessage(new NewMessageBody(null, List.of(attachment), null, null, null))
 
 ### Значения по умолчанию
 
-| Параметр | По умолчанию |
-|---|---|
+| Параметр | По умолчанию                  |
+|---|-------------------------------|
 | `baseUrl` | `https://platform-api.max.ru` |
-| `connectTimeout` | 10 секунд |
-| `requestTimeout` | 30 секунд |
-| `longPollTimeout` | 90 секунд |
-| `maxRetries` | 3 |
-| `enableRateLimiting` | `true` |
-| `maxRequestsPerSecond` | 30 |
+| `connectTimeout` | 10 секунд                     |
+| `requestTimeout` | 60 секунд                     |
+| `longPollTimeout` | 30 секунд                     |
+| `maxRetries` | 3                             |
+| `enableRateLimiting` | `true`                        |
+| `maxRequestsPerSecond` | 30                            |
 
 ### Пользовательская конфигурация
 

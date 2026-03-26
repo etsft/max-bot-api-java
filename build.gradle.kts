@@ -105,6 +105,7 @@ dependencies {
     jacocoAggregation(project(":max-bot-api-gson"))
     jacocoAggregation(project(":max-bot-api-webhook"))
     jacocoAggregation(project(":max-bot-api-longpolling"))
+    jacocoAggregation(project(":max-bot-api-spring-boot"))
 }
 
 tasks.named<JacocoReport>("testCodeCoverageReport") {

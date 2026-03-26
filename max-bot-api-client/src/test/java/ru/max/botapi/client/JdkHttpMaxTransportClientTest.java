@@ -83,6 +83,7 @@ class JdkHttpMaxTransportClientTest {
                 .baseUrl(baseUrl)
                 .connectTimeout(Duration.ofSeconds(5))
                 .requestTimeout(Duration.ofSeconds(5))
+                .longPollTimeout(Duration.ofSeconds(4))
                 .build();
         return new JdkHttpMaxTransportClient(token, config);
     }
@@ -178,7 +179,8 @@ class JdkHttpMaxTransportClientTest {
         MaxClientConfig config = MaxClientConfig.builder()
                 .baseUrl("http://localhost:1") // Invalid port
                 .connectTimeout(Duration.ofMillis(100))
-                .requestTimeout(Duration.ofMillis(100))
+                .requestTimeout(Duration.ofMillis(200))
+                .longPollTimeout(Duration.ofMillis(100))
                 .build();
         try (JdkHttpMaxTransportClient client =
                      new JdkHttpMaxTransportClient("token", config)) {

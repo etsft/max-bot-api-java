@@ -1,0 +1,3 @@
+ru.max.botapi.spring.MaxBotModeAutoConfiguration
+ru.max.botapi.spring.webhook.MaxWebhookAutoConfiguration
+ru.max.botapi.spring.longpolling.MaxLongPollingAutoConfiguration
