@@ -41,15 +41,15 @@ This library provides a complete, idiomatic Java 21 interface to all 31 MAX Bot 
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("ru.etsft.max:max-bot-api-client:0.1.0-SNAPSHOT")
-    implementation("ru.etsft.max:max-bot-api-jackson:0.1.0-SNAPSHOT")
-    implementation("ru.etsft.max:max-bot-api-longpolling:0.1.0-SNAPSHOT")
+    implementation("ru.etsft.max:max-bot-api-client:0.1.0")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.1.0")
+    implementation("ru.etsft.max:max-bot-api-longpolling:0.1.0")
 
     // Optional: webhook support
-    // implementation("ru.etsft.max:max-bot-api-webhook:0.1.0-SNAPSHOT")
+    // implementation("ru.etsft.max:max-bot-api-webhook:0.1.0")
 
     // Optional: Spring Boot auto-configuration (webhook + long polling)
-    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.1.0-SNAPSHOT")
+    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.1.0")
 }
 ```
 
@@ -60,24 +60,24 @@ dependencies {
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-client</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.0</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-jackson</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.0</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-longpolling</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.0</version>
     </dependency>
     <!-- Optional: Spring Boot auto-configuration (webhook + long polling) -->
     <!--
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-spring-boot</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.0</version>
     </dependency>
     -->
 </dependencies>
@@ -517,5 +517,3 @@ limitations under the License.
 
 **References:**
 - [MAX Bot API documentation](https://dev.max.ru/docs-api) (Russian)
-- [TypeScript reference client](https://github.com/max-messenger/max-bot-api-client-ts)
-- [Java 8 reference client](https://github.com/max-messenger/max-bot-api-client-java)
