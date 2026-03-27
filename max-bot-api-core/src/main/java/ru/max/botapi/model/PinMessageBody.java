@@ -22,7 +22,7 @@ import java.util.Objects;
  * Request body for {@code PUT /chats/{chatId}/pin}.
  *
  * @param messageId ID of the message to pin
- * @param notify    whether to notify chat participants about the pin
+ * @param notifyRecipients whether to notify chat participants about the pin
  */
 public record PinMessageBody(
         String messageId,

@@ -41,15 +41,15 @@ This library provides a complete, idiomatic Java 21 interface to all 31 MAX Bot 
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("ru.etsft.max.botapi:max-bot-api-client:0.1.0-SNAPSHOT")
-    implementation("ru.etsft.max.botapi:max-bot-api-jackson:0.1.0-SNAPSHOT")
-    implementation("ru.etsft.max.botapi:max-bot-api-longpolling:0.1.0-SNAPSHOT")
+    implementation("ru.etsft.max:max-bot-api-client:0.1.0-SNAPSHOT")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.1.0-SNAPSHOT")
+    implementation("ru.etsft.max:max-bot-api-longpolling:0.1.0-SNAPSHOT")
 
     // Optional: webhook support
-    // implementation("ru.etsft.max.botapi:max-bot-api-webhook:0.1.0-SNAPSHOT")
+    // implementation("ru.etsft.max:max-bot-api-webhook:0.1.0-SNAPSHOT")
 
     // Optional: Spring Boot auto-configuration (webhook + long polling)
-    // implementation("ru.etsft.max.botapi:max-bot-api-spring-boot:0.1.0-SNAPSHOT")
+    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.1.0-SNAPSHOT")
 }
 ```
 
@@ -58,24 +58,24 @@ dependencies {
 ```xml
 <dependencies>
     <dependency>
-        <groupId>ru.etsft.max.botapi</groupId>
+        <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-client</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
-        <groupId>ru.etsft.max.botapi</groupId>
+        <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-jackson</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
-        <groupId>ru.etsft.max.botapi</groupId>
+        <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-longpolling</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </dependency>
     <!-- Optional: Spring Boot auto-configuration (webhook + long polling) -->
     <!--
     <dependency>
-        <groupId>ru.etsft.max.botapi</groupId>
+        <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-spring-boot</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </dependency>
@@ -458,7 +458,7 @@ Requires JDK 21+ and Gradle 8+. The Gradle wrapper is included.
 
 ```bash
 # Clone the repository
-git clone https://gitlab.etsft.ru/batarelkin/max-bot-api-java.git
+git clone https://github.com/etsft/max-bot-api-java.git
 cd max-bot-api-java
 
 # Build and run all tests
@@ -489,7 +489,7 @@ Build output and coverage reports are placed under each module's `build/` direct
 4. Keep public API surface minimal. New models should use Java records; new union types should use sealed interfaces.
 5. Submit a merge request with a clear description of the change and its rationale.
 
-For bug reports and feature requests, open an issue on the [project repository](https://gitlab.etsft.ru/batarelkin/max-bot-api-java).
+For bug reports and feature requests, open an issue on the [project repository](https://github.com/etsft/max-bot-api-java.git).
 
 ---
 

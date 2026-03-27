@@ -25,8 +25,19 @@ public class MaxApiException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * HTTP status code
+     */
     private final int statusCode;
+
+    /**
+     * Human-readable error message
+     */
     private final String errorMessage;
+
+    /**
+     * Optional API error code
+     */
     private final @Nullable String errorCode;
 
     /**

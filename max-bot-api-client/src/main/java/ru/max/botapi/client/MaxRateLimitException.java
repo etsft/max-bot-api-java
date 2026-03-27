@@ -27,6 +27,9 @@ public class MaxRateLimitException extends MaxApiException {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Suggested wait duration before retry, or {@code null}
+     */
     private final @Nullable Duration retryAfter;
 
     /**

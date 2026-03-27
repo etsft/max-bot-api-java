@@ -41,15 +41,15 @@
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("ru.etsft.max.botapi:max-bot-api-client:0.1.0-SNAPSHOT")
-    implementation("ru.etsft.max.botapi:max-bot-api-jackson:0.1.0-SNAPSHOT")
-    implementation("ru.etsft.max.botapi:max-bot-api-longpolling:0.1.0-SNAPSHOT")
+    implementation("ru.etsft.max:max-bot-api-client:0.1.0-SNAPSHOT")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.1.0-SNAPSHOT")
+    implementation("ru.etsft.max:max-bot-api-longpolling:0.1.0-SNAPSHOT")
 
     // Опционально: поддержка webhook
-    // implementation("ru.etsft.max.botapi:max-bot-api-webhook:0.1.0-SNAPSHOT")
+    // implementation("ru.etsft.max:max-bot-api-webhook:0.1.0-SNAPSHOT")
 
     // Опционально: автоконфигурация Spring Boot (webhook + long polling)
-    // implementation("ru.etsft.max.botapi:max-bot-api-spring-boot:0.1.0-SNAPSHOT")
+    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.1.0-SNAPSHOT")
 }
 ```
 
@@ -58,24 +58,24 @@ dependencies {
 ```xml
 <dependencies>
     <dependency>
-        <groupId>ru.etsft.max.botapi</groupId>
+        <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-client</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
-        <groupId>ru.etsft.max.botapi</groupId>
+        <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-jackson</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
-        <groupId>ru.etsft.max.botapi</groupId>
+        <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-longpolling</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </dependency>
     <!-- Опционально: автоконфигурация Spring Boot (webhook + long polling) -->
     <!--
     <dependency>
-        <groupId>ru.etsft.max.botapi</groupId>
+        <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-spring-boot</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </dependency>
@@ -458,7 +458,7 @@ try {
 
 ```bash
 # Клонировать репозиторий
-git clone https://gitlab.etsft.ru/batarelkin/max-bot-api-java.git
+git clone https://github.com/etsft/max-bot-api-java.git
 cd max-bot-api-java
 
 # Собрать и запустить все тесты
@@ -489,7 +489,7 @@ cd max-bot-api-java
 4. Сохраняйте минимальный публичный API. Новые модели должны использовать Java records; новые union-типы — sealed interfaces.
 5. Отправьте merge request с чётким описанием изменения и его обоснованием.
 
-Для сообщений об ошибках и запросов новых возможностей открывайте issue в [репозитории проекта](https://gitlab.etsft.ru/batarelkin/max-bot-api-java).
+Для сообщений об ошибках и запросов новых возможностей открывайте issue в [репозитории проекта](https://github.com/etsft/max-bot-api-java.git).
 
 ---
 

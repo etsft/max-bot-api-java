@@ -24,7 +24,7 @@ import java.util.List;
  * @param text        text content of the message
  * @param attachments list of attachment requests
  * @param link        link to another message (forward/reply)
- * @param notify      whether to notify recipients
+ * @param notifyRecipients whether to notify recipients
  * @param format      text format (markdown or HTML)
  */
 public record NewMessageBody(

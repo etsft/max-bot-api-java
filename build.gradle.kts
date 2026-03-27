@@ -6,13 +6,24 @@ plugins {
 }
 
 allprojects {
-    group = "ru.etsft.max.botapi"
-    version = "0.1.0-SNAPSHOT"
+    group = property("group")!!
+    version = property("version")!!
 
     repositories {
         mavenCentral()
     }
 }
+
+// Modules published to Maven Central (excludes examples)
+val publishedModules = setOf(
+    "max-bot-api-core",
+    "max-bot-api-client",
+    "max-bot-api-jackson",
+    "max-bot-api-gson",
+    "max-bot-api-webhook",
+    "max-bot-api-longpolling",
+    "max-bot-api-spring-boot"
+)
 
 subprojects {
     apply(plugin = "java")
@@ -95,6 +106,121 @@ subprojects {
     // Disable SpotBugs on test sources — only analyze production code
     tasks.matching { it.name == "spotbugsTest" }.configureEach {
         enabled = false
+    }
+
+    // --- Maven Central publishing setup for published modules ---
+    if (name in publishedModules) {
+        apply(plugin = "maven-publish")
+        apply(plugin = "signing")
+
+        java {
+            withSourcesJar()
+            withJavadocJar()
+        }
+
+        configure<PublishingExtension> {
+            publications {
+                create<MavenPublication>("mavenJava") {
+                    from(components["java"])
+
+                    pom {
+                        name.set(provider {
+                            "${rootProject.property("POM_NAME")} — ${project.name}"
+                        })
+                        description.set(
+                            rootProject.property("POM_DESCRIPTION") as String
+                        )
+                        url.set(rootProject.property("POM_URL") as String)
+                        inceptionYear.set(
+                            rootProject.property("POM_INCEPTION_YEAR") as String
+                        )
+
+                        licenses {
+                            license {
+                                name.set(
+                                    rootProject.property("POM_LICENSE_NAME")
+                                            as String
+                                )
+                                url.set(
+                                    rootProject.property("POM_LICENSE_URL")
+                                            as String
+                                )
+                                distribution.set("repo")
+                            }
+                        }
+
+                        developers {
+                            developer {
+                                id.set(
+                                    rootProject.property("POM_DEVELOPER_ID")
+                                            as String
+                                )
+                                name.set(
+                                    rootProject.property("POM_DEVELOPER_NAME")
+                                            as String
+                                )
+                                email.set(
+                                    rootProject.property("POM_DEVELOPER_EMAIL")
+                                            as String
+                                )
+                            }
+                        }
+
+                        scm {
+                            url.set(
+                                rootProject.property("POM_SCM_URL") as String
+                            )
+                            connection.set(
+                                rootProject.property("POM_SCM_CONNECTION")
+                                        as String
+                            )
+                            developerConnection.set(
+                                rootProject.property("POM_SCM_DEV_CONNECTION")
+                                        as String
+                            )
+                        }
+                    }
+                }
+            }
+
+            repositories {
+                maven {
+                    name = "staging"
+                    url = uri(
+                        rootProject.layout.buildDirectory.dir("staging-deploy")
+                    )
+                }
+            }
+        }
+
+        configure<SigningExtension> {
+            // Only sign when "signing.keyId" is provided (release builds)
+            isRequired = project.hasProperty("signing.keyId")
+
+            // Support in-memory keys for CI (set via environment variables)
+            val signingKey: String? =
+                project.findProperty("signingInMemoryKey") as? String
+            val signingKeyId: String? =
+                project.findProperty("signingInMemoryKeyId") as? String
+            val signingPassword: String? =
+                project.findProperty("signingInMemoryKeyPassword") as? String
+
+            if (signingKey != null) {
+                useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+            }
+
+            sign(
+                the<PublishingExtension>().publications["mavenJava"]
+            )
+        }
+
+        // Disable signing tasks when key is not available (development)
+        tasks.withType<Sign>().configureEach {
+            onlyIf {
+                project.hasProperty("signing.keyId")
+                        || project.hasProperty("signingInMemoryKey")
+            }
+        }
     }
 }
 

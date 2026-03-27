@@ -24,7 +24,7 @@ package ru.max.botapi.model;
  * @param title  new chat title
  * @param icon   new chat icon
  * @param pin    message ID to pin
- * @param notify whether to notify participants about the change
+ * @param notifyRecipients whether to notify participants about the change
  */
 public record ChatPatch(
         @Nullable String title,
