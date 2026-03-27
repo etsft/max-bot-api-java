@@ -104,12 +104,9 @@ class MaxLongPollingConsumerTest {
         MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
                 .api(api)
                 .pollTimeout(1)
-                .handler(new MaxLongPollingConsumer.UpdateHandler() {
-                    @Override
-                    public void onUpdate(Update update) {
-                        received.add(update);
-                        latch.countDown();
-                    }
+                .handler(update -> {
+                    received.add(update);
+                    latch.countDown();
                 })
                 .build();
 
@@ -152,12 +149,9 @@ class MaxLongPollingConsumerTest {
         MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
                 .api(api)
                 .pollTimeout(1)
-                .handler(new MaxLongPollingConsumer.UpdateHandler() {
-                    @Override
-                    public void onUpdate(Update update) {
-                        if (callCount.incrementAndGet() >= 2) {
-                            secondPollLatch.countDown();
-                        }
+                .handler(update -> {
+                    if (callCount.incrementAndGet() >= 2) {
+                        secondPollLatch.countDown();
                     }
                 })
                 .build();
@@ -214,16 +208,10 @@ class MaxLongPollingConsumerTest {
         MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
                 .api(api)
                 .pollTimeout(1)
-                .handler(new MaxLongPollingConsumer.UpdateHandler() {
-                    @Override
-                    public void onUpdate(Update update) {
-                    }
-
-                    @Override
-                    public void onError(Exception e) {
-                        errors.add(e);
-                        errorLatch.countDown();
-                    }
+                .handler(update -> { })
+                .onError(e -> {
+                    errors.add(e);
+                    errorLatch.countDown();
                 })
                 .build();
 

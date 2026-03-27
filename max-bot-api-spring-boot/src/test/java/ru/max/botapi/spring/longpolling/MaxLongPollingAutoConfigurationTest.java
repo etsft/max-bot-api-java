@@ -27,6 +27,7 @@ import org.springframework.context.annotation.Configuration;
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.MaxClientConfig;
 import ru.max.botapi.client.queries.GetUpdatesQuery;
+import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.longpolling.MaxLongPollingConsumer;
 import ru.max.botapi.model.UpdateList;
 
@@ -149,7 +150,7 @@ class MaxLongPollingAutoConfigurationTest {
     static class HandlerConfig {
 
         @Bean
-        MaxLongPollingConsumer.UpdateHandler updateHandler() {
+        UpdateHandler updateHandler() {
             return update -> { };
         }
     }
@@ -174,7 +175,7 @@ class MaxLongPollingAutoConfigurationTest {
         }
 
         @Bean
-        MaxLongPollingConsumer.UpdateHandler customHandler() {
+        UpdateHandler customHandler() {
             return update -> { };
         }
     }

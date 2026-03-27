@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.core.MaxSerializer;
+import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.model.Nullable;
 import ru.max.botapi.model.SubscriptionRequestBody;
 import ru.max.botapi.model.Update;
@@ -76,7 +77,7 @@ public class MaxWebhookServer implements AutoCloseable {
     private static final int DEFAULT_PORT = 8443;
     private static final String SECRET_HEADER = "X-Max-Bot-Api-Secret";
 
-    private final WebhookHandler handler;
+    private final UpdateHandler handler;
     private final MaxSerializer serializer;
     private final @Nullable String secret;
     private final int port;
@@ -246,7 +247,7 @@ public class MaxWebhookServer implements AutoCloseable {
      */
     public static final class Builder {
 
-        private WebhookHandler handler;
+        private UpdateHandler handler;
         private MaxSerializer serializer;
         private @Nullable String secret;
         private int port = DEFAULT_PORT;
@@ -256,12 +257,12 @@ public class MaxWebhookServer implements AutoCloseable {
         }
 
         /**
-         * Sets the {@link WebhookHandler} that processes incoming updates. Required.
+         * Sets the {@link UpdateHandler} that processes incoming updates. Required.
          *
          * @param handler the update handler; must not be {@code null}
          * @return this builder
          */
-        public Builder handler(WebhookHandler handler) {
+        public Builder handler(UpdateHandler handler) {
             this.handler = Objects.requireNonNull(handler, "handler must not be null");
             return this;
         }

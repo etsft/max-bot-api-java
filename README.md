@@ -41,15 +41,15 @@ This library provides a complete, idiomatic Java 21 interface to all 31 MAX Bot 
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("ru.etsft.max:max-bot-api-client:0.1.0")
-    implementation("ru.etsft.max:max-bot-api-jackson:0.1.0")
-    implementation("ru.etsft.max:max-bot-api-longpolling:0.1.0")
+    implementation("ru.etsft.max:max-bot-api-client:0.2.0-SNAPSHOT")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.2.0-SNAPSHOT")
+    implementation("ru.etsft.max:max-bot-api-longpolling:0.2.0-SNAPSHOT")
 
     // Optional: webhook support
-    // implementation("ru.etsft.max:max-bot-api-webhook:0.1.0")
+    // implementation("ru.etsft.max:max-bot-api-webhook:0.2.0-SNAPSHOT")
 
     // Optional: Spring Boot auto-configuration (webhook + long polling)
-    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.1.0")
+    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.2.0-SNAPSHOT")
 }
 ```
 
@@ -60,24 +60,24 @@ dependencies {
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-client</artifactId>
-        <version>0.1.0</version>
+        <version>0.2.0-SNAPSHOT</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-jackson</artifactId>
-        <version>0.1.0</version>
+        <version>0.2.0-SNAPSHOT</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-longpolling</artifactId>
-        <version>0.1.0</version>
+        <version>0.2.0-SNAPSHOT</version>
     </dependency>
     <!-- Optional: Spring Boot auto-configuration (webhook + long polling) -->
     <!--
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-spring-boot</artifactId>
-        <version>0.1.0</version>
+        <version>0.2.0-SNAPSHOT</version>
     </dependency>
     -->
 </dependencies>
@@ -253,11 +253,11 @@ The starter automatically:
 - Subscribes the webhook URL with the MAX platform on application startup.
 - Unsubscribes on graceful shutdown.
 
-Define a `WebhookHandler` bean to process incoming updates:
+Define an `UpdateHandler` bean to process incoming updates:
 
 ```java
 @Bean
-WebhookHandler webhookHandler() {
+UpdateHandler updateHandler() {
     return update -> {
         if (update instanceof MessageCreatedUpdate msg) {
             // process message
@@ -304,7 +304,7 @@ Define an `UpdateHandler` bean to process incoming updates:
 
 ```java
 @Bean
-MaxLongPollingConsumer.UpdateHandler updateHandler() {
+UpdateHandler updateHandler() {
     return update -> {
         if (update instanceof MessageCreatedUpdate msg) {
             // process message
@@ -324,6 +324,8 @@ MaxLongPollingConsumer.UpdateHandler updateHandler() {
 #### Choosing Between Modes
 
 The `max.bot.mode` property selects the update delivery mechanism. It accepts two values: `webhook` or `longpolling`. Only one mode can be active at a time — if the property is not set, neither auto-configuration activates.
+
+Both modes use the same `UpdateHandler` interface (`ru.max.botapi.core.UpdateHandler`). Define a single handler bean and switch modes by changing only the `max.bot.mode` property — no code changes required.
 
 | Property | Values | Description |
 |---|---|---|

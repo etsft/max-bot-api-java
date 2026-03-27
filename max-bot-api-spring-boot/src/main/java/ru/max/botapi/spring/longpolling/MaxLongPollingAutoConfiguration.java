@@ -25,6 +25,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 import ru.max.botapi.client.MaxBotAPI;
+import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.longpolling.MaxLongPollingConsumer;
 import ru.max.botapi.spring.MaxBotProperties;
 
@@ -36,8 +37,8 @@ import ru.max.botapi.spring.MaxBotProperties;
  *
  * <p>This configuration creates a {@link MaxLongPollingLifecycle} bean that
  * manages the consumer's lifecycle (start/stop) within the Spring context.
- * The user must provide a {@link MaxLongPollingConsumer.UpdateHandler} bean
- * containing the application-specific update processing logic.</p>
+ * The user must provide an {@link UpdateHandler} bean containing the
+ * application-specific update processing logic.</p>
  *
  * @see MaxLongPollingProperties
  * @see MaxLongPollingLifecycle
@@ -70,8 +71,8 @@ public class MaxLongPollingAutoConfiguration {
     /**
      * Creates the long-polling lifecycle manager.
      *
-     * <p>Only created when both a {@link MaxBotAPI} bean and a
-     * {@link MaxLongPollingConsumer.UpdateHandler} bean are present.</p>
+     * <p>Only created when both a {@link MaxBotAPI} bean and an
+     * {@link UpdateHandler} bean are present.</p>
      *
      * @param api        the MAX Bot API instance
      * @param handler    the user-provided update handler
@@ -80,11 +81,10 @@ public class MaxLongPollingAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnBean({MaxBotAPI.class,
-            MaxLongPollingConsumer.UpdateHandler.class})
+    @ConditionalOnBean({MaxBotAPI.class, UpdateHandler.class})
     public MaxLongPollingLifecycle maxLongPollingLifecycle(
             MaxBotAPI api,
-            MaxLongPollingConsumer.UpdateHandler handler,
+            UpdateHandler handler,
             MaxLongPollingProperties properties) {
         return new MaxLongPollingLifecycle(api, handler, properties);
     }

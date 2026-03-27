@@ -27,7 +27,7 @@
  *
  * <p>Configuration is externalized under the {@code max.bot.longpolling}
  * prefix in {@code application.yml}. The user must provide a
- * {@link ru.max.botapi.longpolling.MaxLongPollingConsumer.UpdateHandler}
+ * {@link ru.max.botapi.core.UpdateHandler}
  * bean.</p>
  *
  * @see ru.max.botapi.spring.longpolling.MaxLongPollingAutoConfiguration

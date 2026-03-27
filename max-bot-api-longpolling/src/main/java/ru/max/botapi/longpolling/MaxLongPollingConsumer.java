@@ -20,12 +20,14 @@ import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.queries.GetUpdatesQuery;
+import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.model.Update;
 import ru.max.botapi.model.UpdateList;
 
@@ -57,8 +59,12 @@ public class MaxLongPollingConsumer implements AutoCloseable {
 
     private static final long MAX_BACKOFF_MS = 30_000L;
 
+    private static final Consumer<Exception> DEFAULT_ERROR_HANDLER =
+            e -> LOG.warn("Error during long polling", e);
+
     private final MaxBotAPI api;
     private final UpdateHandler handler;
+    private final Consumer<Exception> errorHandler;
     private final Set<String> updateTypes;
     private final int pollTimeout;
 
@@ -66,32 +72,10 @@ public class MaxLongPollingConsumer implements AutoCloseable {
     private volatile boolean running;
     private volatile Long marker;
 
-    /**
-     * Handler interface for received updates and polling errors.
-     */
-    public interface UpdateHandler {
-
-        /**
-         * Called for each received {@link Update}.
-         *
-         * @param update the received update; never {@code null}
-         */
-        void onUpdate(Update update);
-
-        /**
-         * Called when an error occurs during polling or update handling.
-         * The default implementation logs the error at WARN level.
-         *
-         * @param e the exception that was thrown
-         */
-        default void onError(Exception e) {
-            LOG.warn("Error during long polling", e);
-        }
-    }
-
     private MaxLongPollingConsumer(Builder builder) {
         this.api = Objects.requireNonNull(builder.api, "api must not be null");
         this.handler = Objects.requireNonNull(builder.handler, "handler must not be null");
+        this.errorHandler = builder.errorHandler != null ? builder.errorHandler : DEFAULT_ERROR_HANDLER;
         this.updateTypes = builder.updateTypes == null
                 ? Collections.emptySet()
                 : Collections.unmodifiableSet(builder.updateTypes);
@@ -179,14 +163,14 @@ public class MaxLongPollingConsumer implements AutoCloseable {
                         try {
                             handler.onUpdate(update);
                         } catch (Exception e) {
-                            handler.onError(e);
+                            errorHandler.accept(e);
                         }
                     }
                     if (result.marker() != null) {
                         marker = result.marker();
                     }
                 } catch (Exception e) {
-                    handler.onError(e);
+                    errorHandler.accept(e);
                     errorStreak++;
                     sleepOnError(errorStreak);
                 }
@@ -205,9 +189,6 @@ public class MaxLongPollingConsumer implements AutoCloseable {
      * @param errorStreak number of consecutive errors so far
      */
     private void sleepOnError(int errorStreak) {
-        // Exponential backoff: 1s, 2s, 4s, 8s, 16s → then capped at MAX_BACKOFF_MS (30s).
-        // The inner Math.min caps the shift operand at 4 to prevent long overflow;
-        // the outer Math.min applies the hard ceiling.
         long delayMs = Math.min(1000L * (1L << Math.min(errorStreak - 1, 4)), MAX_BACKOFF_MS);
         LOG.debug("Backing off for {}ms after {} consecutive error(s)", delayMs, errorStreak);
         try {
@@ -225,6 +206,7 @@ public class MaxLongPollingConsumer implements AutoCloseable {
 
         private MaxBotAPI api;
         private UpdateHandler handler;
+        private Consumer<Exception> errorHandler;
         private Set<String> updateTypes;
         private Integer pollTimeout;
 
@@ -243,13 +225,25 @@ public class MaxLongPollingConsumer implements AutoCloseable {
         }
 
         /**
-         * Sets the {@link UpdateHandler} that receives updates and errors. Required.
+         * Sets the {@link UpdateHandler} that receives updates. Required.
          *
          * @param handler the update handler; must not be {@code null}
          * @return this builder
          */
         public Builder handler(UpdateHandler handler) {
             this.handler = Objects.requireNonNull(handler, "handler must not be null");
+            return this;
+        }
+
+        /**
+         * Sets an optional error handler invoked when polling or update handling throws
+         * an exception. If not set, errors are logged at WARN level.
+         *
+         * @param errorHandler the error callback; must not be {@code null}
+         * @return this builder
+         */
+        public Builder onError(Consumer<Exception> errorHandler) {
+            this.errorHandler = Objects.requireNonNull(errorHandler, "errorHandler must not be null");
             return this;
         }
 

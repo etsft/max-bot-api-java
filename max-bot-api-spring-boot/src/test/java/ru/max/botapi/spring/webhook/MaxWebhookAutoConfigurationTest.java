@@ -25,8 +25,8 @@ import org.springframework.context.annotation.Configuration;
 
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.core.MaxSerializer;
+import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.jackson.JacksonMaxSerializer;
-import ru.max.botapi.webhook.WebhookHandler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -103,15 +103,17 @@ class MaxWebhookAutoConfigurationTest {
     }
 
     @Test
-    void controllerNotCreated_withoutSerializerBean() {
+    void controllerCreated_withoutExplicitSerializer() {
         contextRunner
                 .withUserConfiguration(HandlerConfig.class)
                 .withPropertyValues(
                         "max.bot.mode=webhook",
                         "max.bot.webhook.token=test-token")
                 .run(context -> {
-                    assertThat(context).doesNotHaveBean(
+                    assertThat(context).hasSingleBean(
                             MaxWebhookController.class);
+                    assertThat(context).hasSingleBean(
+                            MaxSerializer.class);
                 });
     }
 
@@ -187,7 +189,7 @@ class MaxWebhookAutoConfigurationTest {
     static class HandlerConfig {
 
         @Bean
-        WebhookHandler webhookHandler() {
+        UpdateHandler webhookHandler() {
             return update -> { };
         }
     }
@@ -210,7 +212,7 @@ class MaxWebhookAutoConfigurationTest {
         }
 
         @Bean
-        WebhookHandler customWebhookHandler() {
+        UpdateHandler customWebhookHandler() {
             return update -> { };
         }
 

@@ -41,15 +41,15 @@
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("ru.etsft.max:max-bot-api-client:0.1.0")
-    implementation("ru.etsft.max:max-bot-api-jackson:0.1.0")
-    implementation("ru.etsft.max:max-bot-api-longpolling:0.1.0")
+    implementation("ru.etsft.max:max-bot-api-client:0.2.0-SNAPSHOT")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.2.0-SNAPSHOT")
+    implementation("ru.etsft.max:max-bot-api-longpolling:0.2.0-SNAPSHOT")
 
     // Опционально: поддержка webhook
-    // implementation("ru.etsft.max:max-bot-api-webhook:0.1.0")
+    // implementation("ru.etsft.max:max-bot-api-webhook:0.2.0-SNAPSHOT")
 
     // Опционально: автоконфигурация Spring Boot (webhook + long polling)
-    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.1.0")
+    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.2.0-SNAPSHOT")
 }
 ```
 
@@ -60,24 +60,24 @@ dependencies {
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-client</artifactId>
-        <version>0.1.0</version>
+        <version>0.2.0-SNAPSHOT</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-jackson</artifactId>
-        <version>0.1.0</version>
+        <version>0.2.0-SNAPSHOT</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-longpolling</artifactId>
-        <version>0.1.0</version>
+        <version>0.2.0-SNAPSHOT</version>
     </dependency>
     <!-- Опционально: автоконфигурация Spring Boot (webhook + long polling) -->
     <!--
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-spring-boot</artifactId>
-        <version>0.1.0</version>
+        <version>0.2.0-SNAPSHOT</version>
     </dependency>
     -->
 </dependencies>
@@ -253,11 +253,11 @@ max:
 - Подписывает webhook URL на платформе MAX при запуске приложения.
 - Отписывается при корректном завершении работы.
 
-Определите бин `WebhookHandler` для обработки входящих обновлений:
+Определите бин `UpdateHandler` для обработки входящих обновлений:
 
 ```java
 @Bean
-WebhookHandler webhookHandler() {
+UpdateHandler updateHandler() {
     return update -> {
         if (update instanceof MessageCreatedUpdate msg) {
             // обработать сообщение
@@ -304,7 +304,7 @@ max:
 
 ```java
 @Bean
-MaxLongPollingConsumer.UpdateHandler updateHandler() {
+UpdateHandler updateHandler() {
     return update -> {
         if (update instanceof MessageCreatedUpdate msg) {
             // обработать сообщение
@@ -324,6 +324,8 @@ MaxLongPollingConsumer.UpdateHandler updateHandler() {
 #### Выбор между режимами
 
 Свойство `max.bot.mode` выбирает механизм доставки обновлений. Оно принимает два значения: `webhook` или `longpolling`. Одновременно может быть активен только один режим — если свойство не задано, ни одна автоконфигурация не активируется.
+
+Оба режима используют один интерфейс `UpdateHandler` (`ru.max.botapi.core.UpdateHandler`). Определите один бин-обработчик и переключайте режимы, изменяя только свойство `max.bot.mode` — изменения кода не требуются.
 
 | Свойство | Значения | Описание |
 |---|---|---|

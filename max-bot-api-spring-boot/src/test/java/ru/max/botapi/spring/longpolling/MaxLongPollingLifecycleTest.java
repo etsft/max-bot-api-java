@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.MaxClientConfig;
 import ru.max.botapi.client.queries.GetUpdatesQuery;
+import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.longpolling.MaxLongPollingConsumer;
 import ru.max.botapi.model.UpdateList;
 
@@ -49,7 +50,7 @@ class MaxLongPollingLifecycleTest {
         when(query.execute()).thenReturn(emptyResult);
 
         AtomicBoolean received = new AtomicBoolean(false);
-        MaxLongPollingConsumer.UpdateHandler handler = update ->
+        UpdateHandler handler = update ->
                 received.set(true);
 
         MaxLongPollingProperties props = new MaxLongPollingProperties();
@@ -79,7 +80,7 @@ class MaxLongPollingLifecycleTest {
         UpdateList emptyResult = new UpdateList(List.of(), null);
         when(query.execute()).thenReturn(emptyResult);
 
-        MaxLongPollingConsumer.UpdateHandler handler = update -> { };
+        UpdateHandler handler = update -> { };
 
         MaxLongPollingProperties props = new MaxLongPollingProperties();
         props.setPollTimeout(60);
@@ -110,7 +111,7 @@ class MaxLongPollingLifecycleTest {
         UpdateList emptyResult = new UpdateList(List.of(), null);
         when(query.execute()).thenReturn(emptyResult);
 
-        MaxLongPollingConsumer.UpdateHandler handler = update -> { };
+        UpdateHandler handler = update -> { };
 
         MaxLongPollingProperties props = new MaxLongPollingProperties();
         props.setUpdateTypes(
@@ -140,7 +141,7 @@ class MaxLongPollingLifecycleTest {
         UpdateList emptyResult = new UpdateList(List.of(), null);
         when(query.execute()).thenReturn(emptyResult);
 
-        MaxLongPollingConsumer.UpdateHandler handler = update -> { };
+        UpdateHandler handler = update -> { };
 
         MaxLongPollingProperties props = new MaxLongPollingProperties();
         MaxLongPollingLifecycle lifecycle =
@@ -158,7 +159,7 @@ class MaxLongPollingLifecycleTest {
     @Test
     void stopBeforeStart_doesNotThrow() {
         MaxBotAPI api = mock(MaxBotAPI.class);
-        MaxLongPollingConsumer.UpdateHandler handler = update -> { };
+        UpdateHandler handler = update -> { };
         MaxLongPollingProperties props = new MaxLongPollingProperties();
 
         MaxLongPollingLifecycle lifecycle =

@@ -19,7 +19,7 @@
  *
  * <p>Provides {@link ru.max.botapi.webhook.MaxWebhookServer}, a lightweight server backed by
  * {@code com.sun.net.httpserver.HttpServer} that dispatches incoming update payloads to a
- * user-supplied {@link ru.max.botapi.webhook.WebhookHandler}.</p>
+ * user-supplied {@link ru.max.botapi.core.UpdateHandler}.</p>
  *
  * <p>Features:</p>
  * <ul>

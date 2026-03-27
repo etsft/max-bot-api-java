@@ -26,8 +26,8 @@
  *
  * <p>Configuration is externalized under the {@code max.bot.webhook} prefix
  * in {@code application.yml}. The user must provide a
- * {@link ru.max.botapi.webhook.WebhookHandler} bean and a
- * {@link ru.max.botapi.core.MaxSerializer} bean (e.g., {@code JacksonMaxSerializer}).</p>
+ * {@link ru.max.botapi.core.UpdateHandler} bean. The {@code MaxSerializer}
+ * is automatically extracted from the {@code MaxBotAPI} bean.</p>
  *
  * @see ru.max.botapi.spring.webhook.MaxWebhookAutoConfiguration
  * @see ru.max.botapi.spring.webhook.MaxWebhookProperties

@@ -30,8 +30,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import ru.max.botapi.core.MaxSerializer;
+import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.model.Update;
-import ru.max.botapi.webhook.WebhookHandler;
 
 /**
  * Spring MVC controller that receives MAX Bot API webhook updates.
@@ -56,7 +56,7 @@ public class MaxWebhookController {
 
     static final String SECRET_HEADER = "X-Max-Bot-Api-Secret";
 
-    private final WebhookHandler handler;
+    private final UpdateHandler handler;
     private final MaxSerializer serializer;
     private final String secret;
 
@@ -67,7 +67,7 @@ public class MaxWebhookController {
      * @param serializer the JSON serializer; must not be {@code null}
      * @param properties the webhook configuration properties; must not be {@code null}
      */
-    public MaxWebhookController(WebhookHandler handler,
+    public MaxWebhookController(UpdateHandler handler,
                                 MaxSerializer serializer,
                                 MaxWebhookProperties properties) {
         this.handler = Objects.requireNonNull(handler, "handler must not be null");
@@ -80,7 +80,7 @@ public class MaxWebhookController {
      * Handles incoming webhook POST requests from the MAX platform.
      *
      * <p>Validates the secret header (if configured), deserializes the JSON body
-     * into an {@link Update}, and dispatches it to the {@link WebhookHandler}.
+     * into an {@link Update}, and dispatches it to the {@link UpdateHandler}.
      * Returns HTTP 200 in all cases except invalid secret (HTTP 401).</p>
      *
      * @param body         the raw JSON request body

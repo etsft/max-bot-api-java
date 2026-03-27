@@ -27,14 +27,14 @@ import org.springframework.web.servlet.DispatcherServlet;
 
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.core.MaxSerializer;
+import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.spring.MaxBotProperties;
-import ru.max.botapi.webhook.WebhookHandler;
 
 /**
  * Spring Boot auto-configuration for the MAX Bot API webhook integration.
  *
  * <p>Activates when {@link DispatcherServlet} (Spring MVC) and
- * {@link WebhookHandler} are on the classpath and the property
+ * {@link MaxBotAPI} are on the classpath and the property
  * {@code max.bot.mode} is set to {@code webhook}.</p>
  *
  * <p>This configuration does not create its own web server — it registers
@@ -42,8 +42,10 @@ import ru.max.botapi.webhook.WebhookHandler;
  * {@link DispatcherServlet}. All beans are overridable via
  * {@code @ConditionalOnMissingBean}.</p>
  *
- * <p>The user must provide a {@link WebhookHandler} bean — this is intentional,
- * as the handler contains application-specific business logic.</p>
+ * <p>The user must provide an {@link UpdateHandler} bean — this is
+ * intentional, as the handler contains application-specific business
+ * logic. The same handler bean works for both webhook and long-polling
+ * modes.</p>
  *
  * @see MaxWebhookProperties
  * @see MaxWebhookController
@@ -51,16 +53,18 @@ import ru.max.botapi.webhook.WebhookHandler;
  * @see ru.max.botapi.spring.MaxBotMode
  */
 @AutoConfiguration
-@ConditionalOnClass({DispatcherServlet.class, WebhookHandler.class})
-@ConditionalOnProperty(prefix = "max.bot", name = "mode", havingValue = "webhook")
-@EnableConfigurationProperties({MaxBotProperties.class, MaxWebhookProperties.class})
+@ConditionalOnClass({DispatcherServlet.class, MaxBotAPI.class})
+@ConditionalOnProperty(prefix = "max.bot", name = "mode",
+        havingValue = "webhook")
+@EnableConfigurationProperties({MaxBotProperties.class,
+        MaxWebhookProperties.class})
 public class MaxWebhookAutoConfiguration {
 
     /**
      * Creates a {@link MaxBotAPI} from the configured bot token.
      *
-     * <p>Only created when no {@code MaxBotAPI} bean is already present and the
-     * {@code max.bot.webhook.token} property is set.</p>
+     * <p>Only created when no {@code MaxBotAPI} bean is already present
+     * and the {@code max.bot.webhook.token} property is set.</p>
      *
      * @param properties the webhook configuration
      * @return a new {@code MaxBotAPI} instance
@@ -73,10 +77,28 @@ public class MaxWebhookAutoConfiguration {
     }
 
     /**
+     * Extracts the {@link MaxSerializer} from the existing
+     * {@link MaxBotAPI} bean.
+     *
+     * <p>This ensures the webhook controller uses the same serializer
+     * instance as the API client, eliminating the need for the user
+     * to declare a {@code MaxSerializer} bean manually.</p>
+     *
+     * @param api the MAX Bot API instance
+     * @return the serializer used by the API client
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnBean(MaxBotAPI.class)
+    public MaxSerializer maxSerializer(MaxBotAPI api) {
+        return api.serializer();
+    }
+
+    /**
      * Creates the webhook controller that handles incoming POST requests.
      *
-     * <p>Only created when a {@link WebhookHandler} bean is present and no
-     * custom {@code MaxWebhookController} bean exists.</p>
+     * <p>Only created when an {@link UpdateHandler} bean is present and
+     * no custom {@code MaxWebhookController} bean exists.</p>
      *
      * @param handler    the user-provided update handler
      * @param serializer the JSON serializer
@@ -85,20 +107,21 @@ public class MaxWebhookAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnBean({WebhookHandler.class, MaxSerializer.class})
+    @ConditionalOnBean({UpdateHandler.class, MaxSerializer.class})
     public MaxWebhookController maxWebhookController(
-            WebhookHandler handler,
+            UpdateHandler handler,
             MaxSerializer serializer,
             MaxWebhookProperties properties) {
         return new MaxWebhookController(handler, serializer, properties);
     }
 
     /**
-     * Creates the lifecycle registrar that registers/unregisters the webhook
-     * URL with the MAX platform.
+     * Creates the lifecycle registrar that registers/unregisters the
+     * webhook URL with the MAX platform.
      *
      * <p>Only created when a {@link MaxBotAPI} bean is present and
-     * {@code max.bot.webhook.auto-register} is {@code true} (the default).</p>
+     * {@code max.bot.webhook.auto-register} is {@code true}
+     * (the default).</p>
      *
      * @param api        the MAX Bot API instance
      * @param properties the webhook configuration

@@ -26,9 +26,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import ru.max.botapi.core.MaxSerializer;
+import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.jackson.JacksonMaxSerializer;
 import ru.max.botapi.model.Update;
-import ru.max.botapi.webhook.WebhookHandler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -49,7 +49,7 @@ class MaxWebhookControllerTest {
     @Test
     void postWithValidBody_returns200AndCallsHandler() throws IOException {
         AtomicReference<Update> captured = new AtomicReference<>();
-        WebhookHandler handler = captured::set;
+        UpdateHandler handler = captured::set;
         MaxWebhookProperties props = new MaxWebhookProperties();
 
         MaxWebhookController controller =
@@ -66,7 +66,7 @@ class MaxWebhookControllerTest {
     @Test
     void postWithMessageCallback_returns200AndCallsHandler() throws IOException {
         AtomicReference<Update> captured = new AtomicReference<>();
-        WebhookHandler handler = captured::set;
+        UpdateHandler handler = captured::set;
         MaxWebhookProperties props = new MaxWebhookProperties();
 
         MaxWebhookController controller =
@@ -83,7 +83,7 @@ class MaxWebhookControllerTest {
     @Test
     void postWithValidSecretHeader_returns200() throws IOException {
         AtomicReference<Update> captured = new AtomicReference<>();
-        WebhookHandler handler = captured::set;
+        UpdateHandler handler = captured::set;
         MaxWebhookProperties props = new MaxWebhookProperties();
         props.setSecret("my-secret");
 
@@ -101,7 +101,7 @@ class MaxWebhookControllerTest {
     @Test
     void postWithInvalidSecret_returns401() throws IOException {
         AtomicReference<Update> captured = new AtomicReference<>();
-        WebhookHandler handler = captured::set;
+        UpdateHandler handler = captured::set;
         MaxWebhookProperties props = new MaxWebhookProperties();
         props.setSecret("my-secret");
 
@@ -119,7 +119,7 @@ class MaxWebhookControllerTest {
     @Test
     void postWithMissingSecretHeader_returns401() throws IOException {
         AtomicReference<Update> captured = new AtomicReference<>();
-        WebhookHandler handler = captured::set;
+        UpdateHandler handler = captured::set;
         MaxWebhookProperties props = new MaxWebhookProperties();
         props.setSecret("my-secret");
 
@@ -136,7 +136,7 @@ class MaxWebhookControllerTest {
     @Test
     void postWithNoSecretConfigured_skipsValidation() throws IOException {
         AtomicReference<Update> captured = new AtomicReference<>();
-        WebhookHandler handler = captured::set;
+        UpdateHandler handler = captured::set;
         MaxWebhookProperties props = new MaxWebhookProperties();
         // secret is null — no validation
 
@@ -153,7 +153,7 @@ class MaxWebhookControllerTest {
 
     @Test
     void handlerException_stillReturns200() throws IOException {
-        WebhookHandler handler = update -> {
+        UpdateHandler handler = update -> {
             throw new RuntimeException("handler exploded");
         };
         MaxWebhookProperties props = new MaxWebhookProperties();
@@ -170,7 +170,7 @@ class MaxWebhookControllerTest {
     @Test
     void deserializationError_returns200() {
         AtomicReference<Update> captured = new AtomicReference<>();
-        WebhookHandler handler = captured::set;
+        UpdateHandler handler = captured::set;
         MaxWebhookProperties props = new MaxWebhookProperties();
 
         MaxWebhookController controller =

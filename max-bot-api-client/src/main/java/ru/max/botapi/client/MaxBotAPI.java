@@ -531,6 +531,18 @@ public class MaxBotAPI implements AutoCloseable {
     }
 
     /**
+     * Returns the JSON serializer used by the underlying client.
+     *
+     * <p>This is the same serializer instance used for request/response
+     * serialization. Useful for webhook update deserialization.</p>
+     *
+     * @return the serializer; never {@code null}
+     */
+    public MaxSerializer serializer() {
+        return client.serializer();
+    }
+
+    /**
      * Returns the underlying {@link MaxClient} for advanced use cases.
      *
      * @return the MAX client

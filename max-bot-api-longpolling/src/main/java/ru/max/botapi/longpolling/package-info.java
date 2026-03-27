@@ -20,7 +20,7 @@
  * <p>Provides {@link ru.max.botapi.longpolling.MaxLongPollingConsumer}, which polls the
  * {@code GET /updates} endpoint in a dedicated virtual thread and dispatches each received
  * {@link ru.max.botapi.model.Update} to a user-supplied
- * {@link ru.max.botapi.longpolling.MaxLongPollingConsumer.UpdateHandler}.</p>
+ * {@link ru.max.botapi.core.UpdateHandler}.</p>
  *
  * <p>Features:</p>
  * <ul>

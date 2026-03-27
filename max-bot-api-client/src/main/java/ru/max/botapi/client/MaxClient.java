@@ -90,6 +90,15 @@ public class MaxClient {
     }
 
     /**
+     * Returns the JSON serializer used by this client.
+     *
+     * @return the serializer; never {@code null}
+     */
+    public MaxSerializer serializer() {
+        return serializer;
+    }
+
+    /**
      * Executes a request and deserializes the response to the given class.
      *
      * @param request      the API request

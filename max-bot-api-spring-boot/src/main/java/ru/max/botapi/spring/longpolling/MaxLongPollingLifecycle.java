@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.SmartLifecycle;
 
 import ru.max.botapi.client.MaxBotAPI;
+import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.longpolling.MaxLongPollingConsumer;
 
 /**
@@ -45,7 +46,7 @@ public class MaxLongPollingLifecycle implements SmartLifecycle {
             LoggerFactory.getLogger(MaxLongPollingLifecycle.class);
 
     private final MaxBotAPI api;
-    private final MaxLongPollingConsumer.UpdateHandler handler;
+    private final UpdateHandler handler;
     private final MaxLongPollingProperties properties;
     private volatile MaxLongPollingConsumer consumer;
     private volatile boolean running;
@@ -58,7 +59,7 @@ public class MaxLongPollingLifecycle implements SmartLifecycle {
      * @param properties the long-polling configuration; must not be {@code null}
      */
     public MaxLongPollingLifecycle(MaxBotAPI api,
-                                   MaxLongPollingConsumer.UpdateHandler handler,
+                                   UpdateHandler handler,
                                    MaxLongPollingProperties properties) {
         this.api = Objects.requireNonNull(api, "api must not be null");
         this.handler = Objects.requireNonNull(handler,
