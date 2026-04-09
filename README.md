@@ -198,6 +198,7 @@ MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
             // process message
         }
     })
+    .onError(e -> log.error("Polling error", e))  // optional; defaults to WARN logging
     .build();
 
 consumer.start();   // non-blocking; polling runs on a virtual thread
@@ -205,7 +206,7 @@ consumer.start();   // non-blocking; polling runs on a virtual thread
 consumer.stop();    // graceful shutdown
 ```
 
-The consumer calls `getUpdates` in a loop, tracking the marker returned by each response to avoid re-delivering events. Unhandled exceptions in the handler are caught and logged; the loop continues.
+The consumer calls `getUpdates` in a loop, tracking the marker returned by each response to avoid re-delivering events. Errors (network failures, API errors, handler exceptions) are passed to the `.onError()` callback; when not set, they are logged at WARN level. The loop always continues after an error with exponential backoff (1s → 2s → 4s → max 30s).
 
 ---
 
@@ -310,6 +311,15 @@ UpdateHandler updateHandler() {
             // process message
         }
     };
+}
+```
+
+To handle polling errors, declare a `PollingErrorHandler` bean. It is optional — when absent, errors are logged at WARN level:
+
+```java
+@Bean
+PollingErrorHandler pollingErrorHandler() {
+    return e -> log.error("Polling error", e);
 }
 ```
 

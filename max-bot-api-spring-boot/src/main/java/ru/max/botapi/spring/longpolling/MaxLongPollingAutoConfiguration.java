@@ -25,8 +25,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 import ru.max.botapi.client.MaxBotAPI;
+import ru.max.botapi.core.PollingErrorHandler;
 import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.longpolling.MaxLongPollingConsumer;
+import ru.max.botapi.model.Nullable;
 import ru.max.botapi.spring.MaxBotProperties;
 
 /**
@@ -37,8 +39,9 @@ import ru.max.botapi.spring.MaxBotProperties;
  *
  * <p>This configuration creates a {@link MaxLongPollingLifecycle} bean that
  * manages the consumer's lifecycle (start/stop) within the Spring context.
- * The user must provide an {@link UpdateHandler} bean containing the
- * application-specific update processing logic.</p>
+ * The user must provide an {@link UpdateHandler} bean. An optional
+ * {@link PollingErrorHandler} bean may be declared to receive polling errors;
+ * if absent, errors are logged at WARN level.</p>
  *
  * @see MaxLongPollingProperties
  * @see MaxLongPollingLifecycle
@@ -72,11 +75,13 @@ public class MaxLongPollingAutoConfiguration {
      * Creates the long-polling lifecycle manager.
      *
      * <p>Only created when both a {@link MaxBotAPI} bean and an
-     * {@link UpdateHandler} bean are present.</p>
+     * {@link UpdateHandler} bean are present. An optional
+     * {@link PollingErrorHandler} bean is wired in when available.</p>
      *
-     * @param api        the MAX Bot API instance
-     * @param handler    the user-provided update handler
-     * @param properties the long-polling configuration
+     * @param api          the MAX Bot API instance
+     * @param handler      the user-provided update handler
+     * @param properties   the long-polling configuration
+     * @param errorHandler optional error handler; {@code null} uses default WARN logging
      * @return a new lifecycle manager
      */
     @Bean
@@ -85,7 +90,8 @@ public class MaxLongPollingAutoConfiguration {
     public MaxLongPollingLifecycle maxLongPollingLifecycle(
             MaxBotAPI api,
             UpdateHandler handler,
-            MaxLongPollingProperties properties) {
-        return new MaxLongPollingLifecycle(api, handler, properties);
+            MaxLongPollingProperties properties,
+            @Nullable PollingErrorHandler errorHandler) {
+        return new MaxLongPollingLifecycle(api, handler, properties, errorHandler);
     }
 }

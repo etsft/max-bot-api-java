@@ -27,6 +27,7 @@ import org.springframework.context.annotation.Configuration;
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.MaxClientConfig;
 import ru.max.botapi.client.queries.GetUpdatesQuery;
+import ru.max.botapi.core.PollingErrorHandler;
 import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.longpolling.MaxLongPollingConsumer;
 import ru.max.botapi.model.UpdateList;
@@ -146,12 +147,41 @@ class MaxLongPollingAutoConfigurationTest {
                 });
     }
 
+    @Test
+    void lifecycleCreated_withPollingErrorHandler() {
+        contextRunner
+                .withUserConfiguration(HandlerWithErrorHandlerConfig.class)
+                .withPropertyValues(
+                        "max.bot.mode=longpolling",
+                        "max.bot.longpolling.token=test-token")
+                .run(context -> {
+                    assertThat(context).hasSingleBean(
+                            MaxLongPollingLifecycle.class);
+                    assertThat(context).hasSingleBean(
+                            PollingErrorHandler.class);
+                });
+    }
+
     @Configuration(proxyBeanMethods = false)
     static class HandlerConfig {
 
         @Bean
         UpdateHandler updateHandler() {
             return update -> { };
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class HandlerWithErrorHandlerConfig {
+
+        @Bean
+        UpdateHandler updateHandler() {
+            return update -> { };
+        }
+
+        @Bean
+        PollingErrorHandler pollingErrorHandler() {
+            return e -> { };
         }
     }
 
