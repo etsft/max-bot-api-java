@@ -23,6 +23,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
 
+import ru.max.botapi.model.UpdateType;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -44,22 +46,22 @@ class MaxLongPollingPropertiesTest {
         props.setToken("test-token");
         props.setPollTimeout(60);
         props.setUpdateTypes(
-                List.of("message_created", "message_callback"));
+                List.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK));
 
         assertThat(props.getToken()).isEqualTo("test-token");
         assertThat(props.getPollTimeout()).isEqualTo(60);
         assertThat(props.getUpdateTypes())
-                .containsExactly("message_created", "message_callback");
+                .containsExactly(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK);
     }
 
     @Test
     void getUpdateTypes_returnsUnmodifiableList() {
         MaxLongPollingProperties props = new MaxLongPollingProperties();
-        props.setUpdateTypes(List.of("message_created"));
+        props.setUpdateTypes(List.of(UpdateType.MESSAGE_CREATED));
 
-        List<String> returned = props.getUpdateTypes();
-        assertThat(returned).containsExactly("message_created");
-        assertThatThrownBy(() -> returned.add("message_callback"))
+        List<UpdateType> returned = props.getUpdateTypes();
+        assertThat(returned).containsExactly(UpdateType.MESSAGE_CREATED);
+        assertThatThrownBy(() -> returned.add(UpdateType.MESSAGE_CALLBACK))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
@@ -70,8 +72,7 @@ class MaxLongPollingPropertiesTest {
                 .withPropertyValues(
                         "max.bot.longpolling.token=yaml-test-token",
                         "max.bot.longpolling.poll-timeout=60",
-                        "max.bot.longpolling.update-types="
-                                + "message_created")
+                        "max.bot.longpolling.update-types=MESSAGE_CREATED")
                 .run(context -> {
                     assertThat(context).hasSingleBean(
                             MaxLongPollingProperties.class);
@@ -84,7 +85,7 @@ class MaxLongPollingPropertiesTest {
                     assertThat(properties.getPollTimeout())
                             .isEqualTo(60);
                     assertThat(properties.getUpdateTypes())
-                            .containsExactly("message_created");
+                            .containsExactly(UpdateType.MESSAGE_CREATED);
                 });
     }
 

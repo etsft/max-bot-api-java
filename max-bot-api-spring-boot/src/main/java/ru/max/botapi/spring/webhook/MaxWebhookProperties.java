@@ -22,6 +22,8 @@ import java.util.List;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import ru.max.botapi.model.UpdateType;
+
 /**
  * Configuration properties for the MAX Bot API webhook integration.
  *
@@ -41,8 +43,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       auto-register: true
  *       auto-unregister: true
  *       update-types:
- *         - message_created
- *         - message_callback
+ *         - MESSAGE_CREATED
+ *         - MESSAGE_CALLBACK
  * }</pre>
  */
 @ConfigurationProperties(prefix = "max.bot.webhook")
@@ -87,9 +89,9 @@ public class MaxWebhookProperties {
 
     /**
      * List of update types to subscribe to.
-     * When empty, all update types are received.
+     * When empty, all update types are received. Accepts {@link UpdateType} enum constants.
      */
-    private List<String> updateTypes = new ArrayList<>();
+    private List<UpdateType> updateTypes = new ArrayList<>();
 
     /**
      * Returns the bot access token.
@@ -204,7 +206,7 @@ public class MaxWebhookProperties {
      *
      * @return unmodifiable list of update types; empty list means all types
      */
-    public List<String> getUpdateTypes() {
+    public List<UpdateType> getUpdateTypes() {
         return Collections.unmodifiableList(updateTypes);
     }
 
@@ -213,7 +215,7 @@ public class MaxWebhookProperties {
      *
      * @param updateTypes the update type strings
      */
-    public void setUpdateTypes(List<String> updateTypes) {
+    public void setUpdateTypes(List<UpdateType> updateTypes) {
         this.updateTypes = updateTypes;
     }
 }

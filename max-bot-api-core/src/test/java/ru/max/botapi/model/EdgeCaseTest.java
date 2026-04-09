@@ -299,10 +299,10 @@ class EdgeCaseTest {
 
     @Test
     void subscriptionRequestBody_withSecret() {
-        var types = List.of("message_created", "message_edited");
+        var types = List.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_EDITED);
         var body = new SubscriptionRequestBody("https://example.com/wh", types, "my_secret");
         assertThat(body.url()).isEqualTo("https://example.com/wh");
-        assertThat(body.updateTypes()).containsExactly("message_created", "message_edited");
+        assertThat(body.updateTypes()).containsExactly(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_EDITED);
         assertThat(body.secret()).isEqualTo("my_secret");
     }
 
@@ -414,9 +414,9 @@ class EdgeCaseTest {
 
     @Test
     void subscription_defensiveCopy_updateTypes() {
-        var mutableList = new ArrayList<>(List.of("message_created"));
+        var mutableList = new ArrayList<>(List.of(UpdateType.MESSAGE_CREATED));
         var sub = new Subscription("https://example.com", mutableList);
-        mutableList.add("bot_added"); // modify original
+        mutableList.add(UpdateType.BOT_ADDED); // modify original
         assertThat(sub.updateTypes()).hasSize(1); // record's list is unaffected
     }
 }

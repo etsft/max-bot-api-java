@@ -31,6 +31,7 @@ import ru.max.botapi.core.PollingErrorHandler;
 import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.longpolling.MaxLongPollingConsumer;
 import ru.max.botapi.model.UpdateList;
+import ru.max.botapi.model.UpdateType;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -143,7 +144,7 @@ class MaxLongPollingAutoConfigurationTest {
                     assertThat(props.getPollTimeout())
                             .isEqualTo(60);
                     assertThat(props.getUpdateTypes())
-                            .containsExactly("message_created");
+                            .containsExactly(UpdateType.MESSAGE_CREATED);
                 });
     }
 

@@ -208,11 +208,51 @@ consumer.stop();    // graceful shutdown
 
 The consumer calls `getUpdates` in a loop, tracking the marker returned by each response to avoid re-delivering events. Errors (network failures, API errors, handler exceptions) are passed to the `.onError()` callback; when not set, they are logged at WARN level. The loop always continues after an error with exponential backoff (1s → 2s → 4s → max 30s).
 
+To receive only specific event types, use `.types()` with one or more `UpdateType` constants:
+
+```java
+consumer = MaxLongPollingConsumer.builder()
+    .api(api)
+    .handler(handler)
+    .types(Set.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK))
+    .build();
+```
+
+### Available update types
+
+| `UpdateType` constant | API value | Description |
+|---|---|---|
+| `MESSAGE_CREATED` | `message_created` | A new message was sent to a chat |
+| `MESSAGE_CALLBACK` | `message_callback` | A user tapped an inline keyboard button |
+| `MESSAGE_EDITED` | `message_edited` | An existing message was edited |
+| `MESSAGE_REMOVED` | `message_removed` | A message was deleted |
+| `BOT_ADDED` | `bot_added` | The bot was added to a chat |
+| `BOT_REMOVED` | `bot_removed` | The bot was removed from a chat |
+| `USER_ADDED` | `user_added` | A user was added to a chat |
+| `USER_REMOVED` | `user_removed` | A user was removed from a chat |
+| `BOT_STARTED` | `bot_started` | A user started a direct conversation with the bot |
+| `BOT_STOPPED` | `bot_stopped` | A user stopped (blocked) the bot |
+| `CHAT_TITLE_CHANGED` | `chat_title_changed` | The chat title was changed |
+| `MESSAGE_CONSTRUCTION_REQUEST` | `message_construction_request` | A message construction session was requested |
+| `MESSAGE_CONSTRUCTED` | `message_constructed` | A message construction session completed |
+| `MESSAGE_CHAT_CREATED` | `message_chat_created` | A new chat was created via a message |
+
 ---
 
 ## Webhooks
 
 `MaxWebhookServer` listens for HTTPS POST requests from the MAX platform and dispatches each incoming update to a handler. It validates the secret header before processing.
+
+To receive only specific event types, pass a set of `UpdateType` constants to `register()`:
+
+```java
+server.register(api, "https://example.com/webhook",
+    Set.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK));
+// or pass null to receive all update types
+server.register(api, "https://example.com/webhook", null);
+```
+
+See the [update types table](#available-update-types) above.
 
 ```java
 MaxWebhookServer server = MaxWebhookServer.builder()
@@ -277,7 +317,7 @@ UpdateHandler updateHandler() {
 | `max.bot.webhook.url` | — | Public URL for webhook auto-registration. |
 | `max.bot.webhook.auto-register` | `true` | Register webhook subscription on startup. |
 | `max.bot.webhook.auto-unregister` | `true` | Unsubscribe on application shutdown. |
-| `max.bot.webhook.update-types` | — | List of update types to subscribe to (empty = all). |
+| `max.bot.webhook.update-types` | — | List of `UpdateType` constants to subscribe to (empty = all). See [update types table](#available-update-types). |
 
 #### Long Polling Mode
 
@@ -291,8 +331,8 @@ max:
       token: "your-bot-token"
       poll-timeout: 30
       update-types:
-        - message_created
-        - message_callback
+        - MESSAGE_CREATED
+        - MESSAGE_CALLBACK
 ```
 
 The starter automatically:
@@ -329,7 +369,7 @@ PollingErrorHandler pollingErrorHandler() {
 |---|---|---|
 | `max.bot.longpolling.token` | — | Bot access token (required). |
 | `max.bot.longpolling.poll-timeout` | — | Poll timeout in seconds (defaults to `MaxClientConfig` value, 30s). |
-| `max.bot.longpolling.update-types` | — | List of update types to receive (empty = all). |
+| `max.bot.longpolling.update-types` | — | List of `UpdateType` constants to receive (empty = all). See [update types table](#available-update-types). |
 
 #### Choosing Between Modes
 

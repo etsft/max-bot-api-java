@@ -22,13 +22,17 @@ import java.util.List;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import ru.max.botapi.model.UpdateType;
+
 /**
  * Configuration properties for the MAX Bot API long-polling integration.
  *
  * <p>All properties are bound under the {@code max.bot.longpolling} prefix in
  * {@code application.yml} or {@code application.properties}.</p>
  *
- * <p>Example configuration:</p>
+ * <p>Update types may be specified either as raw strings or as {@link UpdateType}
+ * enum constants. Both forms are accepted in YAML:</p>
+ *
  * <pre>{@code
  * max:
  *   bot:
@@ -36,6 +40,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     longpolling:
  *       token: "your-bot-token"
  *       poll-timeout: 30
+ *       update-types:
+ *         - MESSAGE_CREATED
+ *         - MESSAGE_CALLBACK
+ * }</pre>
+ *
+ * <p>Or using the raw API strings (also supported):</p>
+ *
+ * <pre>{@code
  *       update-types:
  *         - message_created
  *         - message_callback
@@ -57,10 +69,10 @@ public class MaxLongPollingProperties {
     private Integer pollTimeout;
 
     /**
-     * List of update types to subscribe to.
+     * List of update types to filter.
      * When empty, all update types are received.
      */
-    private List<String> updateTypes = new ArrayList<>();
+    private List<UpdateType> updateTypes = new ArrayList<>();
 
     /**
      * Returns the bot access token.
@@ -99,20 +111,23 @@ public class MaxLongPollingProperties {
     }
 
     /**
-     * Returns an unmodifiable view of the update types to subscribe to.
+     * Returns an unmodifiable view of the update types to filter.
      *
-     * @return unmodifiable list of update types; empty list means all types
+     * @return unmodifiable list of update type strings; empty list means all types
      */
-    public List<String> getUpdateTypes() {
+    public List<UpdateType> getUpdateTypes() {
         return Collections.unmodifiableList(updateTypes);
     }
 
     /**
-     * Sets the list of update types to subscribe to.
+     * Sets the list of update types to filter.
+     * Accepts {@link UpdateType} enum constants.
      *
      * @param updateTypes the update type strings
      */
-    public void setUpdateTypes(List<String> updateTypes) {
+    public void setUpdateTypes(List<UpdateType> updateTypes) {
         this.updateTypes = updateTypes;
     }
+
 }
+

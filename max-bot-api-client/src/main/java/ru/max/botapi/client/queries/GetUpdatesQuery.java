@@ -18,12 +18,12 @@ package ru.max.botapi.client.queries;
 
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import ru.max.botapi.client.HttpMethod;
 import ru.max.botapi.client.MaxClient;
 import ru.max.botapi.client.MaxQuery;
 import ru.max.botapi.model.UpdateList;
+import ru.max.botapi.model.UpdateType;
 
 /**
  * Query for {@code GET /updates} — long-polls for incoming bot updates.
@@ -34,6 +34,7 @@ import ru.max.botapi.model.UpdateList;
  *     .limit(100)
  *     .timeout(30)
  *     .marker(lastMarker)
+ *     .types(Set.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK))
  *     .execute();
  * }</pre>
  */
@@ -84,13 +85,13 @@ public class GetUpdatesQuery extends MaxQuery<UpdateList> {
     /**
      * Filters updates to only the specified update types.
      *
-     * @param types the set of update type strings; must not be {@code null}
+     * @param types the set of update type constants; must not be {@code null}
      * @return this query for chaining
      */
-    public GetUpdatesQuery types(Set<String> types) {
+    public GetUpdatesQuery types(Set<UpdateType> types) {
         Objects.requireNonNull(types, "types must not be null");
         if (!types.isEmpty()) {
-            queryParams.put("types", String.join(",", types));
+            queryParams.put("types", String.join(",", UpdateType.toStrings(types)));
         }
         return this;
     }

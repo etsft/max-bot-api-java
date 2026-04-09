@@ -23,6 +23,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
 
+import ru.max.botapi.model.UpdateType;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -51,7 +53,7 @@ class MaxWebhookPropertiesTest {
         props.setUrl("https://example.com/webhook");
         props.setAutoRegister(false);
         props.setAutoUnregister(false);
-        props.setUpdateTypes(List.of("message_created", "message_callback"));
+        props.setUpdateTypes(List.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK));
 
         assertThat(props.getToken()).isEqualTo("test-token");
         assertThat(props.getPath()).isEqualTo("/custom/path");
@@ -60,17 +62,17 @@ class MaxWebhookPropertiesTest {
         assertThat(props.isAutoRegister()).isFalse();
         assertThat(props.isAutoUnregister()).isFalse();
         assertThat(props.getUpdateTypes())
-                .containsExactly("message_created", "message_callback");
+                .containsExactly(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK);
     }
 
     @Test
     void getUpdateTypes_returnsUnmodifiableList() {
         MaxWebhookProperties props = new MaxWebhookProperties();
-        props.setUpdateTypes(List.of("message_created"));
+        props.setUpdateTypes(List.of(UpdateType.MESSAGE_CREATED));
 
-        List<String> returned = props.getUpdateTypes();
-        assertThat(returned).containsExactly("message_created");
-        assertThatThrownBy(() -> returned.add("message_callback"))
+        List<UpdateType> returned = props.getUpdateTypes();
+        assertThat(returned).containsExactly(UpdateType.MESSAGE_CREATED);
+        assertThatThrownBy(() -> returned.add(UpdateType.MESSAGE_CALLBACK))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
@@ -85,7 +87,7 @@ class MaxWebhookPropertiesTest {
                         "max.bot.webhook.url=https://yaml.example.com/webhook",
                         "max.bot.webhook.auto-register=false",
                         "max.bot.webhook.auto-unregister=false",
-                        "max.bot.webhook.update-types=message_created")
+                        "max.bot.webhook.update-types=MESSAGE_CREATED")
                 .run(context -> {
                     assertThat(context).hasSingleBean(
                             MaxWebhookProperties.class);
@@ -103,7 +105,7 @@ class MaxWebhookPropertiesTest {
                     assertThat(properties.isAutoRegister()).isFalse();
                     assertThat(properties.isAutoUnregister()).isFalse();
                     assertThat(properties.getUpdateTypes())
-                            .containsExactly("message_created");
+                            .containsExactly(UpdateType.MESSAGE_CREATED);
                 });
     }
 

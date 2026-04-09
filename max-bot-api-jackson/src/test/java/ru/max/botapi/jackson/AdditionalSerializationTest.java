@@ -71,6 +71,7 @@ import ru.max.botapi.model.Subscription;
 import ru.max.botapi.model.TextFormat;
 import ru.max.botapi.model.Update;
 import ru.max.botapi.model.UpdateList;
+import ru.max.botapi.model.UpdateType;
 import ru.max.botapi.model.UploadEndpoint;
 import ru.max.botapi.model.UploadedInfo;
 import ru.max.botapi.model.User;
@@ -222,11 +223,12 @@ class AdditionalSerializationTest {
         @Test
         void subscription_roundTrip() {
             var sub = new Subscription("https://example.com/webhook",
-                    List.of("message_created", "bot_started"));
+                    List.of(UpdateType.MESSAGE_CREATED, UpdateType.BOT_STARTED));
             String json = serializer.serialize(sub);
             Subscription deserialized = serializer.deserialize(json, Subscription.class);
             assertThat(deserialized.url()).isEqualTo("https://example.com/webhook");
-            assertThat(deserialized.updateTypes()).containsExactly("message_created", "bot_started");
+            assertThat(deserialized.updateTypes()).containsExactly(
+                    UpdateType.MESSAGE_CREATED, UpdateType.BOT_STARTED);
         }
 
         @Test

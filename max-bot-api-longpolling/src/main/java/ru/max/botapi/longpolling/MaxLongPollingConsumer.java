@@ -17,6 +17,7 @@
 package ru.max.botapi.longpolling;
 
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -30,6 +31,7 @@ import ru.max.botapi.client.queries.GetUpdatesQuery;
 import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.model.Update;
 import ru.max.botapi.model.UpdateList;
+import ru.max.botapi.model.UpdateType;
 
 /**
  * Long-polling consumer for the MAX Bot API.
@@ -65,7 +67,7 @@ public class MaxLongPollingConsumer implements AutoCloseable {
     private final MaxBotAPI api;
     private final UpdateHandler handler;
     private final Consumer<Exception> errorHandler;
-    private final Set<String> updateTypes;
+    private final Set<UpdateType> updateTypes;
     private final int pollTimeout;
 
     private final AtomicBoolean started = new AtomicBoolean(false);
@@ -78,7 +80,9 @@ public class MaxLongPollingConsumer implements AutoCloseable {
         this.errorHandler = builder.errorHandler != null ? builder.errorHandler : DEFAULT_ERROR_HANDLER;
         this.updateTypes = builder.updateTypes == null
                 ? Collections.emptySet()
-                : Collections.unmodifiableSet(builder.updateTypes);
+                : Collections.unmodifiableSet(builder.updateTypes.isEmpty()
+                        ? EnumSet.noneOf(UpdateType.class)
+                        : EnumSet.copyOf(builder.updateTypes));
         this.pollTimeout = builder.pollTimeout;
     }
 
@@ -207,7 +211,7 @@ public class MaxLongPollingConsumer implements AutoCloseable {
         private MaxBotAPI api;
         private UpdateHandler handler;
         private Consumer<Exception> errorHandler;
-        private Set<String> updateTypes;
+        private Set<UpdateType> updateTypes;
         private Integer pollTimeout;
 
         private Builder() {
@@ -251,10 +255,10 @@ public class MaxLongPollingConsumer implements AutoCloseable {
          * Filters polling to the specified update types.
          * When {@code null} or empty, all update types are received.
          *
-         * @param updateTypes the set of update type strings to filter, may be {@code null}
+         * @param updateTypes the set of update type constants to filter, may be {@code null}
          * @return this builder
          */
-        public Builder updateTypes(Set<String> updateTypes) {
+        public Builder types(Set<UpdateType> updateTypes) {
             this.updateTypes = updateTypes;
             return this;
         }

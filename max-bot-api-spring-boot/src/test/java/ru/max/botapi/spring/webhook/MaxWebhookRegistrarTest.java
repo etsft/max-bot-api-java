@@ -26,6 +26,7 @@ import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.queries.SubscribeQuery;
 import ru.max.botapi.client.queries.UnsubscribeQuery;
 import ru.max.botapi.model.SubscriptionRequestBody;
+import ru.max.botapi.model.UpdateType;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -52,7 +53,7 @@ class MaxWebhookRegistrarTest {
         MaxWebhookProperties props = new MaxWebhookProperties();
         props.setUrl("https://example.com/webhook");
         props.setSecret("test-secret");
-        props.setUpdateTypes(List.of("message_created"));
+        props.setUpdateTypes(List.of(UpdateType.MESSAGE_CREATED));
 
         MaxWebhookRegistrar registrar = new MaxWebhookRegistrar(api, props);
         ApplicationReadyEvent event = mock(ApplicationReadyEvent.class);
@@ -62,7 +63,7 @@ class MaxWebhookRegistrarTest {
         assertThat(captured.get()).isNotNull();
         assertThat(captured.get().url()).isEqualTo("https://example.com/webhook");
         assertThat(captured.get().secret()).isEqualTo("test-secret");
-        assertThat(captured.get().updateTypes()).containsExactly("message_created");
+        assertThat(captured.get().updateTypes()).containsExactly(UpdateType.MESSAGE_CREATED);
     }
 
     @Test

@@ -32,6 +32,7 @@ import ru.max.botapi.core.PollingErrorHandler;
 import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.longpolling.MaxLongPollingConsumer;
 import ru.max.botapi.model.UpdateList;
+import ru.max.botapi.model.UpdateType;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -116,7 +117,7 @@ class MaxLongPollingLifecycleTest {
         UpdateHandler handler = update -> { };
 
         MaxLongPollingProperties props = new MaxLongPollingProperties();
-        props.setUpdateTypes(List.of("message_created", "message_callback"));
+        props.setUpdateTypes(List.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK));
 
         MaxLongPollingLifecycle lifecycle =
                 new MaxLongPollingLifecycle(api, handler, props, null);

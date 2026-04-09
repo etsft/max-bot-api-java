@@ -23,11 +23,11 @@ import java.util.Objects;
  * A webhook subscription.
  *
  * @param url         webhook callback URL
- * @param updateTypes list of update types to receive (null for all)
+ * @param updateTypes list of update types to receive; {@code null} means all types
  */
 public record Subscription(
         String url,
-        @Nullable List<String> updateTypes
+        @Nullable List<UpdateType> updateTypes
 ) {
 
     /**

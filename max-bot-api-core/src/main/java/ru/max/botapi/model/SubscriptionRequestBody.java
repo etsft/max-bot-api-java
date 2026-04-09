@@ -23,12 +23,12 @@ import java.util.Objects;
  * Request body for creating a webhook subscription.
  *
  * @param url         webhook callback URL
- * @param updateTypes list of update types to subscribe to (null for all)
+ * @param updateTypes update types to subscribe to; {@code null} means all types
  * @param secret      optional secret for request verification
  */
 public record SubscriptionRequestBody(
         String url,
-        @Nullable List<String> updateTypes,
+        @Nullable List<UpdateType> updateTypes,
         @Nullable String secret
 ) {
 

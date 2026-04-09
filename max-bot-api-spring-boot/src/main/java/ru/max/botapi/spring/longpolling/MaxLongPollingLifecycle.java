@@ -16,7 +16,7 @@
 
 package ru.max.botapi.spring.longpolling;
 
-import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Set;
 
@@ -29,6 +29,7 @@ import ru.max.botapi.core.PollingErrorHandler;
 import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.longpolling.MaxLongPollingConsumer;
 import ru.max.botapi.model.Nullable;
+import ru.max.botapi.model.UpdateType;
 
 /**
  * Spring {@link SmartLifecycle} that manages the {@link MaxLongPollingConsumer}.
@@ -93,8 +94,8 @@ public class MaxLongPollingLifecycle implements SmartLifecycle {
         }
 
         if (!properties.getUpdateTypes().isEmpty()) {
-            Set<String> types = new HashSet<>(properties.getUpdateTypes());
-            builder.updateTypes(types);
+            Set<UpdateType> types = EnumSet.copyOf(properties.getUpdateTypes());
+            builder.types(types);
         }
 
         consumer = builder.build();

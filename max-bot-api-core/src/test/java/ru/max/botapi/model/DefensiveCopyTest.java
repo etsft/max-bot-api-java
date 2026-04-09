@@ -232,11 +232,11 @@ class DefensiveCopyTest {
 
     @Test
     void subscription_updateTypes_defensiveCopy() {
-        var mutable = new ArrayList<>(List.of("message_created", "message_edited"));
+        var mutable = new ArrayList<>(List.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_EDITED));
         var sub = new Subscription("http://example.com", mutable);
         mutable.clear();
         assertThat(sub.updateTypes()).hasSize(2);
-        assertThatThrownBy(() -> sub.updateTypes().add("extra"))
+        assertThatThrownBy(() -> sub.updateTypes().add(UpdateType.MESSAGE_EDITED))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
@@ -248,11 +248,11 @@ class DefensiveCopyTest {
 
     @Test
     void subscriptionRequestBody_updateTypes_defensiveCopy() {
-        var mutable = new ArrayList<>(List.of("message_created"));
+        var mutable = new ArrayList<>(List.of(UpdateType.MESSAGE_CREATED));
         var body = new SubscriptionRequestBody("http://example.com", mutable, null);
         mutable.clear();
         assertThat(body.updateTypes()).hasSize(1);
-        assertThatThrownBy(() -> body.updateTypes().add("extra"))
+        assertThatThrownBy(() -> body.updateTypes().add(UpdateType.MESSAGE_EDITED))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 

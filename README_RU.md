@@ -208,11 +208,51 @@ consumer.stop();    // корректное завершение работы
 
 Потребитель вызывает `getUpdates` в цикле, отслеживая маркер, возвращённый каждым ответом, чтобы исключить повторную доставку событий. Ошибки (сетевые сбои, ошибки API, исключения в обработчике) передаются в коллбэк `.onError()`; если он не задан, ошибки логируются на уровне WARN. После каждой ошибки цикл продолжает работу с экспоненциальным откатом (1с → 2с → 4с → максимум 30с).
 
+Для получения только определённых типов событий используйте `.types()` с константами `UpdateType`:
+
+```java
+consumer = MaxLongPollingConsumer.builder()
+    .api(api)
+    .handler(handler)
+    .types(Set.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK))
+    .build();
+```
+
+### Доступные типы обновлений
+
+| Константа `UpdateType` | Значение API | Описание |
+|---|---|---|
+| `MESSAGE_CREATED` | `message_created` | Новое сообщение отправлено в чат |
+| `MESSAGE_CALLBACK` | `message_callback` | Пользователь нажал кнопку встроенной клавиатуры |
+| `MESSAGE_EDITED` | `message_edited` | Существующее сообщение отредактировано |
+| `MESSAGE_REMOVED` | `message_removed` | Сообщение удалено |
+| `BOT_ADDED` | `bot_added` | Бот добавлен в чат |
+| `BOT_REMOVED` | `bot_removed` | Бот удалён из чата |
+| `USER_ADDED` | `user_added` | Пользователь добавлен в чат |
+| `USER_REMOVED` | `user_removed` | Пользователь удалён из чата |
+| `BOT_STARTED` | `bot_started` | Пользователь начал прямой диалог с ботом |
+| `BOT_STOPPED` | `bot_stopped` | Пользователь остановил (заблокировал) бота |
+| `CHAT_TITLE_CHANGED` | `chat_title_changed` | Изменился заголовок чата |
+| `MESSAGE_CONSTRUCTION_REQUEST` | `message_construction_request` | Запрошена сессия конструирования сообщения |
+| `MESSAGE_CONSTRUCTED` | `message_constructed` | Сессия конструирования сообщения завершена |
+| `MESSAGE_CHAT_CREATED` | `message_chat_created` | Чат создан через сообщение |
+
 ---
 
 ## Webhooks
 
 `MaxWebhookServer` ожидает HTTPS POST-запросы от платформы MAX и передаёт каждое входящее обновление обработчику. Перед обработкой выполняется проверка секретного заголовка.
+
+Для получения только определённых типов событий передайте множество `UpdateType` в метод `register()`:
+
+```java
+server.register(api, "https://example.com/webhook",
+    Set.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK));
+// или null, чтобы получать все типы обновлений
+server.register(api, "https://example.com/webhook", null);
+```
+
+См. [таблицу типов обновлений](#доступные-типы-обновлений) выше.
 
 ```java
 MaxWebhookServer server = MaxWebhookServer.builder()
@@ -277,7 +317,7 @@ UpdateHandler updateHandler() {
 | `max.bot.webhook.url` | — | Публичный URL для автоматической регистрации webhook. |
 | `max.bot.webhook.auto-register` | `true` | Регистрировать подписку webhook при запуске. |
 | `max.bot.webhook.auto-unregister` | `true` | Отписываться при завершении работы приложения. |
-| `max.bot.webhook.update-types` | — | Список типов обновлений для подписки (пустой = все). |
+| `max.bot.webhook.update-types` | — | Список констант `UpdateType` для подписки (пустой = все). См. [таблицу типов](#доступные-типы-обновлений). |
 
 #### Режим Long Polling
 
@@ -291,8 +331,8 @@ max:
       token: "your-bot-token"
       poll-timeout: 30
       update-types:
-        - message_created
-        - message_callback
+        - MESSAGE_CREATED
+        - MESSAGE_CALLBACK
 ```
 
 Стартер автоматически:
@@ -329,7 +369,7 @@ PollingErrorHandler pollingErrorHandler() {
 |---|---|---|
 | `max.bot.longpolling.token` | — | Токен доступа бота (обязательный). |
 | `max.bot.longpolling.poll-timeout` | — | Таймаут опроса в секундах (по умолчанию из `MaxClientConfig`, 30 сек). |
-| `max.bot.longpolling.update-types` | — | Список типов обновлений для получения (пустой = все). |
+| `max.bot.longpolling.update-types` | — | Список констант `UpdateType` для получения (пустой = все). См. [таблицу типов](#доступные-типы-обновлений). |
 
 #### Выбор между режимами
 

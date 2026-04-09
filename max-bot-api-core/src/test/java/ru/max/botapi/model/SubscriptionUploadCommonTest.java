@@ -29,9 +29,9 @@ class SubscriptionUploadCommonTest {
 
     @Test
     void subscription_construction() {
-        var sub = new Subscription("http://hook", List.of("message_created"));
+        var sub = new Subscription("http://hook", List.of(UpdateType.MESSAGE_CREATED));
         assertThat(sub.url()).isEqualTo("http://hook");
-        assertThat(sub.updateTypes()).containsExactly("message_created");
+        assertThat(sub.updateTypes()).containsExactly(UpdateType.MESSAGE_CREATED);
     }
 
     @Test

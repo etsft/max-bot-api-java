@@ -34,6 +34,7 @@ import ru.max.botapi.client.MaxClient;
 import ru.max.botapi.client.MaxClientConfig;
 import ru.max.botapi.jackson.JacksonMaxSerializer;
 import ru.max.botapi.model.Update;
+import ru.max.botapi.model.UpdateType;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
@@ -257,7 +258,7 @@ class MaxLongPollingConsumerTest {
         MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
                 .api(api)
                 .pollTimeout(1)
-                .updateTypes(Set.of("message_created"))
+                .types(Set.of(UpdateType.MESSAGE_CREATED))
                 .handler(update -> latch.countDown())
                 .build();
 

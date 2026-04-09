@@ -27,6 +27,7 @@ import org.springframework.context.ApplicationListener;
 
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.model.SubscriptionRequestBody;
+import ru.max.botapi.model.UpdateType;
 
 /**
  * Manages webhook lifecycle: registers the webhook URL with the MAX platform
@@ -87,7 +88,7 @@ public class MaxWebhookRegistrar
             return;
         }
 
-        List<String> updateTypes = properties.getUpdateTypes().isEmpty()
+        List<UpdateType> updateTypes = properties.getUpdateTypes().isEmpty()
                 ? null
                 : List.copyOf(properties.getUpdateTypes());
 

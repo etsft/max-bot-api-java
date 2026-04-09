@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.Executors;
 
 import javax.net.ssl.SSLContext;
@@ -39,6 +40,7 @@ import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.model.Nullable;
 import ru.max.botapi.model.SubscriptionRequestBody;
 import ru.max.botapi.model.Update;
+import ru.max.botapi.model.UpdateType;
 
 /**
  * Embedded HTTP/HTTPS webhook server for receiving MAX Bot API updates.
@@ -141,12 +143,13 @@ public class MaxWebhookServer implements AutoCloseable {
      *
      * @param api         the {@link MaxBotAPI} instance to use for registration; must not be {@code null}
      * @param webhookUrl  the publicly reachable URL MAX should call; must not be {@code null}
-     * @param updateTypes optional list of update type strings to subscribe to; {@code null} means all types
+     * @param updateTypes optional set of update types to subscribe to; {@code null} means all types
      */
-    public void register(MaxBotAPI api, String webhookUrl, @Nullable List<String> updateTypes) {
+    public void register(MaxBotAPI api, String webhookUrl, @Nullable Set<UpdateType> updateTypes) {
         Objects.requireNonNull(api, "api must not be null");
         Objects.requireNonNull(webhookUrl, "webhookUrl must not be null");
-        SubscriptionRequestBody body = new SubscriptionRequestBody(webhookUrl, updateTypes, secret);
+        List<UpdateType> typeList = updateTypes == null ? null : List.copyOf(updateTypes);
+        SubscriptionRequestBody body = new SubscriptionRequestBody(webhookUrl, typeList, secret);
         api.subscribe(body).execute();
         LOG.info("Webhook registered: url={}", webhookUrl);
     }
