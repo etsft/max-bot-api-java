@@ -36,10 +36,11 @@ class AttachmentTest {
 
     @Test
     void videoAttachment_construction() {
-        var payload = new VideoAttachment.VideoPayload("http://vid", "vtok");
-        var att = new VideoAttachment(payload, "http://thumb", 1920, 1080, 120);
+        var payload = new VideoAttachment.VideoPayload("http://vid", "vtok", null);
+        var thumb = new VideoThumbnail("http://thumb");
+        var att = new VideoAttachment(payload, thumb, 1920, 1080, 120);
         assertThat(att.type()).isEqualTo("video");
-        assertThat(att.thumbnail()).isEqualTo("http://thumb");
+        assertThat(att.thumbnail().url()).isEqualTo("http://thumb");
         assertThat(att.width()).isEqualTo(1920);
     }
 
@@ -110,7 +111,7 @@ class AttachmentTest {
     void exhaustiveSwitch_coversAllTypes() {
         Attachment[] all = {
                 new PhotoAttachment(new PhotoAttachment.PhotoPayload("u", "t", 1)),
-                new VideoAttachment(new VideoAttachment.VideoPayload("u", "t"),
+                new VideoAttachment(new VideoAttachment.VideoPayload("u", "t", null),
                         null, null, null, null),
                 new AudioAttachment(new MediaPayload("u", "t")),
                 new FileAttachment(new MediaPayload("u", "t"), "f", 0),

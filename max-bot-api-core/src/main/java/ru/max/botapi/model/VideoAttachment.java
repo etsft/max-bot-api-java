@@ -19,17 +19,17 @@ package ru.max.botapi.model;
 import java.util.Objects;
 
 /**
- * Video attachment.
+ * Video attachment received in an incoming message.
  *
- * @param payload   video payload with URL and token
- * @param thumbnail optional thumbnail URL
+ * @param payload   video payload with URL, token, and internal ID
+ * @param thumbnail optional thumbnail object with its own URL
  * @param width     optional video width in pixels
  * @param height    optional video height in pixels
  * @param duration  optional video duration in seconds
  */
 public record VideoAttachment(
         VideoPayload payload,
-        @Nullable String thumbnail,
+        @Nullable VideoThumbnail thumbnail,
         @Nullable Integer width,
         @Nullable Integer height,
         @Nullable Integer duration
@@ -51,12 +51,13 @@ public record VideoAttachment(
     }
 
     /**
-     * Payload for a video attachment.
+     * Payload of an incoming video attachment.
      *
-     * @param url   video URL
-     * @param token video token
+     * @param url   video streaming URL
+     * @param token video token (stable reference for the video)
+     * @param id    optional internal video ID
      */
-    public record VideoPayload(String url, String token) {
+    public record VideoPayload(String url, String token, @Nullable Long id) {
 
         /**
          * Creates a VideoPayload.

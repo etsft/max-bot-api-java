@@ -19,11 +19,11 @@ package ru.max.botapi.model;
 import java.util.Objects;
 
 /**
- * Detailed information about a video attachment.
+ * Detailed information about a video attachment returned by {@code GET /videos/{videoToken}}.
  *
  * @param url       video URL
  * @param token     video token
- * @param thumbnail optional thumbnail URL
+ * @param thumbnail optional thumbnail object with its own URL
  * @param width     optional video width in pixels
  * @param height    optional video height in pixels
  * @param duration  optional duration in seconds
@@ -31,7 +31,7 @@ import java.util.Objects;
 public record VideoAttachmentDetails(
         String url,
         String token,
-        @Nullable String thumbnail,
+        @Nullable VideoThumbnail thumbnail,
         @Nullable Integer width,
         @Nullable Integer height,
         @Nullable Integer duration

@@ -2,6 +2,8 @@
   "sender": {
     "user_id": 99001,
     "name": "John Doe",
+    "first_name": "John",
+    "last_name": "Doe",
     "username": "johndoe",
     "is_bot": false,
     "last_activity_time": 1700000100000
@@ -20,9 +22,12 @@
         "type": "video",
         "payload": {
           "url": "https://example.com/video.mp4",
-          "token": "video_token_456"
+          "token": "video_token_456",
+          "id": 13340073811828
         },
-        "thumbnail": "https://example.com/thumb.jpg",
+        "thumbnail": {
+          "url": "https://example.com/thumb.jpg"
+        },
         "width": 1920,
         "height": 1080,
         "duration": 120

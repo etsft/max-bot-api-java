@@ -64,8 +64,9 @@ class SubscriptionUploadCommonTest {
     @Test
     void videoAttachmentDetails_construction() {
         var details = new VideoAttachmentDetails(
-                "http://vid", "vtok", "http://thumb", 1920, 1080, 120);
+                "http://vid", "vtok", new VideoThumbnail("http://thumb"), 1920, 1080, 120);
         assertThat(details.url()).isEqualTo("http://vid");
+        assertThat(details.thumbnail().url()).isEqualTo("http://thumb");
         assertThat(details.duration()).isEqualTo(120);
     }
 

@@ -501,7 +501,7 @@ class AdditionalIntegrationTest {
                                 {
                                   "url": "https://cdn.example.com/vid.mp4",
                                   "token": "video_token_xyz",
-                                  "thumbnail": "https://cdn.example.com/thumb.jpg",
+                                  "thumbnail": { "url": "https://cdn.example.com/thumb.jpg" },
                                   "width": 3840,
                                   "height": 2160,
                                   "duration": 300
@@ -512,7 +512,7 @@ class AdditionalIntegrationTest {
 
         assertThat(details.url()).isEqualTo("https://cdn.example.com/vid.mp4");
         assertThat(details.token()).isEqualTo("video_token_xyz");
-        assertThat(details.thumbnail()).isEqualTo("https://cdn.example.com/thumb.jpg");
+        assertThat(details.thumbnail().url()).isEqualTo("https://cdn.example.com/thumb.jpg");
         assertThat(details.width()).isEqualTo(3840);
         assertThat(details.height()).isEqualTo(2160);
         assertThat(details.duration()).isEqualTo(300);

@@ -21,18 +21,28 @@ import java.util.Objects;
 import ru.max.botapi.client.HttpMethod;
 import ru.max.botapi.client.MaxClient;
 import ru.max.botapi.client.MaxQuery;
-import ru.max.botapi.model.SimpleQueryResult;
+import ru.max.botapi.model.AddMembersResult;
 import ru.max.botapi.model.UserIdsList;
 
 /**
  * Query for {@code POST /chats/{chatId}/members} — adds members to a chat.
  *
+ * <p>When all users are added successfully, {@link AddMembersResult#success()} is {@code true}.
+ * When some or all users could not be added (e.g. due to privacy settings),
+ * {@link AddMembersResult#success()} is {@code false} and
+ * {@link AddMembersResult#failedUserIds()} lists the affected users with
+ * per-user error details in {@link AddMembersResult#failedUserDetails()}.</p>
+ *
  * <p>Example usage:</p>
  * <pre>{@code
- * api.addMembers(new UserIdsList(List.of(111L, 222L)), 123456789L).execute();
+ * AddMembersResult result = api.addMembers(new UserIdsList(List.of(111L, 222L)), 123456789L).execute();
+ * if (!result.success()) {
+ *     result.failedUserDetails().forEach(f ->
+ *         System.out.println(f.errorCode() + " for " + f.userIds()));
+ * }
  * }</pre>
  */
-public class AddMembersQuery extends MaxQuery<SimpleQueryResult> {
+public class AddMembersQuery extends MaxQuery<AddMembersResult> {
 
     /**
      * Creates an AddMembersQuery.
@@ -42,7 +52,7 @@ public class AddMembersQuery extends MaxQuery<SimpleQueryResult> {
      * @param chatId  the chat identifier
      */
     public AddMembersQuery(MaxClient client, UserIdsList userIds, long chatId) {
-        super(client, "/chats/" + chatId + "/members", HttpMethod.POST, SimpleQueryResult.class);
+        super(client, "/chats/" + chatId + "/members", HttpMethod.POST, AddMembersResult.class);
         this.body = Objects.requireNonNull(userIds, "userIds must not be null");
     }
 }

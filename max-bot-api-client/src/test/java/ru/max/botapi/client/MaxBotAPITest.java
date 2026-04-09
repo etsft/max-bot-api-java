@@ -25,6 +25,8 @@ import org.junit.jupiter.api.Test;
 
 import ru.max.botapi.jackson.JacksonMaxSerializer;
 import ru.max.botapi.model.ActionRequestBody;
+import ru.max.botapi.model.AddMemberFailure;
+import ru.max.botapi.model.AddMembersResult;
 import ru.max.botapi.model.BotInfo;
 import ru.max.botapi.model.BotPatch;
 import ru.max.botapi.model.CallbackAnswer;
@@ -307,7 +309,7 @@ class MaxBotAPITest {
     }
 
     @Test
-    void addMembers() {
+    void addMembers_success() {
         stubFor(post(urlPathEqualTo("/chats/123/members"))
                 .withHeader(AUTH_HEADER, equalTo(TOKEN))
                 .willReturn(aResponse()
@@ -315,9 +317,35 @@ class MaxBotAPITest {
                         .withBody("{\"success\": true}")));
 
         UserIdsList ids = new UserIdsList(List.of(111L, 222L));
-        SimpleQueryResult result = api.addMembers(ids, 123L).execute();
+        AddMembersResult result = api.addMembers(ids, 123L).execute();
 
         assertThat(result.success()).isTrue();
+        assertThat(result.failedUserIds()).isNull();
+        assertThat(result.failedUserDetails()).isNull();
+    }
+
+    @Test
+    void addMembers_partialFailure_privacySettings() {
+        String body = "{\"success\":false,"
+                + "\"failed_user_ids\":[217690268],"
+                + "\"failed_user_details\":[{"
+                + "\"error_code\":\"add.participant.privacy\","
+                + "\"user_ids\":[217690268]}]}";
+        stubFor(post(urlPathEqualTo("/chats/123/members"))
+                .withHeader(AUTH_HEADER, equalTo(TOKEN))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody(body)));
+
+        UserIdsList ids = new UserIdsList(List.of(217690268L));
+        AddMembersResult result = api.addMembers(ids, 123L).execute();
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.failedUserIds()).containsExactly(217690268L);
+        assertThat(result.failedUserDetails()).hasSize(1);
+        AddMemberFailure failure = result.failedUserDetails().get(0);
+        assertThat(failure.errorCode()).isEqualTo("add.participant.privacy");
+        assertThat(failure.userIds()).containsExactly(217690268L);
     }
 
     @Test
@@ -748,7 +776,9 @@ class MaxBotAPITest {
                                 {
                                   "url": "https://cdn.example.com/video/abc.mp4",
                                   "token": "vtoken",
-                                  "thumbnail": "https://cdn.example.com/thumb/abc.jpg",
+                                  "thumbnail": {
+                                    "url": "https://cdn.example.com/thumb/abc.jpg"
+                                  },
                                   "width": 1280,
                                   "height": 720,
                                   "duration": 60
@@ -759,6 +789,8 @@ class MaxBotAPITest {
 
         assertThat(details).isNotNull();
         assertThat(details.token()).isEqualTo("vtoken");
+        assertThat(details.thumbnail().url()).isEqualTo(
+                "https://cdn.example.com/thumb/abc.jpg");
         assertThat(details.width()).isEqualTo(1280);
     }
 

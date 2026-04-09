@@ -197,7 +197,7 @@ public final class MaxApiStubs {
     }
 
     /**
-     * Stubs {@code POST /chats/{chatId}/members} — returns simple success result.
+     * Stubs {@code POST /chats/{chatId}/members} — returns success result.
      *
      * @param chatId the chat ID to match in the URL path
      * @return the registered stub mapping
@@ -208,7 +208,25 @@ public final class MaxApiStubs {
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader(CONTENT_TYPE, APPLICATION_JSON)
-                        .withBody(FixtureLoader.loadFixture("simple-result.json"))));
+                        .withBody(FixtureLoader.loadFixture(
+                                "chats/add-members-success.json"))));
+    }
+
+    /**
+     * Stubs {@code POST /chats/{chatId}/members} — returns partial failure
+     * (e.g. due to user privacy settings).
+     *
+     * @param chatId the chat ID to match in the URL path
+     * @return the registered stub mapping
+     */
+    public static StubMapping stubAddMembersFailure(long chatId) {
+        return stubFor(post(urlPathEqualTo("/chats/" + chatId + "/members"))
+                .withHeader(AUTH_HEADER, matching(TOKEN_PATTERN))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader(CONTENT_TYPE, APPLICATION_JSON)
+                        .withBody(FixtureLoader.loadFixture(
+                                "chats/add-members-partial-failure.json"))));
     }
 
     /**

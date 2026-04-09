@@ -1,0 +1,14 @@
+{
+  "success": false,
+  "failed_user_ids": [
+    217690268
+  ],
+  "failed_user_details": [
+    {
+      "error_code": "add.participant.privacy",
+      "user_ids": [
+        217690268
+      ]
+    }
+  ]
+}

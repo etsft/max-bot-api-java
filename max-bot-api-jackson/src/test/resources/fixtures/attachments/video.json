@@ -1,1 +1,14 @@
-{"type":"video","payload":{"url":"https://example.com/video.mp4","token":"video_tok"},"thumbnail":"https://example.com/thumb.jpg","width":1920,"height":1080,"duration":120}
+{
+  "type": "video",
+  "payload": {
+    "url": "https://example.com/video.mp4",
+    "token": "video_tok",
+    "id": 13340073811828
+  },
+  "thumbnail": {
+    "url": "https://example.com/thumb.jpg"
+  },
+  "width": 1920,
+  "height": 1080,
+  "duration": 120
+}

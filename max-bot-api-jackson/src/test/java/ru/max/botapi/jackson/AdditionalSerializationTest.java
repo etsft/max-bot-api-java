@@ -78,6 +78,7 @@ import ru.max.botapi.model.UserIdsList;
 import ru.max.botapi.model.VideoAttachment;
 import ru.max.botapi.model.VideoAttachmentDetails;
 import ru.max.botapi.model.VideoAttachmentRequest;
+import ru.max.botapi.model.VideoThumbnail;
 import ru.max.botapi.testsupport.FixtureLoader;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -297,7 +298,7 @@ class AdditionalSerializationTest {
         void videoAttachmentDetails_roundTrip() {
             var details = new VideoAttachmentDetails(
                     "https://cdn.example.com/video.mp4", "vtok",
-                    "https://cdn.example.com/thumb.jpg", 1920, 1080, 120);
+                    new VideoThumbnail("https://cdn.example.com/thumb.jpg"), 1920, 1080, 120);
             String json = serializer.serialize(details);
             VideoAttachmentDetails deserialized = serializer.deserialize(json,
                     VideoAttachmentDetails.class);
@@ -483,8 +484,8 @@ class AdditionalSerializationTest {
             var photo = new PhotoAttachment(
                     new PhotoAttachment.PhotoPayload("http://photo.jpg", "ptok", 1L));
             var video = new VideoAttachment(
-                    new VideoAttachment.VideoPayload("http://video.mp4", "vtok"),
-                    "http://thumb.jpg", 1920, 1080, 60);
+                    new VideoAttachment.VideoPayload("http://video.mp4", "vtok", null),
+                    new VideoThumbnail("http://thumb.jpg"), 1920, 1080, 60);
             var audio = new AudioAttachment(new MediaPayload("http://audio.mp3", "atok"));
             var file = new FileAttachment(new MediaPayload("http://doc.pdf", "ftok"),
                     "doc.pdf", 1024L);
