@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class EdgeCaseTest {
 
-    private static final User USER = new User(1L, "Alice", "@alice", false, 100L);
+    private static final User USER = new User(1L, "Alice", null, null, "@alice", false, 100L);
     private static final MessageRecipient RECIPIENT = new MessageRecipient(1L, ChatType.CHAT);
     private static final MessageBody BODY = new MessageBody("mid1", 1L, "Hello", null, null);
 
@@ -38,7 +38,7 @@ class EdgeCaseTest {
 
     @Test
     void user_toString_containsAllFields() {
-        var user = new User(42L, "TestUser", "@testuser", true, 999L);
+        var user = new User(42L, "TestUser", null, null, "@testuser", true, 999L);
         String str = user.toString();
         assertThat(str).contains("42");
         assertThat(str).contains("TestUser");
@@ -175,7 +175,7 @@ class EdgeCaseTest {
 
     @Test
     void chatMember_construction_allFields() {
-        var member = new ChatMember(99L, "Charlie", "@charlie", false, 300L,
+        var member = new ChatMember(99L, "Charlie", null, null, "@charlie", false, 300L,
                 "A member", "http://avatar.jpg", "http://full.jpg",
                 400L, false, false, 50L, null);
         assertThat(member.userId()).isEqualTo(99L);
@@ -195,10 +195,33 @@ class EdgeCaseTest {
     @Test
     void chatMember_withPermissions() {
         var perms = List.of(ChatPermission.WRITE, ChatPermission.PIN_MESSAGE, ChatPermission.READ_ALL_MESSAGES);
-        var member = new ChatMember(1L, "Admin", null, false, 100L,
+        var member = new ChatMember(1L, "Admin", null, null, null, false, 100L,
                 null, null, null, 200L, false, true, 50L, perms);
         assertThat(member.permissions()).hasSize(3);
         assertThat(member.permissions()).contains(ChatPermission.WRITE, ChatPermission.PIN_MESSAGE);
+    }
+
+    @Test
+    void chatMember_permissions_nullsFiltered() {
+        // Simulate forward-compatible deserialization: unknown enum values become null.
+        // The compact constructor must filter them out to avoid NullPointerException.
+        var permsWithNulls = new java.util.ArrayList<ChatPermission>();
+        permsWithNulls.add(ChatPermission.WRITE);
+        permsWithNulls.add(null); // unknown future permission
+        permsWithNulls.add(ChatPermission.PIN_MESSAGE);
+        var member = new ChatMember(1L, "Admin", null, null, null, false, 100L,
+                null, null, null, 200L, false, true, 50L, permsWithNulls);
+        assertThat(member.permissions()).containsExactly(ChatPermission.WRITE, ChatPermission.PIN_MESSAGE);
+        assertThat(member.permissions()).doesNotContainNull();
+    }
+
+    @Test
+    void chatMember_firstName_lastName() {
+        var member = new ChatMember(1L, "Ivan Petrov", "Ivan", "Petrov", null, false, 100L,
+                null, null, null, 200L, false, false, 50L, null);
+        assertThat(member.firstName()).isEqualTo("Ivan");
+        assertThat(member.lastName()).isEqualTo("Petrov");
+        assertThat(member.name()).isEqualTo("Ivan Petrov");
     }
 
     @Test
@@ -383,7 +406,7 @@ class EdgeCaseTest {
     void botInfo_defensiveCopy_commands() {
         var cmd = new BotCommand("start", "Start");
         var mutableList = new ArrayList<>(List.of(cmd));
-        var bot = new BotInfo(1L, "Bot", null, true, 0L,
+        var bot = new BotInfo(1L, "Bot", null, null, true, 0L,
                 null, null, null, mutableList);
         mutableList.add(cmd); // modify original
         assertThat(bot.commands()).hasSize(1); // record's list is unaffected

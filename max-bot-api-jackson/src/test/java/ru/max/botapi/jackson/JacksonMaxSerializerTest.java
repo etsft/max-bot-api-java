@@ -485,7 +485,7 @@ class JacksonMaxSerializerTest {
 
         @Test
         void serializesToSnakeCase() {
-            User user = new User(1L, "Test", "test_user", false, 1700000000000L);
+            User user = new User(1L, "Test", null, null, "test_user", false, 1700000000000L);
             String json = serializer.serialize(user);
             assertThatJson(json).node("user_id").isEqualTo(1);
             assertThatJson(json).node("last_activity_time").isEqualTo(1700000000000L);
@@ -508,7 +508,7 @@ class JacksonMaxSerializerTest {
 
         @Test
         void nullFieldsOmitted() {
-            User user = new User(1L, "Test", null, false, 100L);
+            User user = new User(1L, "Test", null, null, null, false, 100L);
             String json = serializer.serialize(user);
             assertThatJson(json).node("username").isAbsent();
         }

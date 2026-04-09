@@ -3,6 +3,8 @@
     {
       "user_id": 123,
       "name": "Test User",
+      "first_name": "Test",
+      "last_name": "User",
       "username": "testuser",
       "is_bot": false,
       "last_activity_time": 170000,
@@ -18,6 +20,8 @@
     {
       "user_id": 456,
       "name": "Another User",
+      "first_name": "Another",
+      "last_name": "User",
       "username": "another",
       "is_bot": false,
       "last_activity_time": 170000,

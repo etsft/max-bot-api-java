@@ -40,13 +40,18 @@ class EnumTest {
 
     @Test
     void chatPermission_hasAllValues() {
-        assertThat(ChatPermission.values()).hasSize(6);
+        assertThat(ChatPermission.values()).hasSize(11);
         assertThat(ChatPermission.valueOf("READ_ALL_MESSAGES")).isNotNull();
         assertThat(ChatPermission.valueOf("ADD_REMOVE_MEMBERS")).isNotNull();
         assertThat(ChatPermission.valueOf("ADD_ADMINS")).isNotNull();
         assertThat(ChatPermission.valueOf("CHANGE_CHAT_INFO")).isNotNull();
         assertThat(ChatPermission.valueOf("PIN_MESSAGE")).isNotNull();
         assertThat(ChatPermission.valueOf("WRITE")).isNotNull();
+        assertThat(ChatPermission.valueOf("CAN_CALL")).isNotNull();
+        assertThat(ChatPermission.valueOf("EDIT_LINK")).isNotNull();
+        assertThat(ChatPermission.valueOf("DELETE")).isNotNull();
+        assertThat(ChatPermission.valueOf("EDIT")).isNotNull();
+        assertThat(ChatPermission.valueOf("VIEW_STATS")).isNotNull();
     }
 
     @Test

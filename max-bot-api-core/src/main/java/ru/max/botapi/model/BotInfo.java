@@ -22,19 +22,21 @@ import java.util.Objects;
 /**
  * Extended bot information returned by {@code GET /me}.
  *
- * @param userId          unique user identifier
- * @param name            display name
- * @param username        optional username (handle)
- * @param isBot           {@code true} if this user is a bot
+ * @param userId           unique user identifier
+ * @param name             composite display name
+ * @param firstName        first name component of the display name
+ * @param username         optional username (handle)
+ * @param isBot            {@code true} if this user is a bot
  * @param lastActivityTime timestamp of last activity (epoch millis)
- * @param description     optional bot description
- * @param avatarUrl       optional avatar thumbnail URL
- * @param fullAvatarUrl   optional full-size avatar URL
- * @param commands        optional list of bot commands
+ * @param description      optional bot description
+ * @param avatarUrl        optional avatar thumbnail URL
+ * @param fullAvatarUrl    optional full-size avatar URL
+ * @param commands         optional list of bot commands
  */
 public record BotInfo(
         long userId,
         String name,
+        @Nullable String firstName,
         @Nullable String username,
         boolean isBot,
         long lastActivityTime,

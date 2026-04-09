@@ -30,38 +30,48 @@ class UserBotTypesTest {
 
     @Test
     void user_construction() {
-        var user = new User(1L, "Alice", "@alice", false, 1000L);
+        var user = new User(1L, "Alice", null, null, "@alice", false, 1000L);
         assertThat(user.userId()).isEqualTo(1L);
         assertThat(user.name()).isEqualTo("Alice");
+        assertThat(user.firstName()).isNull();
+        assertThat(user.lastName()).isNull();
         assertThat(user.username()).isEqualTo("@alice");
         assertThat(user.isBot()).isFalse();
         assertThat(user.lastActivityTime()).isEqualTo(1000L);
     }
 
     @Test
+    void user_firstName_lastName() {
+        var user = new User(1L, "Ivan Petrov", "Ivan", "Petrov", null, false, 1000L);
+        assertThat(user.firstName()).isEqualTo("Ivan");
+        assertThat(user.lastName()).isEqualTo("Petrov");
+        assertThat(user.name()).isEqualTo("Ivan Petrov");
+    }
+
+    @Test
     void user_nullableUsername() {
-        var user = new User(2L, "Bob", null, true, 2000L);
+        var user = new User(2L, "Bob", null, null, null, true, 2000L);
         assertThat(user.username()).isNull();
     }
 
     @Test
     void user_nullName_throws() {
         assertThatNullPointerException()
-                .isThrownBy(() -> new User(1L, null, null, false, 0L));
+                .isThrownBy(() -> new User(1L, null, null, null, null, false, 0L));
     }
 
     @Test
     void user_equalityAndHashCode() {
-        var u1 = new User(1L, "Alice", null, false, 100L);
-        var u2 = new User(1L, "Alice", null, false, 100L);
+        var u1 = new User(1L, "Alice", null, null, null, false, 100L);
+        var u2 = new User(1L, "Alice", null, null, null, false, 100L);
         assertThat(u1).isEqualTo(u2);
         assertThat(u1.hashCode()).isEqualTo(u2.hashCode());
     }
 
     @Test
     void user_notEqual_differentFields() {
-        var u1 = new User(1L, "Alice", null, false, 100L);
-        var u2 = new User(2L, "Alice", null, false, 100L);
+        var u1 = new User(1L, "Alice", null, null, null, false, 100L);
+        var u2 = new User(2L, "Alice", null, null, null, false, 100L);
         assertThat(u1).isNotEqualTo(u2);
     }
 
@@ -92,7 +102,7 @@ class UserBotTypesTest {
     @Test
     void botInfo_construction() {
         var cmd = new BotCommand("start", "Start bot");
-        var bot = new BotInfo(1L, "MyBot", "@mybot", true, 1000L,
+        var bot = new BotInfo(1L, "MyBot", null, "@mybot", true, 1000L,
                 "A bot", "http://avatar", "http://full", List.of(cmd));
         assertThat(bot.commands()).hasSize(1);
         assertThat(bot.isBot()).isTrue();

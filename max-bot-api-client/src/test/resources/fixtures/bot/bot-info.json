@@ -1,6 +1,7 @@
 {
   "user_id": 12345,
   "name": "TestBot",
+  "first_name": "TestBot",
   "username": "test_bot",
   "is_bot": true,
   "last_activity_time": 1700000000000,

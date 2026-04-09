@@ -21,15 +21,19 @@ import java.util.Objects;
 /**
  * Represents a user in MAX Messenger.
  *
- * @param userId          unique user identifier
- * @param name            display name of the user
- * @param username        optional username (handle)
- * @param isBot           {@code true} if this user is a bot
+ * @param userId           unique user identifier
+ * @param name             composite display name (e.g. "Ivan Petrov")
+ * @param firstName        first name
+ * @param lastName         optional last name
+ * @param username         optional username (handle)
+ * @param isBot            {@code true} if this user is a bot
  * @param lastActivityTime timestamp of last activity (epoch millis)
  */
 public record User(
         long userId,
         String name,
+        @Nullable String firstName,
+        @Nullable String lastName,
         @Nullable String username,
         boolean isBot,
         long lastActivityTime

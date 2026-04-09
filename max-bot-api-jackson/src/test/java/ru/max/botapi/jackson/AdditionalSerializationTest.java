@@ -96,7 +96,7 @@ class AdditionalSerializationTest {
         serializer = new JacksonMaxSerializer();
     }
 
-    private static final User USER = new User(99001L, "John Doe", "johndoe", false, 1700000100000L);
+    private static final User USER = new User(99001L, "John Doe", null, null, "johndoe", false, 1700000100000L);
     private static final MessageRecipient RECIPIENT = new MessageRecipient(50001L, ChatType.CHAT);
     private static final MessageBody BODY = new MessageBody("msg_001", 1L, "Hello, world!", null, null);
     private static final Message MSG = new Message(USER, RECIPIENT, 1700000500000L, null, BODY, null, null, null);
@@ -159,7 +159,7 @@ class AdditionalSerializationTest {
 
         @Test
         void chatMember_roundTrip() {
-            var member = new ChatMember(99001L, "Alice", "@alice", false, 1700000100000L,
+            var member = new ChatMember(99001L, "Alice", null, null, "@alice", false, 1700000100000L,
                     "A member", "http://avatar.jpg", "http://full.jpg",
                     1700000200000L, true, true, 1699000000000L,
                     List.of(ChatPermission.WRITE, ChatPermission.PIN_MESSAGE));
@@ -174,8 +174,34 @@ class AdditionalSerializationTest {
         }
 
         @Test
+        void chatMember_firstName_lastName_deserialized() {
+            String json = "{\"user_id\":1,\"name\":\"Ivan Petrov\",\"first_name\":\"Ivan\","
+                    + "\"last_name\":\"Petrov\",\"is_bot\":false,\"last_activity_time\":100,"
+                    + "\"last_access_time\":0,\"is_owner\":false,\"is_admin\":false,\"join_time\":0}";
+            ChatMember deserialized = serializer.deserialize(json, ChatMember.class);
+            assertThat(deserialized.firstName()).isEqualTo("Ivan");
+            assertThat(deserialized.lastName()).isEqualTo("Petrov");
+            assertThat(deserialized.name()).isEqualTo("Ivan Petrov");
+        }
+
+        @Test
+        void chatMember_allNewPermissions_deserialized() {
+            String json = "{\"user_id\":1,\"name\":\"Admin\",\"first_name\":\"Admin\","
+                    + "\"is_bot\":false,\"last_activity_time\":100,"
+                    + "\"last_access_time\":0,\"is_owner\":true,\"is_admin\":true,\"join_time\":0,"
+                    + "\"permissions\":[\"write\",\"read_all_messages\",\"can_call\","
+                    + "\"edit_link\",\"delete\",\"edit\",\"view_stats\"]}";
+            ChatMember deserialized = serializer.deserialize(json, ChatMember.class);
+            assertThat(deserialized.permissions()).contains(
+                    ChatPermission.WRITE, ChatPermission.READ_ALL_MESSAGES,
+                    ChatPermission.CAN_CALL, ChatPermission.EDIT_LINK,
+                    ChatPermission.DELETE, ChatPermission.EDIT, ChatPermission.VIEW_STATS);
+            assertThat(deserialized.permissions()).doesNotContainNull();
+        }
+
+        @Test
         void chatMembersList_roundTrip() {
-            var member = new ChatMember(1L, "Bob", null, false, 100L,
+            var member = new ChatMember(1L, "Bob", null, null, null, false, 100L,
                     null, null, null, 200L, false, false, 50L, null);
             var list = new ChatMembersList(List.of(member), 999L);
             String json = serializer.serialize(list);
@@ -414,7 +440,7 @@ class AdditionalSerializationTest {
 
         @Test
         void snakeCase_fieldMapping() {
-            var member = new ChatMember(1L, "Test", null, true, 100L,
+            var member = new ChatMember(1L, "Test", null, null, null, true, 100L,
                     null, null, null, 200L, true, false, 50L, null);
             String json = serializer.serialize(member);
             assertThatJson(json).node("user_id").isEqualTo(1);

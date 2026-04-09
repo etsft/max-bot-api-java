@@ -37,5 +37,20 @@ public enum ChatPermission {
     PIN_MESSAGE,
 
     /** Permission to write messages. */
-    WRITE
+    WRITE,
+
+    /** Permission to make audio/video calls. */
+    CAN_CALL,
+
+    /** Permission to edit the chat invite link. */
+    EDIT_LINK,
+
+    /** Permission to delete the chat. */
+    DELETE,
+
+    /** Permission to edit any message in the chat. */
+    EDIT,
+
+    /** Permission to view chat statistics. */
+    VIEW_STATS
 }

@@ -64,7 +64,7 @@ class MessageTypesTest {
 
     @Test
     void message_construction() {
-        var sender = new User(1L, "Alice", null, false, 100L);
+        var sender = new User(1L, "Alice", null, null, null, false, 100L);
         var msg = new Message(sender, RECIPIENT, 1000L, null, BODY, null, null, null);
         assertThat(msg.sender()).isEqualTo(sender);
         assertThat(msg.recipient()).isEqualTo(RECIPIENT);

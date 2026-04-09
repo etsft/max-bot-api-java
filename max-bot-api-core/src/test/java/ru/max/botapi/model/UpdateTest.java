@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class UpdateTest {
 
-    private static final User USER = new User(1L, "Alice", null, false, 100L);
+    private static final User USER = new User(1L, "Alice", null, null, null, false, 100L);
     private static final MessageRecipient RECIPIENT =
             new MessageRecipient(1L, ChatType.CHAT);
     private static final MessageBody BODY = new MessageBody("m1", 1L, "Hi", null, null);
