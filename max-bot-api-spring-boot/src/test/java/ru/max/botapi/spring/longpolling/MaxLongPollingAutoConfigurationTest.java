@@ -87,6 +87,19 @@ class MaxLongPollingAutoConfigurationTest {
     }
 
     @Test
+    void noBeansCreated_whenModeIsNone() {
+        contextRunner
+                .withUserConfiguration(HandlerConfig.class)
+                .withPropertyValues(
+                        "max.bot.mode=none",
+                        "max.bot.longpolling.token=test-token")
+                .run(context -> {
+                    assertThat(context).doesNotHaveBean(
+                            MaxLongPollingLifecycle.class);
+                });
+    }
+
+    @Test
     void lifecycleNotCreated_withoutHandlerBean() {
         contextRunner
                 .withPropertyValues(

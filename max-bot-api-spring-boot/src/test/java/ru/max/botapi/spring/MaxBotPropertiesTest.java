@@ -83,7 +83,8 @@ class MaxBotPropertiesTest {
     void modeEnum_hasExpectedValues() {
         assertThat(MaxBotMode.values())
                 .containsExactly(MaxBotMode.WEBHOOK,
-                        MaxBotMode.LONGPOLLING);
+                        MaxBotMode.LONGPOLLING,
+                        MaxBotMode.NONE);
     }
 
     @Configuration(proxyBeanMethods = false)

@@ -90,6 +90,22 @@ class MaxWebhookAutoConfigurationTest {
     }
 
     @Test
+    void noBeansCreated_whenModeIsNone() {
+        contextRunner
+                .withUserConfiguration(
+                        HandlerConfig.class, SerializerConfig.class)
+                .withPropertyValues(
+                        "max.bot.mode=none",
+                        "max.bot.webhook.token=test-token")
+                .run(context -> {
+                    assertThat(context).doesNotHaveBean(
+                            MaxWebhookController.class);
+                    assertThat(context).doesNotHaveBean(
+                            MaxWebhookRegistrar.class);
+                });
+    }
+
+    @Test
     void controllerNotCreated_withoutHandlerBean() {
         contextRunner
                 .withUserConfiguration(SerializerConfig.class)

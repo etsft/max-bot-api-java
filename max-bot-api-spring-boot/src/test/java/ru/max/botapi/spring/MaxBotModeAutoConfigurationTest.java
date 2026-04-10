@@ -66,4 +66,18 @@ class MaxBotModeAutoConfigurationTest {
                             "No max.bot.mode configured");
                 });
     }
+
+    @Test
+    void logsInfo_whenModeIsNone(CapturedOutput output) {
+        contextRunner
+                .withPropertyValues("max.bot.mode=none")
+                .run(context -> {
+                    assertThat(context).hasSingleBean(
+                            MaxBotModeAutoConfiguration.class);
+                    assertThat(output).doesNotContain(
+                            "No max.bot.mode configured");
+                    assertThat(output).contains(
+                            "bot update delivery is disabled");
+                });
+    }
 }

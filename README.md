@@ -373,13 +373,26 @@ PollingErrorHandler pollingErrorHandler() {
 
 #### Choosing Between Modes
 
-The `max.bot.mode` property selects the update delivery mechanism. It accepts two values: `webhook` or `longpolling`. Only one mode can be active at a time — if the property is not set, neither auto-configuration activates.
+The `max.bot.mode` property selects the update delivery mechanism.
 
-Both modes use the same `UpdateHandler` interface (`ru.max.botapi.core.UpdateHandler`). Define a single handler bean and switch modes by changing only the `max.bot.mode` property — no code changes required.
+| Value | Description |
+|---|---|
+| `webhook` | Receive updates via HTTP webhook callbacks. Requires a public HTTPS endpoint. |
+| `longpolling` | Receive updates by polling the MAX API. No public URL required. |
+| `none` | Explicitly disable all bot update delivery. Neither auto-configuration activates. |
 
-| Property | Values | Description |
-|---|---|---|
-| `max.bot.mode` | `webhook`, `longpolling` | Update delivery mode (required). |
+Only one mode can be active at a time. When the property is not set, a WARN log is emitted at startup to remind you to configure it. Setting `max.bot.mode=none` silences the warning and makes the intent explicit — useful for test profiles or applications where the bot starter is on the classpath but not needed.
+
+Both `webhook` and `longpolling` modes use the same `UpdateHandler` interface (`ru.max.botapi.core.UpdateHandler`). Define a single handler bean and switch modes by changing only the `max.bot.mode` property — no code changes required.
+
+Example — disable the bot in a test profile:
+
+```yaml
+# application-test.yml
+max:
+  bot:
+    mode: none
+```
 
 ---
 

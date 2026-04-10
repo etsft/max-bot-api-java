@@ -26,8 +26,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
  * Auto-configuration that validates the {@code max.bot.mode} property.
  *
  * <p>Logs a warning at startup if no mode is configured, guiding the user
- * to set {@code max.bot.mode} to either {@code webhook} or
- * {@code longpolling}.</p>
+ * to set {@code max.bot.mode} to {@code webhook}, {@code longpolling},
+ * or {@code none}.</p>
  *
  * @see MaxBotMode
  * @see MaxBotProperties
@@ -58,8 +58,10 @@ public class MaxBotModeAutoConfiguration implements InitializingBean {
     public void afterPropertiesSet() {
         if (properties.getMode() == null) {
             LOG.warn("No max.bot.mode configured. Set max.bot.mode "
-                    + "to 'webhook' or 'longpolling' to activate "
-                    + "the corresponding auto-configuration.");
+                    + "to 'webhook', 'longpolling', or 'none'.");
+        } else if (properties.getMode() == MaxBotMode.NONE) {
+            LOG.info("max.bot.mode is set to 'none' "
+                    + "— bot update delivery is disabled.");
         }
     }
 }

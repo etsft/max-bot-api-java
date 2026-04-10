@@ -40,5 +40,14 @@ public enum MaxBotMode {
      * <p>The application periodically calls {@code getUpdates} on the
      * MAX API. No public URL is required.</p>
      */
-    LONGPOLLING
+    LONGPOLLING,
+
+    /**
+     * Explicitly disables all bot update delivery.
+     *
+     * <p>Neither webhook nor long-polling auto-configuration will activate.
+     * Use this when the bot starter is on the classpath but you do not want
+     * any update delivery in a particular profile (e.g. testing).</p>
+     */
+    NONE
 }
