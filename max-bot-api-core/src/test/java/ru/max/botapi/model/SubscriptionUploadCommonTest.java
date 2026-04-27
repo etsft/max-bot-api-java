@@ -56,9 +56,38 @@ class SubscriptionUploadCommonTest {
     }
 
     @Test
-    void uploadedInfo_construction() {
-        var info = new UploadedInfo("tok123");
-        assertThat(info.token()).isEqualTo("tok123");
+    void fileUploadedInfo_construction() {
+        var info = new FileUploadedInfo(3343344796L, "file-tok");
+        assertThat(info.fileId()).isEqualTo(3343344796L);
+        assertThat(info.token()).isEqualTo("file-tok");
+        assertThat((UploadedInfo) info).isInstanceOf(UploadedInfo.class);
+    }
+
+    @Test
+    void imageUploadedInfo_construction() {
+        var photos = java.util.Map.of(
+                "key1", new PhotoAttachmentRequestPayload.TokenRef("img-tok-1"));
+        var info = new ImageUploadedInfo(photos);
+        assertThat(info.photos()).hasSize(1);
+        assertThat(info.photos().get("key1").token()).isEqualTo("img-tok-1");
+    }
+
+    @Test
+    void mediaUploadedInfo_construction() {
+        var info = new MediaUploadedInfo("video-tok", 1);
+        assertThat(info.token()).isEqualTo("video-tok");
+        assertThat(info.retval()).isEqualTo(1);
+    }
+
+    @Test
+    void uploadedInfo_isSealedAndExhaustive() {
+        UploadedInfo file = new FileUploadedInfo(1L, "t");
+        String description = switch (file) {
+            case FileUploadedInfo f -> "file:" + f.fileId();
+            case ImageUploadedInfo i -> "image:" + i.photos().size();
+            case MediaUploadedInfo m -> "media:" + m.retval();
+        };
+        assertThat(description).isEqualTo("file:1");
     }
 
     @Test

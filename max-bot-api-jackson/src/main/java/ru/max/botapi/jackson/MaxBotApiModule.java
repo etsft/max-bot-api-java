@@ -22,6 +22,7 @@ import ru.max.botapi.model.Attachment;
 import ru.max.botapi.model.AttachmentRequest;
 import ru.max.botapi.model.Button;
 import ru.max.botapi.model.ChatPatch;
+import ru.max.botapi.model.FileUploadedInfo;
 import ru.max.botapi.model.NewMessageBody;
 import ru.max.botapi.model.PinMessageBody;
 import ru.max.botapi.model.Update;
@@ -66,5 +67,6 @@ public class MaxBotApiModule extends SimpleModule {
         context.setMixInAnnotations(NewMessageBody.class, NotifyFieldMixIn.class);
         context.setMixInAnnotations(PinMessageBody.class, NotifyFieldMixIn.class);
         context.setMixInAnnotations(ChatPatch.class, NotifyFieldMixIn.class);
+        context.setMixInAnnotations(FileUploadedInfo.class, FileUploadedInfoMixIn.class);
     }
 }

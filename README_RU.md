@@ -146,7 +146,7 @@ switch (update) {
 
 ### Загрузка файла
 
-Загрузка файла выполняется в два шага: сначала запрашивается URL для загрузки через API, затем файл передаётся потоком на этот URL.
+Загрузка файла выполняется в два шага: сначала запрашивается URL для загрузки через API, затем файл передаётся потоком на этот URL. Форма ответа и тип результата зависят от `UploadType` — см. [Загрузка файлов](#загрузка-файлов) ниже.
 
 ```java
 MaxUploadAPI uploadApi = new MaxUploadAPI();
@@ -155,7 +155,7 @@ MaxUploadAPI uploadApi = new MaxUploadAPI();
 UploadEndpoint endpoint = api.getUploadUrl(UploadType.FILE).execute();
 
 // Шаг 2: передать файл потоком (без буферизации в куче)
-UploadedInfo info = uploadApi.upload(endpoint.url(), Path.of("file.txt"), "file.txt");
+FileUploadedInfo info = uploadApi.uploadFile(endpoint, Path.of("file.txt"), "file.txt");
 
 // Шаг 3: прикрепить полученный токен к сообщению
 api.sendMessage(new NewMessageBody(
@@ -401,25 +401,59 @@ max:
 MAX API требует двухэтапной процедуры загрузки:
 
 1. **Запрос URL для загрузки** — вызовите `api.getUploadUrl(UploadType)`, чтобы получить предподписанный `UploadEndpoint`.
-2. **Потоковая передача файла** — вызовите `MaxUploadAPI.upload(url, path, filename)`. Реализация использует `java.net.http` с `BodyPublisher`, напрямую связанным с файлом, поэтому файлы произвольного размера передаются без загрузки в кучу.
+2. **Потоковая передача файла** — вызовите метод `MaxUploadAPI`, соответствующий типу загрузки. Перегрузки для файлов на диске используют `java.net.http` с `BodyPublisher`, напрямую связанным с файлом, поэтому файлы произвольного размера передаются без загрузки в кучу.
+
+Платформа MAX возвращает три разные формы ответа в зависимости от типа загрузки, и момент появления токена вложения тоже различается. Чтобы сделать это явным и типобезопасным, `MaxUploadAPI` предоставляет отдельный метод для каждого типа, каждый возвращает свой подтип sealed-интерфейса `UploadedInfo`.
+
+| `UploadType` | Метод                  | Результат            | Токен получается из              |
+|--------------|-------------------------|----------------------|--------------------------------|
+| `FILE`       | `uploadFile(...)`       | `FileUploadedInfo`   | ответа на загрузку (JSON)       |
+| `IMAGE`      | `uploadImage(...)`      | `ImageUploadedInfo`  | ответа на загрузку (JSON)       |
+| `VIDEO`      | `uploadMedia(...)`      | `MediaUploadedInfo`  | `UploadEndpoint.token()`       |
+| `AUDIO`      | `uploadMedia(...)`      | `MediaUploadedInfo`  | `UploadEndpoint.token()`       |
+
+Для видео и аудио ответ на загрузку — это крошечный XML (`<retval>1</retval>`) без токена; токен вложения нужно брать из `UploadEndpoint`, возвращённого `POST /uploads`. `uploadMedia(...)` автоматически переносит этот токен в возвращаемый `MediaUploadedInfo`, чтобы вызывающему коду не приходилось передавать его вручную.
+
+#### Файл
 
 ```java
 MaxUploadAPI uploadApi = new MaxUploadAPI();
+UploadEndpoint endpoint = api.getUploadUrl(UploadType.FILE).execute();
+FileUploadedInfo info = uploadApi.uploadFile(endpoint, Path.of("/tmp/doc.pdf"), "doc.pdf");
 
-// Получить endpoint для загрузки
-UploadEndpoint endpoint = api.getUploadUrl(UploadType.IMAGE).execute();
-
-// Загрузить — потоком, без буферизации в куче
-UploadedInfo info = uploadApi.upload(endpoint.url(), Path.of("/tmp/photo.jpg"), "photo.jpg");
-
-// Использовать полученный токен во вложении
-ImageAttachmentRequest attachment =
-    new ImageAttachmentRequest(new MediaRequestPayload(info.token()));
-
-api.sendMessage(new NewMessageBody(null, List.of(attachment), null, null, null))
-    .chatId(chatId)
-    .execute();
+FileAttachmentRequest att =
+    new FileAttachmentRequest(new MediaRequestPayload(info.token()));
+api.sendMessage(new NewMessageBody("File:", List.of(att), null, null, null))
+    .chatId(chatId).execute();
 ```
+
+#### Изображение
+
+```java
+UploadEndpoint endpoint = api.getUploadUrl(UploadType.IMAGE).execute();
+ImageUploadedInfo info = uploadApi.uploadImage(endpoint, Path.of("/tmp/photo.jpg"), "photo.jpg");
+
+// Передайте карту photos в payload без изменений.
+ImageAttachmentRequest att = new ImageAttachmentRequest(
+    new PhotoAttachmentRequestPayload(null, null, info.photos()));
+api.sendMessage(new NewMessageBody(null, List.of(att), null, null, null))
+    .chatId(chatId).execute();
+```
+
+#### Видео / Аудио
+
+```java
+UploadEndpoint endpoint = api.getUploadUrl(UploadType.VIDEO).execute();
+MediaUploadedInfo info = uploadApi.uploadMedia(endpoint, Path.of("/tmp/clip.mp4"), "clip.mp4");
+
+// info.token() == endpoint.token() (ответ на загрузку не содержит токена).
+VideoAttachmentRequest att =
+    new VideoAttachmentRequest(new MediaRequestPayload(info.token()));
+api.sendMessage(new NewMessageBody("Video:", List.of(att), null, null, null))
+    .chatId(chatId).execute();
+```
+
+Серверу MAX может потребоваться несколько секунд, чтобы завершить обработку загруженного медиа. Если `sendMessage` возвращает `attachment.not.ready`, повторите отправку сообщения с небольшим откатом (повторная загрузка не нужна).
 
 Поддерживаемые значения `UploadType`: `IMAGE`, `VIDEO`, `AUDIO`, `FILE`.
 

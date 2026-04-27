@@ -43,14 +43,17 @@ import ru.max.botapi.model.ChatType;
 import ru.max.botapi.model.ConstructedMessage;
 import ru.max.botapi.model.ContactAttachment;
 import ru.max.botapi.model.FileAttachment;
+import ru.max.botapi.model.FileUploadedInfo;
 import ru.max.botapi.model.GetPinnedMessageResult;
 import ru.max.botapi.model.GetSubscriptionsResult;
 import ru.max.botapi.model.Image;
+import ru.max.botapi.model.ImageUploadedInfo;
 import ru.max.botapi.model.InlineKeyboardAttachment;
 import ru.max.botapi.model.LocationAttachment;
 import ru.max.botapi.model.LocationAttachmentRequest;
 import ru.max.botapi.model.MediaPayload;
 import ru.max.botapi.model.MediaRequestPayload;
+import ru.max.botapi.model.MediaUploadedInfo;
 import ru.max.botapi.model.Message;
 import ru.max.botapi.model.MessageBody;
 import ru.max.botapi.model.MessageChatCreatedUpdate;
@@ -73,7 +76,6 @@ import ru.max.botapi.model.Update;
 import ru.max.botapi.model.UpdateList;
 import ru.max.botapi.model.UpdateType;
 import ru.max.botapi.model.UploadEndpoint;
-import ru.max.botapi.model.UploadedInfo;
 import ru.max.botapi.model.User;
 import ru.max.botapi.model.UserIdsList;
 import ru.max.botapi.model.VideoAttachment;
@@ -253,11 +255,36 @@ class AdditionalSerializationTest {
         }
 
         @Test
-        void uploadedInfo_roundTrip() {
-            var info = new UploadedInfo("upload_token_abc");
+        void fileUploadedInfo_deserialize_camelCaseFileId() {
+            // The MAX file upload endpoint returns camelCase "fileId"
+            // (not snake_case "file_id" like the rest of the API).
+            String json = "{\"fileId\": 3343344796, \"token\": \"file-tok\"}";
+            FileUploadedInfo info = serializer.deserialize(json, FileUploadedInfo.class);
+            assertThat(info.fileId()).isEqualTo(3343344796L);
+            assertThat(info.token()).isEqualTo("file-tok");
+        }
+
+        @Test
+        void imageUploadedInfo_deserialize_photosMap() {
+            String json = "{\"photos\": {"
+                    + "\"abc==\": {\"token\": \"t1\"},"
+                    + "\"def==\": {\"token\": \"t2\"}}}";
+            ImageUploadedInfo info = serializer.deserialize(json, ImageUploadedInfo.class);
+            assertThat(info.photos()).hasSize(2);
+            assertThat(info.photos().get("abc==").token()).isEqualTo("t1");
+            assertThat(info.photos().get("def==").token()).isEqualTo("t2");
+        }
+
+        @Test
+        void mediaUploadedInfo_roundTrip() {
+            // MediaUploadedInfo is constructed by the upload code (not deserialized from
+            // the API XML body), but it should still round-trip through Jackson cleanly
+            // for callers that want to log or persist it.
+            var info = new MediaUploadedInfo("video-tok", 1);
             String json = serializer.serialize(info);
-            UploadedInfo deserialized = serializer.deserialize(json, UploadedInfo.class);
-            assertThat(deserialized.token()).isEqualTo("upload_token_abc");
+            MediaUploadedInfo deserialized = serializer.deserialize(json, MediaUploadedInfo.class);
+            assertThat(deserialized.token()).isEqualTo("video-tok");
+            assertThat(deserialized.retval()).isEqualTo(1);
         }
 
         @Test

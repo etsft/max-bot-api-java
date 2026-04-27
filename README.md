@@ -146,7 +146,7 @@ switch (update) {
 
 ### Uploading a File
 
-File upload is a two-step process: first obtain an upload URL from the API, then stream the file to that URL.
+File upload is a two-step process: first obtain an upload URL from the API, then stream the file to that URL. The upload response shape and the result type depend on the `UploadType` — see [File Upload](#file-upload) below for the full picture.
 
 ```java
 MaxUploadAPI uploadApi = new MaxUploadAPI();
@@ -155,7 +155,7 @@ MaxUploadAPI uploadApi = new MaxUploadAPI();
 UploadEndpoint endpoint = api.getUploadUrl(UploadType.FILE).execute();
 
 // Step 2: stream the file (no heap buffering)
-UploadedInfo info = uploadApi.upload(endpoint.url(), Path.of("file.txt"), "file.txt");
+FileUploadedInfo info = uploadApi.uploadFile(endpoint, Path.of("file.txt"), "file.txt");
 
 // Step 3: attach the uploaded token to a message
 api.sendMessage(new NewMessageBody(
@@ -401,25 +401,59 @@ max:
 The MAX API requires a two-step upload workflow:
 
 1. **Request an upload URL** — call `api.getUploadUrl(UploadType)` to receive a pre-signed `UploadEndpoint`.
-2. **Stream the file** — call `MaxUploadAPI.upload(url, path, filename)`. The implementation uses `java.net.http` with a `BodyPublisher` backed directly by the file, so arbitrarily large files are transferred without loading them into the heap.
+2. **Stream the file** — call the `MaxUploadAPI` method that matches the upload type. File-based overloads stream directly from disk via `java.net.http`'s `BodyPublisher`, so arbitrarily large files are transferred without loading them into the heap.
+
+The MAX platform returns three different response shapes depending on the upload type, and the moment when the attachment token becomes available also differs. To keep this explicit and type-safe, `MaxUploadAPI` exposes one method per type, each returning a dedicated subtype of the sealed `UploadedInfo` interface.
+
+| `UploadType` | Method                  | Result               | Token comes from         |
+|--------------|-------------------------|----------------------|--------------------------|
+| `FILE`       | `uploadFile(...)`       | `FileUploadedInfo`   | upload response (JSON)   |
+| `IMAGE`      | `uploadImage(...)`      | `ImageUploadedInfo`  | upload response (JSON)   |
+| `VIDEO`      | `uploadMedia(...)`      | `MediaUploadedInfo`  | `UploadEndpoint.token()` |
+| `AUDIO`      | `uploadMedia(...)`      | `MediaUploadedInfo`  | `UploadEndpoint.token()` |
+
+For video and audio the upload response is a tiny XML body (`<retval>1</retval>`) and carries no token; the attachment token must be taken from the `UploadEndpoint` returned by `POST /uploads`. `uploadMedia(...)` carries that token forward into the returned `MediaUploadedInfo` so callers don't have to thread it through manually.
+
+#### File
 
 ```java
 MaxUploadAPI uploadApi = new MaxUploadAPI();
+UploadEndpoint endpoint = api.getUploadUrl(UploadType.FILE).execute();
+FileUploadedInfo info = uploadApi.uploadFile(endpoint, Path.of("/tmp/doc.pdf"), "doc.pdf");
 
-// Obtain upload endpoint
-UploadEndpoint endpoint = api.getUploadUrl(UploadType.IMAGE).execute();
-
-// Upload — streaming, no heap buffering
-UploadedInfo info = uploadApi.upload(endpoint.url(), Path.of("/tmp/photo.jpg"), "photo.jpg");
-
-// Use the returned token in an attachment
-ImageAttachmentRequest attachment =
-    new ImageAttachmentRequest(new MediaRequestPayload(info.token()));
-
-api.sendMessage(new NewMessageBody(null, List.of(attachment), null, null, null))
-    .chatId(chatId)
-    .execute();
+FileAttachmentRequest att =
+    new FileAttachmentRequest(new MediaRequestPayload(info.token()));
+api.sendMessage(new NewMessageBody("File:", List.of(att), null, null, null))
+    .chatId(chatId).execute();
 ```
+
+#### Image
+
+```java
+UploadEndpoint endpoint = api.getUploadUrl(UploadType.IMAGE).execute();
+ImageUploadedInfo info = uploadApi.uploadImage(endpoint, Path.of("/tmp/photo.jpg"), "photo.jpg");
+
+// Pass the photos map verbatim into the request payload.
+ImageAttachmentRequest att = new ImageAttachmentRequest(
+    new PhotoAttachmentRequestPayload(null, null, info.photos()));
+api.sendMessage(new NewMessageBody(null, List.of(att), null, null, null))
+    .chatId(chatId).execute();
+```
+
+#### Video / Audio
+
+```java
+UploadEndpoint endpoint = api.getUploadUrl(UploadType.VIDEO).execute();
+MediaUploadedInfo info = uploadApi.uploadMedia(endpoint, Path.of("/tmp/clip.mp4"), "clip.mp4");
+
+// info.token() == endpoint.token() (the upload response carries no token).
+VideoAttachmentRequest att =
+    new VideoAttachmentRequest(new MediaRequestPayload(info.token()));
+api.sendMessage(new NewMessageBody("Video:", List.of(att), null, null, null))
+    .chatId(chatId).execute();
+```
+
+The MAX server may need a few seconds to finish processing the uploaded media. If `sendMessage` returns `attachment.not.ready`, retry the message send with a short backoff (no need to re-upload).
 
 Supported `UploadType` values: `IMAGE`, `VIDEO`, `AUDIO`, `FILE`.
 

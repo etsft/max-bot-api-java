@@ -30,35 +30,52 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import ru.max.botapi.core.MaxSerializer;
-import ru.max.botapi.model.UploadedInfo;
+import ru.max.botapi.model.FileUploadedInfo;
+import ru.max.botapi.model.ImageUploadedInfo;
+import ru.max.botapi.model.MediaUploadedInfo;
+import ru.max.botapi.model.UploadEndpoint;
 
 /**
  * Provides file upload functionality to MAX platform upload endpoints.
  *
- * <p>The MAX upload flow is two-step:</p>
- * <ol>
- *   <li>Call {@link MaxBotAPI#getUploadUrl(ru.max.botapi.model.UploadType)} to obtain
- *       an upload URL.</li>
- *   <li>Call one of the {@code upload(...)} methods on this class with the obtained URL
- *       and file data.</li>
- * </ol>
+ * <p>The MAX upload flow is two-step: first call
+ * {@link MaxBotAPI#getUploadUrl(ru.max.botapi.model.UploadType)} to obtain an
+ * {@link UploadEndpoint}, then transfer the bytes to {@code endpoint.url()}. The shape of
+ * the upload response and the moment when the attachment token becomes available depend
+ * on the upload type:</p>
  *
- * <p>File-based uploads ({@link #upload(String, Path, String)} and
- * {@link #upload(String, File)}) stream the file content directly from disk using
+ * <ul>
+ *   <li>{@code FILE} — JSON response carries {@code fileId} and {@code token}. Use
+ *       {@link #uploadFile(UploadEndpoint, Path, String)} or one of its overloads.</li>
+ *   <li>{@code IMAGE} — JSON response carries a {@code photos} map of token references.
+ *       Use {@link #uploadImage(UploadEndpoint, Path, String)} or one of its overloads.</li>
+ *   <li>{@code VIDEO} / {@code AUDIO} — XML response ({@code <retval>1</retval>}) carries
+ *       no token; the attachment token must come from {@link UploadEndpoint#token()}.
+ *       Use {@link #uploadMedia(UploadEndpoint, Path, String)} or one of its overloads.</li>
+ * </ul>
+ *
+ * <p>File-based uploads stream the file content directly from disk using
  * {@link HttpRequest.BodyPublishers#ofFile(Path)} without loading the entire file into
  * heap memory. This avoids {@code OutOfMemoryError} for large files such as videos.</p>
  *
- * <p>This class implements {@link AutoCloseable} so it can be used in try-with-resources blocks.
- * Calling {@link #close()} shuts down the internal executor service and releases all resources.</p>
+ * <p>This class implements {@link AutoCloseable}; calling {@link #close()} shuts down the
+ * internal executor service and releases all resources.</p>
  *
  * <p>Example usage:</p>
  * <pre>{@code
  * MaxBotAPI api = MaxBotAPI.create("my-token");
  * try (MaxUploadAPI uploadApi = new MaxUploadAPI()) {
  *     UploadEndpoint endpoint = api.getUploadUrl(UploadType.IMAGE).execute();
- *     UploadedInfo info = uploadApi.upload(endpoint.url(), Path.of("photo.jpg"), "photo.jpg");
+ *     ImageUploadedInfo info = uploadApi.uploadImage(endpoint, Path.of("photo.jpg"), "photo.jpg");
+ *
+ *     ImageAttachmentRequest att = new ImageAttachmentRequest(
+ *         new PhotoAttachmentRequestPayload(null, null, info.photos()));
+ *     api.sendMessage(new NewMessageBody("look", List.of(att), null, null, null))
+ *         .chatId(chatId).execute();
  * }
  * }</pre>
  */
@@ -68,6 +85,10 @@ public class MaxUploadAPI implements AutoCloseable {
     private static final String JACKSON_SERIALIZER_CLASS =
             "ru.max.botapi.jackson.JacksonMaxSerializer";
     private static final String CRLF = "\r\n";
+
+    /** Matches the integer body of {@code <retval>...</retval>} responses (video/audio). */
+    private static final Pattern RETVAL_PATTERN =
+            Pattern.compile("<retval>\\s*(-?\\d+)\\s*</retval>");
 
     private final ExecutorService executorService;
     private final HttpClient httpClient;
@@ -87,8 +108,8 @@ public class MaxUploadAPI implements AutoCloseable {
     /**
      * Creates a {@code MaxUploadAPI} with an explicit serializer.
      *
-     * @param serializer the JSON serializer for deserializing the upload response;
-     *                   must not be {@code null}
+     * @param serializer the JSON serializer for deserializing JSON upload responses
+     *                   (file/image); must not be {@code null}
      */
     public MaxUploadAPI(MaxSerializer serializer) {
         this.serializer = Objects.requireNonNull(serializer, "serializer must not be null");
@@ -99,98 +120,163 @@ public class MaxUploadAPI implements AutoCloseable {
                 .build();
     }
 
+    // ===== FILE =====
+
     /**
-     * Uploads a {@link File} to the given upload URL using multipart/form-data streaming.
+     * Uploads a file at the given {@link Path} to the {@code FILE} upload endpoint.
      *
-     * <p>The file is streamed from disk; its contents are not loaded into heap memory.
-     * This is safe for arbitrarily large files.</p>
-     *
-     * @param uploadUrl the URL obtained from {@code POST /uploads}; must not be {@code null}
-     * @param file      the file to upload; must not be {@code null}
-     * @return the {@link UploadedInfo} containing the upload token
-     * @throws MaxClientException if an I/O error occurs or the server returns an error response
+     * @param endpoint the endpoint returned by {@code getUploadUrl(UploadType.FILE)};
+     *                 must not be {@code null}
+     * @param filePath the path of the file to upload; must not be {@code null}
+     * @param filename the filename to advertise in the multipart Content-Disposition;
+     *                 must not be {@code null}
+     * @return the parsed JSON response containing {@code fileId} and {@code token}
+     * @throws MaxClientException if an I/O error occurs or the server returns a non-2xx status
      */
-    public UploadedInfo upload(String uploadUrl, File file) {
-        Objects.requireNonNull(uploadUrl, "uploadUrl must not be null");
+    public FileUploadedInfo uploadFile(UploadEndpoint endpoint, Path filePath, String filename) {
+        Objects.requireNonNull(endpoint, "endpoint must not be null");
+        String body = transferFromFile(endpoint.url(), filePath, filename);
+        return serializer.deserialize(body, FileUploadedInfo.class);
+    }
+
+    /**
+     * Convenience overload accepting a {@link File} (delegates to the {@link Path} form).
+     *
+     * @param endpoint the upload endpoint; must not be {@code null}
+     * @param file     the file to upload; must not be {@code null}
+     * @return the parsed JSON response
+     * @throws MaxClientException if an I/O error occurs
+     */
+    public FileUploadedInfo uploadFile(UploadEndpoint endpoint, File file) {
         Objects.requireNonNull(file, "file must not be null");
-        return upload(uploadUrl, file.toPath(), file.getName());
+        return uploadFile(endpoint, file.toPath(), file.getName());
     }
 
     /**
-     * Uploads a file at the given {@link Path} to the upload URL using multipart/form-data
-     * streaming.
+     * Uploads in-memory data to the {@code FILE} upload endpoint.
      *
-     * <p>Uses {@link HttpRequest.BodyPublishers#concat(HttpRequest.BodyPublisher...)} to
-     * concatenate the multipart header bytes, the file content (streamed via
-     * {@link HttpRequest.BodyPublishers#ofFile(Path)}), and the multipart footer bytes without
-     * buffering the file in memory. This avoids {@code OutOfMemoryError} on large video files.</p>
+     * <p>Prefer the {@link Path} overload for large files to avoid heap exhaustion.</p>
      *
-     * @param uploadUrl the URL obtained from {@code POST /uploads}; must not be {@code null}
-     * @param filePath  the path of the file to upload; must not be {@code null}
-     * @param filename  the filename to use in the multipart Content-Disposition header;
-     *                  must not be {@code null}
-     * @return the {@link UploadedInfo} containing the upload token
-     * @throws MaxClientException if an I/O error occurs or the server returns an error response
+     * @param endpoint the upload endpoint; must not be {@code null}
+     * @param data     the file bytes; must not be {@code null}
+     * @param filename the filename to advertise in the multipart form; must not be {@code null}
+     * @return the parsed JSON response
+     * @throws MaxClientException if an I/O error occurs
      */
-    public UploadedInfo upload(String uploadUrl, Path filePath, String filename) {
-        Objects.requireNonNull(uploadUrl, "uploadUrl must not be null");
-        Objects.requireNonNull(filePath, "filePath must not be null");
-        Objects.requireNonNull(filename, "filename must not be null");
+    public FileUploadedInfo uploadFile(UploadEndpoint endpoint, byte[] data, String filename) {
+        Objects.requireNonNull(endpoint, "endpoint must not be null");
+        String body = transferFromBytes(endpoint.url(), data, filename);
+        return serializer.deserialize(body, FileUploadedInfo.class);
+    }
 
-        String boundary = MULTIPART_BOUNDARY_PREFIX
-                + UUID.randomUUID().toString().replace("-", "");
+    // ===== IMAGE =====
 
-        byte[] partHeader = buildPartHeader(boundary, filename);
-        byte[] footer = (CRLF + "--" + boundary + "--" + CRLF).getBytes(StandardCharsets.UTF_8);
-
-        // Stream the file content without loading it into heap memory.
-        // BodyPublishers.concat() is available in Java 21 and sequences publishers
-        // without buffering intermediate data. Each constituent publisher knows its length,
-        // so concat() can report the correct total content length to the HTTP layer.
-        HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.concat(
-                HttpRequest.BodyPublishers.ofByteArray(partHeader),
-                ofFileSafe(filePath),
-                HttpRequest.BodyPublishers.ofByteArray(footer));
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(uploadUrl))
-                .header("Content-Type", "multipart/form-data; boundary=" + boundary)
-                .POST(bodyPublisher)
-                .build();
-
-        return executeRequest(request);
+    /**
+     * Uploads a file at the given {@link Path} to the {@code IMAGE} upload endpoint.
+     *
+     * @param endpoint the endpoint returned by {@code getUploadUrl(UploadType.IMAGE)};
+     *                 must not be {@code null}
+     * @param filePath the path of the file to upload; must not be {@code null}
+     * @param filename the filename to advertise; must not be {@code null}
+     * @return the parsed JSON response containing the {@code photos} map
+     * @throws MaxClientException if an I/O error occurs or the server returns a non-2xx status
+     */
+    public ImageUploadedInfo uploadImage(UploadEndpoint endpoint, Path filePath, String filename) {
+        Objects.requireNonNull(endpoint, "endpoint must not be null");
+        String body = transferFromFile(endpoint.url(), filePath, filename);
+        return serializer.deserialize(body, ImageUploadedInfo.class);
     }
 
     /**
-     * Uploads raw byte data to the given upload URL using multipart/form-data.
+     * Convenience overload accepting a {@link File} (delegates to the {@link Path} form).
      *
-     * <p>Use this overload when the data is already in memory (e.g., generated content or
-     * small thumbnail images). For file-based uploads prefer
-     * {@link #upload(String, Path, String)} to avoid heap exhaustion.</p>
-     *
-     * @param uploadUrl the URL obtained from {@code POST /uploads}; must not be {@code null}
-     * @param data      the file content as a byte array; must not be {@code null}
-     * @param filename  the filename to use in the multipart form; must not be {@code null}
-     * @return the {@link UploadedInfo} containing the upload token
-     * @throws MaxClientException if an I/O error occurs or the server returns an error response
+     * @param endpoint the upload endpoint; must not be {@code null}
+     * @param file     the file to upload; must not be {@code null}
+     * @return the parsed JSON response
+     * @throws MaxClientException if an I/O error occurs
      */
-    public UploadedInfo upload(String uploadUrl, byte[] data, String filename) {
-        Objects.requireNonNull(uploadUrl, "uploadUrl must not be null");
-        Objects.requireNonNull(data, "data must not be null");
-        Objects.requireNonNull(filename, "filename must not be null");
+    public ImageUploadedInfo uploadImage(UploadEndpoint endpoint, File file) {
+        Objects.requireNonNull(file, "file must not be null");
+        return uploadImage(endpoint, file.toPath(), file.getName());
+    }
 
-        String boundary = MULTIPART_BOUNDARY_PREFIX
-                + UUID.randomUUID().toString().replace("-", "");
+    /**
+     * Uploads in-memory data to the {@code IMAGE} upload endpoint.
+     *
+     * @param endpoint the upload endpoint; must not be {@code null}
+     * @param data     the image bytes; must not be {@code null}
+     * @param filename the filename to advertise; must not be {@code null}
+     * @return the parsed JSON response
+     * @throws MaxClientException if an I/O error occurs
+     */
+    public ImageUploadedInfo uploadImage(UploadEndpoint endpoint, byte[] data, String filename) {
+        Objects.requireNonNull(endpoint, "endpoint must not be null");
+        String body = transferFromBytes(endpoint.url(), data, filename);
+        return serializer.deserialize(body, ImageUploadedInfo.class);
+    }
 
-        byte[] multipartBody = buildMultipartBody(boundary, data, filename);
+    // ===== VIDEO / AUDIO =====
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(uploadUrl))
-                .header("Content-Type", "multipart/form-data; boundary=" + boundary)
-                .POST(HttpRequest.BodyPublishers.ofByteArray(multipartBody))
-                .build();
+    /**
+     * Uploads a file at the given {@link Path} to a {@code VIDEO} or {@code AUDIO} upload endpoint.
+     *
+     * <p>Unlike file/image uploads, the response carries no token; this method parses the
+     * {@code <retval>...</retval>} XML body and forwards
+     * {@link UploadEndpoint#token() endpoint.token()} as the attachment token. The endpoint
+     * therefore <strong>must</strong> have a non-null token.</p>
+     *
+     * @param endpoint the endpoint returned by {@code getUploadUrl(UploadType.VIDEO)} or
+     *                 {@code getUploadUrl(UploadType.AUDIO)}; must not be {@code null} and
+     *                 must have a non-null {@code token}
+     * @param filePath the path of the file to upload; must not be {@code null}
+     * @param filename the filename to advertise; must not be {@code null}
+     * @return a {@link MediaUploadedInfo} carrying the endpoint token and the parsed retval
+     * @throws MaxClientException       if an I/O error occurs or the server returns a non-2xx
+     *                                  status, or the XML body cannot be parsed
+     * @throws IllegalArgumentException if {@code endpoint.token()} is {@code null}
+     */
+    public MediaUploadedInfo uploadMedia(UploadEndpoint endpoint, Path filePath, String filename) {
+        Objects.requireNonNull(endpoint, "endpoint must not be null");
+        if (endpoint.token() == null) {
+            throw new IllegalArgumentException(
+                    "endpoint.token() must not be null for video/audio uploads — "
+                    + "the upload response carries no token, the attachment token comes "
+                    + "from the UploadEndpoint returned by POST /uploads.");
+        }
+        String body = transferFromFile(endpoint.url(), filePath, filename);
+        return new MediaUploadedInfo(endpoint.token(), parseRetval(body));
+    }
 
-        return executeRequest(request);
+    /**
+     * Convenience overload accepting a {@link File} (delegates to the {@link Path} form).
+     *
+     * @param endpoint the upload endpoint; must not be {@code null}
+     * @param file     the file to upload; must not be {@code null}
+     * @return the upload result
+     * @throws MaxClientException if an I/O error occurs
+     */
+    public MediaUploadedInfo uploadMedia(UploadEndpoint endpoint, File file) {
+        Objects.requireNonNull(file, "file must not be null");
+        return uploadMedia(endpoint, file.toPath(), file.getName());
+    }
+
+    /**
+     * Uploads in-memory data to a {@code VIDEO} or {@code AUDIO} upload endpoint.
+     *
+     * @param endpoint the upload endpoint; must not be {@code null}
+     * @param data     the media bytes; must not be {@code null}
+     * @param filename the filename to advertise; must not be {@code null}
+     * @return the upload result
+     * @throws MaxClientException if an I/O error occurs
+     */
+    public MediaUploadedInfo uploadMedia(UploadEndpoint endpoint, byte[] data, String filename) {
+        Objects.requireNonNull(endpoint, "endpoint must not be null");
+        if (endpoint.token() == null) {
+            throw new IllegalArgumentException(
+                    "endpoint.token() must not be null for video/audio uploads.");
+        }
+        String body = transferFromBytes(endpoint.url(), data, filename);
+        return new MediaUploadedInfo(endpoint.token(), parseRetval(body));
     }
 
     /**
@@ -214,14 +300,76 @@ public class MaxUploadAPI implements AutoCloseable {
         }
     }
 
+    // ===== Internal transport helpers =====
+
     /**
-     * Sends the given HTTP request and deserializes the response body as {@link UploadedInfo}.
+     * Streams the file content to {@code uploadUrl} via multipart/form-data.
      *
-     * @param request the pre-built HTTP request
-     * @return the deserialized upload result
-     * @throws MaxClientException if the server returns a non-2xx status or an I/O error occurs
+     * @param uploadUrl target URL
+     * @param filePath  source file
+     * @param filename  filename advertised in Content-Disposition
+     * @return the response body as a string (may be JSON or XML depending on endpoint type)
+     * @throws MaxClientException on transport, I/O, or non-2xx HTTP errors
      */
-    private UploadedInfo executeRequest(HttpRequest request) {
+    private String transferFromFile(String uploadUrl, Path filePath, String filename) {
+        Objects.requireNonNull(uploadUrl, "uploadUrl must not be null");
+        Objects.requireNonNull(filePath, "filePath must not be null");
+        Objects.requireNonNull(filename, "filename must not be null");
+
+        String boundary = newBoundary();
+        byte[] partHeader = buildPartHeader(boundary, filename);
+        byte[] footer = (CRLF + "--" + boundary + "--" + CRLF).getBytes(StandardCharsets.UTF_8);
+
+        // Stream the file content without loading it into heap memory.
+        // BodyPublishers.concat() (Java 21) sequences publishers without buffering.
+        HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.concat(
+                HttpRequest.BodyPublishers.ofByteArray(partHeader),
+                ofFileSafe(filePath),
+                HttpRequest.BodyPublishers.ofByteArray(footer));
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(uploadUrl))
+                .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                .POST(bodyPublisher)
+                .build();
+
+        return executeAndReadBody(request);
+    }
+
+    /**
+     * Sends in-memory bytes to {@code uploadUrl} via multipart/form-data.
+     *
+     * @param uploadUrl target URL
+     * @param data      payload bytes
+     * @param filename  filename advertised in Content-Disposition
+     * @return the response body as a string
+     * @throws MaxClientException on transport, I/O, or non-2xx HTTP errors
+     */
+    private String transferFromBytes(String uploadUrl, byte[] data, String filename) {
+        Objects.requireNonNull(uploadUrl, "uploadUrl must not be null");
+        Objects.requireNonNull(data, "data must not be null");
+        Objects.requireNonNull(filename, "filename must not be null");
+
+        String boundary = newBoundary();
+        byte[] multipartBody = buildMultipartBody(boundary, data, filename);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(uploadUrl))
+                .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                .POST(HttpRequest.BodyPublishers.ofByteArray(multipartBody))
+                .build();
+
+        return executeAndReadBody(request);
+    }
+
+    /**
+     * Sends the request and returns the response body. Throws on non-2xx status.
+     *
+     * @param request the prepared request
+     * @return the response body as a string
+     * @throws MaxClientException on non-2xx status, I/O failure, or interruption
+     */
+    private String executeAndReadBody(HttpRequest request) {
         try {
             HttpResponse<String> response = httpClient.send(request,
                     HttpResponse.BodyHandlers.ofString());
@@ -231,7 +379,7 @@ public class MaxUploadAPI implements AutoCloseable {
                         "Upload failed with HTTP status " + status + ": " + response.body(),
                         new IOException("HTTP " + status));
             }
-            return serializer.deserialize(response.body(), UploadedInfo.class);
+            return response.body();
         } catch (IOException e) {
             throw new MaxClientException("Upload request failed", e);
         } catch (InterruptedException e) {
@@ -241,12 +389,39 @@ public class MaxUploadAPI implements AutoCloseable {
     }
 
     /**
+     * Parses the {@code <retval>...</retval>} integer from a video/audio upload response body.
+     *
+     * @param body the response body
+     * @return the parsed integer
+     * @throws MaxClientException if the body does not contain a parseable retval element
+     */
+    private static int parseRetval(String body) {
+        if (body == null) {
+            throw new MaxClientException(
+                    "Empty upload response body; expected <retval>N</retval>",
+                    new IOException("null body"));
+        }
+        Matcher m = RETVAL_PATTERN.matcher(body);
+        if (!m.find()) {
+            throw new MaxClientException(
+                    "Unexpected upload response body, no <retval> element found: " + body,
+                    new IOException("invalid response"));
+        }
+        try {
+            return Integer.parseInt(m.group(1));
+        } catch (NumberFormatException e) {
+            throw new MaxClientException(
+                    "Unparseable retval value in upload response: " + m.group(1), e);
+        }
+    }
+
+    private static String newBoundary() {
+        return MULTIPART_BOUNDARY_PREFIX + UUID.randomUUID().toString().replace("-", "");
+    }
+
+    /**
      * Wraps {@link HttpRequest.BodyPublishers#ofFile(Path)} and re-throws {@link IOException}
      * as {@link MaxClientException}.
-     *
-     * @param filePath the file to stream
-     * @return a body publisher that streams the file content
-     * @throws MaxClientException if the file cannot be read
      */
     private static HttpRequest.BodyPublisher ofFileSafe(Path filePath) {
         try {
@@ -258,9 +433,6 @@ public class MaxUploadAPI implements AutoCloseable {
 
     /**
      * Loads the Jackson serializer via reflection to avoid a compile-time dependency on Jackson.
-     *
-     * @return the instantiated serializer
-     * @throws MaxClientException if the class cannot be found or instantiated
      */
     private static MaxSerializer loadJacksonSerializer() {
         try {
@@ -277,13 +449,6 @@ public class MaxUploadAPI implements AutoCloseable {
         }
     }
 
-    /**
-     * Builds the multipart part header (boundary line + Content-Disposition + Content-Type).
-     *
-     * @param boundary the multipart boundary string (without leading {@code --})
-     * @param filename the filename to include in the Content-Disposition header
-     * @return the header bytes in UTF-8
-     */
     private static byte[] buildPartHeader(String boundary, String filename) {
         String header = "--" + boundary + CRLF
                 + "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\""
@@ -293,17 +458,6 @@ public class MaxUploadAPI implements AutoCloseable {
         return header.getBytes(StandardCharsets.UTF_8);
     }
 
-    /**
-     * Builds a complete multipart/form-data body for the given binary data and filename.
-     *
-     * <p>Used only by the {@link #upload(String, byte[], String)} overload where the caller
-     * already has the data in memory.</p>
-     *
-     * @param boundary the multipart boundary string
-     * @param data     the file bytes
-     * @param filename the filename to include in the Content-Disposition header
-     * @return the encoded multipart body as a byte array
-     */
     private static byte[] buildMultipartBody(String boundary, byte[] data, String filename) {
         byte[] header = buildPartHeader(boundary, filename);
         byte[] footer = (CRLF + "--" + boundary + "--" + CRLF).getBytes(StandardCharsets.UTF_8);
