@@ -41,15 +41,15 @@
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("ru.etsft.max:max-bot-api-client:0.3.0")
-    implementation("ru.etsft.max:max-bot-api-jackson:0.3.0")
-    implementation("ru.etsft.max:max-bot-api-longpolling:0.3.0")
+    implementation("ru.etsft.max:max-bot-api-client:0.3.1")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.3.1")
+    implementation("ru.etsft.max:max-bot-api-longpolling:0.3.1")
 
     // Опционально: поддержка webhook
-    // implementation("ru.etsft.max:max-bot-api-webhook:0.3.0")
+    // implementation("ru.etsft.max:max-bot-api-webhook:0.3.1")
 
     // Опционально: автоконфигурация Spring Boot (webhook + long polling)
-    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.3.0")
+    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.3.1")
 }
 ```
 
@@ -60,24 +60,24 @@ dependencies {
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-client</artifactId>
-        <version>0.3.0</version>
+        <version>0.3.1</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-jackson</artifactId>
-        <version>0.3.0</version>
+        <version>0.3.1</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-longpolling</artifactId>
-        <version>0.3.0</version>
+        <version>0.3.1</version>
     </dependency>
     <!-- Опционально: автоконфигурация Spring Boot (webhook + long polling) -->
     <!--
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-spring-boot</artifactId>
-        <version>0.3.0</version>
+        <version>0.3.1</version>
     </dependency>
     -->
 </dependencies>
