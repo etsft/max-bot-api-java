@@ -30,27 +30,27 @@ public enum ChatPermission {
     /** Permission to add new administrators. */
     ADD_ADMINS,
 
-    /** Permission to change chat info (title, icon, etc.). */
+    /** Permission to change chat or channel info (title, icon, etc.). */
     CHANGE_CHAT_INFO,
 
     /** Permission to pin messages. */
     PIN_MESSAGE,
 
-    /** Permission to write messages. */
+    /** Permission to edit and delete messages in group chats, and to write posts in channels. */
     WRITE,
 
-    /** Permission to make audio/video calls. */
+    /** Permission to make audio/video calls in group chats (not available for channels). */
     CAN_CALL,
 
-    /** Permission to edit the chat invite link. */
+    /** Permission to edit the chat invite link in group chats (not available for channels). */
     EDIT_LINK,
 
-    /** Permission to delete the chat. */
+    /** Permission to delete posts in channels (not available for group chats). */
     DELETE,
 
-    /** Permission to edit any message in the chat. */
+    /** Permission to edit posts in channels (not available for group chats). */
     EDIT,
 
-    /** Permission to view chat statistics. */
+    /** Permission to view chat statistics in channels (not available for group chats). */
     VIEW_STATS
 }
