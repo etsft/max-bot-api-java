@@ -283,18 +283,6 @@ class EdgeCaseTest {
         assertThat(linked.chatId()).isNull();
     }
 
-    // ===== ConstructedMessage =====
-
-    @Test
-    void constructedMessage_construction() {
-        var linked = new LinkedMessage(MessageLinkType.REPLY, USER, 5L, BODY);
-        var cm = new ConstructedMessage(USER, 12345L, linked, BODY);
-        assertThat(cm.sender()).isEqualTo(USER);
-        assertThat(cm.timestamp()).isEqualTo(12345L);
-        assertThat(cm.link()).isEqualTo(linked);
-        assertThat(cm.body()).isEqualTo(BODY);
-    }
-
     // ===== SubscriptionRequestBody =====
 
     @Test

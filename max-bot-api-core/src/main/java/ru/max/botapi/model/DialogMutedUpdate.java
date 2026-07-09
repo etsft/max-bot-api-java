@@ -19,38 +19,34 @@ package ru.max.botapi.model;
 import java.util.Objects;
 
 /**
- * Update: a message construction request from a user (message construction flow).
+ * Update: a user muted notifications for the dialog with the bot.
  *
  * @param timestamp  event timestamp (epoch millis)
- * @param user       the user requesting message construction
+ * @param chatId     chat where the dialog was muted
+ * @param user       the user who muted the dialog
+ * @param mutedUntil epoch millis until which the dialog stays muted
  * @param userLocale locale of the user
- * @param sessionId  construction session identifier
- * @param data       optional data from the previous construction step
- * @param input      optional input from the user (raw JSON string)
  */
-public record MessageConstructionRequestUpdate(
+public record DialogMutedUpdate(
         long timestamp,
+        long chatId,
         User user,
-        @Nullable String userLocale,
-        String sessionId,
-        @Nullable String data,
-        @Nullable String input
+        long mutedUntil,
+        @Nullable String userLocale
 ) implements Update {
 
     /** {@inheritDoc} */
     @Override
     public String updateType() {
-        return "message_construction_request";
+        return "dialog_muted";
     }
 
     /**
-     * Creates a MessageConstructionRequestUpdate.
+     * Creates a DialogMutedUpdate.
      *
-     * @param user      must not be {@code null}
-     * @param sessionId must not be {@code null}
+     * @param user must not be {@code null}
      */
-    public MessageConstructionRequestUpdate {
+    public DialogMutedUpdate {
         Objects.requireNonNull(user, "user must not be null");
-        Objects.requireNonNull(sessionId, "sessionId must not be null");
     }
 }

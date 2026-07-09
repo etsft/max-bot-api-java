@@ -41,8 +41,11 @@ import ru.max.botapi.model.ChatPatch;
 import ru.max.botapi.model.ChatPermission;
 import ru.max.botapi.model.ChatStatus;
 import ru.max.botapi.model.ChatType;
-import ru.max.botapi.model.ConstructedMessage;
 import ru.max.botapi.model.ContactAttachment;
+import ru.max.botapi.model.DialogClearedUpdate;
+import ru.max.botapi.model.DialogMutedUpdate;
+import ru.max.botapi.model.DialogRemovedUpdate;
+import ru.max.botapi.model.DialogUnmutedUpdate;
 import ru.max.botapi.model.FileAttachment;
 import ru.max.botapi.model.FileUploadedInfo;
 import ru.max.botapi.model.GetPinnedMessageResult;
@@ -57,9 +60,6 @@ import ru.max.botapi.model.MediaRequestPayload;
 import ru.max.botapi.model.MediaUploadedInfo;
 import ru.max.botapi.model.Message;
 import ru.max.botapi.model.MessageBody;
-import ru.max.botapi.model.MessageChatCreatedUpdate;
-import ru.max.botapi.model.MessageConstructedUpdate;
-import ru.max.botapi.model.MessageConstructionRequestUpdate;
 import ru.max.botapi.model.MessageCreatedUpdate;
 import ru.max.botapi.model.MessageLinkType;
 import ru.max.botapi.model.MessageList;
@@ -538,17 +538,6 @@ class AdditionalSerializationTest {
             assertThat(deserialized.attachments().get(4)).isInstanceOf(LocationAttachment.class);
         }
 
-        @Test
-        void constructedMessage_serialization() {
-            var cm = new ConstructedMessage(USER, 1700002200000L, null, BODY);
-            String json = serializer.serialize(cm);
-            assertThatJson(json).node("timestamp").isEqualTo(1700002200000L);
-            assertThatJson(json).node("body.mid").isEqualTo("msg_001");
-            ConstructedMessage deserialized = serializer.deserialize(json,
-                    ConstructedMessage.class);
-            assertThat(deserialized.sender().name()).isEqualTo("John Doe");
-            assertThat(deserialized.body().text()).isEqualTo("Hello, world!");
-        }
     }
 
     // ===== Button Exhaustive Serialization =====
@@ -657,41 +646,45 @@ class AdditionalSerializationTest {
     class FixtureBasedDeserialization {
 
         @Test
-        void messageConstructionRequestUpdate_fromFixture() {
+        void dialogClearedUpdate_fromFixture() {
             Update update = serializer.deserialize(
-                    FixtureLoader.loadFixture("updates/message-construction-request.json"), Update.class);
-            assertThat(update).isInstanceOf(MessageConstructionRequestUpdate.class);
-            MessageConstructionRequestUpdate mcru = (MessageConstructionRequestUpdate) update;
-            assertThat(mcru.sessionId()).isEqualTo("session_abc123");
-            assertThat(mcru.data()).isEqualTo("step1");
-            assertThat(mcru.input()).isEqualTo("user input text");
-            assertThat(mcru.userLocale()).isEqualTo("en");
-            assertThat(mcru.user().userId()).isEqualTo(99001L);
+                    FixtureLoader.loadFixture("updates/dialog-cleared.json"), Update.class);
+            assertThat(update).isInstanceOf(DialogClearedUpdate.class);
+            DialogClearedUpdate dcu = (DialogClearedUpdate) update;
+            assertThat(dcu.chatId()).isEqualTo(60001L);
+            assertThat(dcu.userLocale()).isEqualTo("en");
+            assertThat(dcu.user().userId()).isEqualTo(99001L);
         }
 
         @Test
-        void messageConstructedUpdate_fromFixture() {
+        void dialogMutedUpdate_fromFixture() {
             Update update = serializer.deserialize(
-                    FixtureLoader.loadFixture("updates/message-constructed.json"), Update.class);
-            assertThat(update).isInstanceOf(MessageConstructedUpdate.class);
-            MessageConstructedUpdate mcu = (MessageConstructedUpdate) update;
-            assertThat(mcu.sessionId()).isEqualTo("session_abc123");
-            assertThat(mcu.user().name()).isEqualTo("John Doe");
-            assertThat(mcu.message().body().mid()).isEqualTo("cmsg_001");
-            assertThat(mcu.message().body().text()).isEqualTo("Constructed message text");
+                    FixtureLoader.loadFixture("updates/dialog-muted.json"), Update.class);
+            assertThat(update).isInstanceOf(DialogMutedUpdate.class);
+            DialogMutedUpdate dmu = (DialogMutedUpdate) update;
+            assertThat(dmu.chatId()).isEqualTo(60001L);
+            assertThat(dmu.mutedUntil()).isEqualTo(1700100000000L);
+            assertThat(dmu.user().name()).isEqualTo("John Doe");
         }
 
         @Test
-        void messageChatCreatedUpdate_fromFixture() {
+        void dialogUnmutedUpdate_fromFixture() {
             Update update = serializer.deserialize(
-                    FixtureLoader.loadFixture("updates/message-chat-created.json"), Update.class);
-            assertThat(update).isInstanceOf(MessageChatCreatedUpdate.class);
-            MessageChatCreatedUpdate mccu = (MessageChatCreatedUpdate) update;
-            assertThat(mccu.chat().chatId()).isEqualTo(50003L);
-            assertThat(mccu.chat().title()).isEqualTo("New Chat");
-            assertThat(mccu.messageId()).isEqualTo("msg_020");
-            assertThat(mccu.startPayload()).isEqualTo("start_data");
-            assertThat(mccu.chat().participantsCount()).isEqualTo(2);
+                    FixtureLoader.loadFixture("updates/dialog-unmuted.json"), Update.class);
+            assertThat(update).isInstanceOf(DialogUnmutedUpdate.class);
+            DialogUnmutedUpdate duu = (DialogUnmutedUpdate) update;
+            assertThat(duu.chatId()).isEqualTo(60001L);
+            assertThat(duu.userLocale()).isEqualTo("en");
+        }
+
+        @Test
+        void dialogRemovedUpdate_fromFixture() {
+            Update update = serializer.deserialize(
+                    FixtureLoader.loadFixture("updates/dialog-removed.json"), Update.class);
+            assertThat(update).isInstanceOf(DialogRemovedUpdate.class);
+            DialogRemovedUpdate dru = (DialogRemovedUpdate) update;
+            assertThat(dru.chatId()).isEqualTo(60001L);
+            assertThat(dru.userLocale()).isEqualTo("en");
         }
 
         @Test

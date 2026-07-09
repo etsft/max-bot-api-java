@@ -28,10 +28,11 @@ import ru.max.botapi.model.BotRemovedUpdate;
 import ru.max.botapi.model.BotStartedUpdate;
 import ru.max.botapi.model.BotStoppedUpdate;
 import ru.max.botapi.model.ChatTitleChangedUpdate;
+import ru.max.botapi.model.DialogClearedUpdate;
+import ru.max.botapi.model.DialogMutedUpdate;
+import ru.max.botapi.model.DialogRemovedUpdate;
+import ru.max.botapi.model.DialogUnmutedUpdate;
 import ru.max.botapi.model.MessageCallbackUpdate;
-import ru.max.botapi.model.MessageChatCreatedUpdate;
-import ru.max.botapi.model.MessageConstructedUpdate;
-import ru.max.botapi.model.MessageConstructionRequestUpdate;
 import ru.max.botapi.model.MessageCreatedUpdate;
 import ru.max.botapi.model.MessageEditedUpdate;
 import ru.max.botapi.model.MessageRemovedUpdate;
@@ -70,10 +71,10 @@ final class UpdateDeserializer extends StdDeserializer<Update> {
             case "bot_started" -> ctxt.readTreeAsValue(node, BotStartedUpdate.class);
             case "bot_stopped" -> ctxt.readTreeAsValue(node, BotStoppedUpdate.class);
             case "chat_title_changed" -> ctxt.readTreeAsValue(node, ChatTitleChangedUpdate.class);
-            case "message_construction_request" ->
-                    ctxt.readTreeAsValue(node, MessageConstructionRequestUpdate.class);
-            case "message_constructed" -> ctxt.readTreeAsValue(node, MessageConstructedUpdate.class);
-            case "message_chat_created" -> ctxt.readTreeAsValue(node, MessageChatCreatedUpdate.class);
+            case "dialog_cleared" -> ctxt.readTreeAsValue(node, DialogClearedUpdate.class);
+            case "dialog_muted" -> ctxt.readTreeAsValue(node, DialogMutedUpdate.class);
+            case "dialog_unmuted" -> ctxt.readTreeAsValue(node, DialogUnmutedUpdate.class);
+            case "dialog_removed" -> ctxt.readTreeAsValue(node, DialogRemovedUpdate.class);
             default -> {
                 long timestamp = node.has("timestamp") ? node.get("timestamp").asLong() : 0L;
                 yield new UnknownUpdate(updateType, timestamp, node.toString());

@@ -48,6 +48,10 @@ import ru.max.botapi.model.ChatTitleChangedUpdate;
 import ru.max.botapi.model.ChatType;
 import ru.max.botapi.model.ContactAttachment;
 import ru.max.botapi.model.ContactAttachmentRequest;
+import ru.max.botapi.model.DialogClearedUpdate;
+import ru.max.botapi.model.DialogMutedUpdate;
+import ru.max.botapi.model.DialogRemovedUpdate;
+import ru.max.botapi.model.DialogUnmutedUpdate;
 import ru.max.botapi.model.FileAttachment;
 import ru.max.botapi.model.FileAttachmentRequest;
 import ru.max.botapi.model.ImageAttachmentRequest;
@@ -62,9 +66,6 @@ import ru.max.botapi.model.Message;
 import ru.max.botapi.model.MessageBody;
 import ru.max.botapi.model.MessageButton;
 import ru.max.botapi.model.MessageCallbackUpdate;
-import ru.max.botapi.model.MessageChatCreatedUpdate;
-import ru.max.botapi.model.MessageConstructedUpdate;
-import ru.max.botapi.model.MessageConstructionRequestUpdate;
 import ru.max.botapi.model.MessageCreatedUpdate;
 import ru.max.botapi.model.MessageEditedUpdate;
 import ru.max.botapi.model.MessageRecipient;
@@ -290,30 +291,39 @@ class JacksonMaxSerializerTest {
         }
 
         @Test
-        void messageConstructionRequest() {
+        void dialogCleared() {
             Update update = serializer.deserialize(
-                    loadFixture("updates/message-construction-request.json"), Update.class);
-            assertThat(update).isInstanceOf(MessageConstructionRequestUpdate.class);
-            MessageConstructionRequestUpdate mcru = (MessageConstructionRequestUpdate) update;
-            assertThat(mcru.sessionId()).isEqualTo("session_abc123");
+                    loadFixture("updates/dialog-cleared.json"), Update.class);
+            assertThat(update).isInstanceOf(DialogClearedUpdate.class);
+            DialogClearedUpdate dcu = (DialogClearedUpdate) update;
+            assertThat(dcu.chatId()).isEqualTo(60001L);
         }
 
         @Test
-        void messageConstructed() {
+        void dialogMuted() {
             Update update = serializer.deserialize(
-                    loadFixture("updates/message-constructed.json"), Update.class);
-            assertThat(update).isInstanceOf(MessageConstructedUpdate.class);
-            MessageConstructedUpdate mcu = (MessageConstructedUpdate) update;
-            assertThat(mcu.message().body().text()).isEqualTo("Constructed message text");
+                    loadFixture("updates/dialog-muted.json"), Update.class);
+            assertThat(update).isInstanceOf(DialogMutedUpdate.class);
+            DialogMutedUpdate dmu = (DialogMutedUpdate) update;
+            assertThat(dmu.mutedUntil()).isEqualTo(1700100000000L);
         }
 
         @Test
-        void messageChatCreated() {
+        void dialogUnmuted() {
             Update update = serializer.deserialize(
-                    loadFixture("updates/message-chat-created.json"), Update.class);
-            assertThat(update).isInstanceOf(MessageChatCreatedUpdate.class);
-            MessageChatCreatedUpdate mccu = (MessageChatCreatedUpdate) update;
-            assertThat(mccu.chat().title()).isEqualTo("New Chat");
+                    loadFixture("updates/dialog-unmuted.json"), Update.class);
+            assertThat(update).isInstanceOf(DialogUnmutedUpdate.class);
+            DialogUnmutedUpdate duu = (DialogUnmutedUpdate) update;
+            assertThat(duu.chatId()).isEqualTo(60001L);
+        }
+
+        @Test
+        void dialogRemoved() {
+            Update update = serializer.deserialize(
+                    loadFixture("updates/dialog-removed.json"), Update.class);
+            assertThat(update).isInstanceOf(DialogRemovedUpdate.class);
+            DialogRemovedUpdate dru = (DialogRemovedUpdate) update;
+            assertThat(dru.chatId()).isEqualTo(60001L);
         }
 
         @Test

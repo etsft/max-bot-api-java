@@ -19,29 +19,32 @@ package ru.max.botapi.model;
 import java.util.Objects;
 
 /**
- * A message constructed by the bot (message construction flow).
+ * Update: a user cleared the dialog history with the bot.
  *
- * <p>This is a distinct API type from {@link Message}, containing only
- * a subset of fields: sender, timestamp, link, and body.</p>
- *
- * @param sender    the sender of the constructed message
- * @param timestamp message timestamp (epoch millis)
- * @param link      optional link to another message
- * @param body      the message content
+ * @param timestamp  event timestamp (epoch millis)
+ * @param chatId     chat where the dialog was cleared
+ * @param user       the user who cleared the dialog
+ * @param userLocale locale of the user
  */
-public record ConstructedMessage(
-        @Nullable User sender,
+public record DialogClearedUpdate(
         long timestamp,
-        @Nullable LinkedMessage link,
-        MessageBody body
-) {
+        long chatId,
+        User user,
+        @Nullable String userLocale
+) implements Update {
+
+    /** {@inheritDoc} */
+    @Override
+    public String updateType() {
+        return "dialog_cleared";
+    }
 
     /**
-     * Creates a ConstructedMessage.
+     * Creates a DialogClearedUpdate.
      *
-     * @param body must not be {@code null}
+     * @param user must not be {@code null}
      */
-    public ConstructedMessage {
-        Objects.requireNonNull(body, "body must not be null");
+    public DialogClearedUpdate {
+        Objects.requireNonNull(user, "user must not be null");
     }
 }

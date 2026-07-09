@@ -113,28 +113,31 @@ class UpdateTest {
     }
 
     @Test
-    void messageConstructionRequestUpdate() {
-        var upd = new MessageConstructionRequestUpdate(1200L, USER, "en",
-                "sess1", "data", null);
-        assertThat(upd.updateType()).isEqualTo("message_construction_request");
-        assertThat(upd.sessionId()).isEqualTo("sess1");
+    void dialogClearedUpdate() {
+        var upd = new DialogClearedUpdate(1200L, 1L, USER, "en");
+        assertThat(upd.updateType()).isEqualTo("dialog_cleared");
+        assertThat(upd.chatId()).isEqualTo(1L);
     }
 
     @Test
-    void messageConstructedUpdate() {
-        var cm = new ConstructedMessage(USER, 100L, null, BODY);
-        var upd = new MessageConstructedUpdate(1300L, USER, "sess2", cm);
-        assertThat(upd.updateType()).isEqualTo("message_constructed");
-        assertThat(upd.message().body()).isEqualTo(BODY);
+    void dialogMutedUpdate() {
+        var upd = new DialogMutedUpdate(1300L, 1L, USER, 9999L, "en");
+        assertThat(upd.updateType()).isEqualTo("dialog_muted");
+        assertThat(upd.mutedUntil()).isEqualTo(9999L);
     }
 
     @Test
-    void messageChatCreatedUpdate() {
-        var chat = new Chat(1L, ChatType.CHAT, ChatStatus.ACTIVE, "T",
-                null, 0L, 2, null, null, false, null, null, null, null, null, null);
-        var upd = new MessageChatCreatedUpdate(1400L, chat, "mid1", "sp");
-        assertThat(upd.updateType()).isEqualTo("message_chat_created");
-        assertThat(upd.startPayload()).isEqualTo("sp");
+    void dialogUnmutedUpdate() {
+        var upd = new DialogUnmutedUpdate(1400L, 1L, USER, "en");
+        assertThat(upd.updateType()).isEqualTo("dialog_unmuted");
+        assertThat(upd.chatId()).isEqualTo(1L);
+    }
+
+    @Test
+    void dialogRemovedUpdate() {
+        var upd = new DialogRemovedUpdate(1450L, 1L, USER, "en");
+        assertThat(upd.updateType()).isEqualTo("dialog_removed");
+        assertThat(upd.chatId()).isEqualTo(1L);
     }
 
     @Test
@@ -144,11 +147,8 @@ class UpdateTest {
     }
 
     @Test
-    void exhaustiveSwitch_coversAll15Types() {
+    void exhaustiveSwitch_coversAll16Types() {
         var cb = new Callback(0L, "cb", null, USER);
-        var cm = new ConstructedMessage(null, 0L, null, BODY);
-        var chat = new Chat(1L, ChatType.CHAT, ChatStatus.ACTIVE, null,
-                null, 0L, 0, null, null, false, null, null, null, null, null, null);
 
         Update[] all = {
                 new MessageCreatedUpdate(0, MSG, null),
@@ -162,13 +162,14 @@ class UpdateTest {
                 new BotStartedUpdate(0, 1, USER, null, null),
                 new BotStoppedUpdate(0, 1, USER),
                 new ChatTitleChangedUpdate(0, 1, USER, "t"),
-                new MessageConstructionRequestUpdate(0, USER, null, "s", null, null),
-                new MessageConstructedUpdate(0, USER, "s", cm),
-                new MessageChatCreatedUpdate(0, chat, "m", null),
+                new DialogClearedUpdate(0, 1, USER, null),
+                new DialogMutedUpdate(0, 1, USER, 0, null),
+                new DialogUnmutedUpdate(0, 1, USER, null),
+                new DialogRemovedUpdate(0, 1, USER, null),
                 new UnknownUpdate("x", 0, "{}")
         };
 
-        assertThat(all).hasSize(15);
+        assertThat(all).hasSize(16);
 
         for (Update upd : all) {
             String desc = switch (upd) {
@@ -183,9 +184,10 @@ class UpdateTest {
                 case BotStartedUpdate u -> u.updateType();
                 case BotStoppedUpdate u -> u.updateType();
                 case ChatTitleChangedUpdate u -> u.updateType();
-                case MessageConstructionRequestUpdate u -> u.updateType();
-                case MessageConstructedUpdate u -> u.updateType();
-                case MessageChatCreatedUpdate u -> u.updateType();
+                case DialogClearedUpdate u -> u.updateType();
+                case DialogMutedUpdate u -> u.updateType();
+                case DialogUnmutedUpdate u -> u.updateType();
+                case DialogRemovedUpdate u -> u.updateType();
                 case UnknownUpdate u -> u.updateType();
             };
             assertThat(desc).isNotBlank();

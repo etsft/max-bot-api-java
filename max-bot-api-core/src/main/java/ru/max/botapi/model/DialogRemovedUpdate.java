@@ -19,36 +19,35 @@ package ru.max.botapi.model;
 import java.util.Objects;
 
 /**
- * Update: a message was constructed by the bot (message construction flow completed).
+ * Update: a user deleted the dialog with the bot.
  *
- * @param timestamp event timestamp (epoch millis)
- * @param user      the user for whom the message was constructed
- * @param sessionId construction session identifier
- * @param message   the constructed message
+ * <p>The API delivers a separate {@link BotStoppedUpdate} alongside this
+ * event, since deleting the dialog automatically stops the bot.</p>
+ *
+ * @param timestamp  event timestamp (epoch millis)
+ * @param chatId     chat where the dialog was removed
+ * @param user       the user who removed the dialog
+ * @param userLocale locale of the user
  */
-public record MessageConstructedUpdate(
+public record DialogRemovedUpdate(
         long timestamp,
+        long chatId,
         User user,
-        String sessionId,
-        ConstructedMessage message
+        @Nullable String userLocale
 ) implements Update {
 
     /** {@inheritDoc} */
     @Override
     public String updateType() {
-        return "message_constructed";
+        return "dialog_removed";
     }
 
     /**
-     * Creates a MessageConstructedUpdate.
+     * Creates a DialogRemovedUpdate.
      *
-     * @param user      must not be {@code null}
-     * @param sessionId must not be {@code null}
-     * @param message   must not be {@code null}
+     * @param user must not be {@code null}
      */
-    public MessageConstructedUpdate {
+    public DialogRemovedUpdate {
         Objects.requireNonNull(user, "user must not be null");
-        Objects.requireNonNull(sessionId, "sessionId must not be null");
-        Objects.requireNonNull(message, "message must not be null");
     }
 }

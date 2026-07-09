@@ -26,8 +26,8 @@ public sealed interface Update permits
         MessageCreatedUpdate, MessageCallbackUpdate, MessageEditedUpdate,
         MessageRemovedUpdate, BotAddedUpdate, BotRemovedUpdate,
         UserAddedUpdate, UserRemovedUpdate, BotStartedUpdate, BotStoppedUpdate,
-        ChatTitleChangedUpdate, MessageConstructionRequestUpdate,
-        MessageConstructedUpdate, MessageChatCreatedUpdate,
+        ChatTitleChangedUpdate, DialogClearedUpdate, DialogMutedUpdate,
+        DialogUnmutedUpdate, DialogRemovedUpdate,
         UnknownUpdate {
 
     /**

@@ -1,0 +1,8 @@
+{
+  "update_type": "dialog_muted",
+  "timestamp": 1700002200000,
+  "chat_id": 60001,
+  "user": {"user_id": 99001, "name": "John Doe", "is_bot": false, "last_activity_time": 1700000100000},
+  "muted_until": 1700100000000,
+  "user_locale": "en"
+}

@@ -19,34 +19,32 @@ package ru.max.botapi.model;
 import java.util.Objects;
 
 /**
- * Update: a chat was created from a message (via {@link ChatButton}).
+ * Update: a user unmuted notifications for the dialog with the bot.
  *
- * @param timestamp    event timestamp (epoch millis)
- * @param chat         the created chat
- * @param messageId    ID of the message that triggered chat creation
- * @param startPayload optional payload from the chat button
+ * @param timestamp  event timestamp (epoch millis)
+ * @param chatId     chat where the dialog was unmuted
+ * @param user       the user who unmuted the dialog
+ * @param userLocale locale of the user
  */
-public record MessageChatCreatedUpdate(
+public record DialogUnmutedUpdate(
         long timestamp,
-        Chat chat,
-        String messageId,
-        @Nullable String startPayload
+        long chatId,
+        User user,
+        @Nullable String userLocale
 ) implements Update {
 
     /** {@inheritDoc} */
     @Override
     public String updateType() {
-        return "message_chat_created";
+        return "dialog_unmuted";
     }
 
     /**
-     * Creates a MessageChatCreatedUpdate.
+     * Creates a DialogUnmutedUpdate.
      *
-     * @param chat      must not be {@code null}
-     * @param messageId must not be {@code null}
+     * @param user must not be {@code null}
      */
-    public MessageChatCreatedUpdate {
-        Objects.requireNonNull(chat, "chat must not be null");
-        Objects.requireNonNull(messageId, "messageId must not be null");
+    public DialogUnmutedUpdate {
+        Objects.requireNonNull(user, "user must not be null");
     }
 }
