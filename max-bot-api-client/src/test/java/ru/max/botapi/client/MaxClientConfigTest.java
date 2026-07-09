@@ -31,7 +31,7 @@ class MaxClientConfigTest {
     @Test
     void defaultsHaveExpectedValues() {
         MaxClientConfig config = MaxClientConfig.defaults();
-        assertThat(config.baseUrl()).isEqualTo("https://platform-api.max.ru");
+        assertThat(config.baseUrl()).isEqualTo("https://platform-api2.max.ru");
         assertThat(config.connectTimeout()).isEqualTo(Duration.ofSeconds(10));
         assertThat(config.requestTimeout()).isEqualTo(Duration.ofSeconds(60));
         assertThat(config.longPollTimeout()).isEqualTo(Duration.ofSeconds(30));

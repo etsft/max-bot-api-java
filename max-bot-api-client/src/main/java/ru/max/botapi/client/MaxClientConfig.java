@@ -69,7 +69,7 @@ public record MaxClientConfig(
      */
     public static MaxClientConfig defaults() {
         return new MaxClientConfig(
-                "https://platform-api.max.ru",
+                "https://platform-api2.max.ru",
                 Duration.ofSeconds(10),
                 Duration.ofSeconds(60),
                 Duration.ofSeconds(30),
@@ -93,7 +93,7 @@ public record MaxClientConfig(
      */
     public static class Builder {
 
-        private String baseUrl = "https://platform-api.max.ru";
+        private String baseUrl = "https://platform-api2.max.ru";
         private Duration connectTimeout = Duration.ofSeconds(10);
         private Duration requestTimeout = Duration.ofSeconds(60);
         private Duration longPollTimeout = Duration.ofSeconds(30);
