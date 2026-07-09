@@ -76,14 +76,17 @@ public enum UpdateType {
     /** The title of a chat was changed. */
     CHAT_TITLE_CHANGED("chat_title_changed"),
 
-    /** A message construction session was requested. */
-    MESSAGE_CONSTRUCTION_REQUEST("message_construction_request"),
+    /** A user cleared the dialog history with the bot. */
+    DIALOG_CLEARED("dialog_cleared"),
 
-    /** A message construction session was completed. */
-    MESSAGE_CONSTRUCTED("message_constructed"),
+    /** A user muted notifications for the dialog with the bot. */
+    DIALOG_MUTED("dialog_muted"),
 
-    /** A new chat was created via a message. */
-    MESSAGE_CHAT_CREATED("message_chat_created");
+    /** A user unmuted notifications for the dialog with the bot. */
+    DIALOG_UNMUTED("dialog_unmuted"),
+
+    /** A user deleted the dialog with the bot; implies {@code bot_stopped}. */
+    DIALOG_REMOVED("dialog_removed");
 
     private final String value;
 
@@ -138,7 +141,7 @@ public enum UpdateType {
      *
      * <p>Equivalent to {@code UpdateType.toStrings(EnumSet.allOf(UpdateType.class))}.</p>
      *
-     * @return unmodifiable set of all 14 known API value strings
+     * @return unmodifiable set of all 15 known API value strings
      */
     public static Set<String> allValues() {
         return Arrays.stream(values())

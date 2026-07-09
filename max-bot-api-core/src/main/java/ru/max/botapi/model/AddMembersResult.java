@@ -29,11 +29,13 @@ import java.util.Objects;
  * in {@link #failedUserDetails()}.</p>
  *
  * @param success           {@code true} if all users were added successfully
+ * @param message           explanatory message when the request as a whole did not succeed
  * @param failedUserIds     IDs of users that could not be added; empty on full success
  * @param failedUserDetails per-error details for failed users; empty on full success
  */
 public record AddMembersResult(
         boolean success,
+        @Nullable String message,
         @Nullable List<Long> failedUserIds,
         @Nullable List<AddMemberFailure> failedUserDetails
 ) {

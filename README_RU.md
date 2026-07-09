@@ -233,9 +233,10 @@ consumer = MaxLongPollingConsumer.builder()
 | `BOT_STARTED` | `bot_started` | Пользователь начал прямой диалог с ботом |
 | `BOT_STOPPED` | `bot_stopped` | Пользователь остановил (заблокировал) бота |
 | `CHAT_TITLE_CHANGED` | `chat_title_changed` | Изменился заголовок чата |
-| `MESSAGE_CONSTRUCTION_REQUEST` | `message_construction_request` | Запрошена сессия конструирования сообщения |
-| `MESSAGE_CONSTRUCTED` | `message_constructed` | Сессия конструирования сообщения завершена |
-| `MESSAGE_CHAT_CREATED` | `message_chat_created` | Чат создан через сообщение |
+| `DIALOG_CLEARED` | `dialog_cleared` | Пользователь очистил историю диалога с ботом |
+| `DIALOG_MUTED` | `dialog_muted` | Пользователь отключил уведомления в диалоге с ботом |
+| `DIALOG_UNMUTED` | `dialog_unmuted` | Пользователь включил уведомления в диалоге с ботом |
+| `DIALOG_REMOVED` | `dialog_removed` | Пользователь удалил диалог с ботом |
 
 ---
 

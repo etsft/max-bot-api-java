@@ -337,12 +337,12 @@ public class MaxBotAPI implements AutoCloseable {
      * Returns a query for {@code POST /chats/{chatId}/members/admins} that promotes members
      * to admin.
      *
-     * @param adminsList the list of admins to promote; must not be {@code null}
-     * @param chatId     the chat identifier
+     * @param admins the admins to promote, each with their own permission set; must not be {@code null}
+     * @param chatId the chat identifier
      * @return a {@link PostAdminsQuery}
      */
-    public PostAdminsQuery postAdmins(ChatAdminsList adminsList, long chatId) {
-        return new PostAdminsQuery(client, adminsList, chatId);
+    public PostAdminsQuery postAdmins(ChatAdminsList admins, long chatId) {
+        return new PostAdminsQuery(client, admins, chatId);
     }
 
     /**

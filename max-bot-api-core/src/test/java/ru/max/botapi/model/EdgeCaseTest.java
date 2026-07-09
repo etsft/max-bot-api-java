@@ -69,7 +69,7 @@ class EdgeCaseTest {
     @Test
     void chat_withAllFieldsPopulated() {
         var icon = new Image("http://icon.png");
-        var dialogUser = new UserWithPhoto(2L, "Bob", "@bob", false, 200L,
+        var dialogUser = new UserWithPhoto(2L, "Bob", "Bob", null, "@bob", false, 200L,
                 "desc", "http://avatar", "http://full");
         var pinnedMsg = new Message(USER, RECIPIENT, 500L, null, BODY, null, null, null);
         var chat = new Chat(10L, ChatType.CHANNEL, ChatStatus.ACTIVE, "Full Chat",
@@ -379,10 +379,11 @@ class EdgeCaseTest {
 
     @Test
     void chatAdminsList_defensiveCopy_inputListModification() {
-        var mutableList = new ArrayList<>(List.of(1L, 2L));
+        var admin = new ChatAdmin(1L, List.of(ChatPermission.WRITE));
+        var mutableList = new ArrayList<>(List.of(admin));
         var admins = new ChatAdminsList(mutableList);
-        mutableList.add(3L); // modify original
-        assertThat(admins.userIds()).hasSize(2); // record's list is unaffected
+        mutableList.add(admin); // modify original
+        assertThat(admins.admins()).hasSize(1); // record's list is unaffected
     }
 
     @Test

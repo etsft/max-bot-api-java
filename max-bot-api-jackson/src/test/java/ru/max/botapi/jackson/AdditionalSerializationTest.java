@@ -32,6 +32,7 @@ import ru.max.botapi.model.BotPatch;
 import ru.max.botapi.model.ButtonIntent;
 import ru.max.botapi.model.CallbackButton;
 import ru.max.botapi.model.Chat;
+import ru.max.botapi.model.ChatAdmin;
 import ru.max.botapi.model.ChatAdminsList;
 import ru.max.botapi.model.ChatList;
 import ru.max.botapi.model.ChatMember;
@@ -216,10 +217,15 @@ class AdditionalSerializationTest {
 
         @Test
         void chatAdminsList_roundTrip() {
-            var admins = new ChatAdminsList(List.of(1L, 2L, 3L));
+            var admin = new ChatAdmin(1L, List.of(ChatPermission.WRITE, ChatPermission.PIN_MESSAGE), "Mod");
+            var admins = new ChatAdminsList(List.of(admin));
             String json = serializer.serialize(admins);
             ChatAdminsList deserialized = serializer.deserialize(json, ChatAdminsList.class);
-            assertThat(deserialized.userIds()).containsExactly(1L, 2L, 3L);
+            assertThat(deserialized.admins()).hasSize(1);
+            assertThat(deserialized.admins().get(0).userId()).isEqualTo(1L);
+            assertThat(deserialized.admins().get(0).permissions())
+                    .containsExactly(ChatPermission.WRITE, ChatPermission.PIN_MESSAGE);
+            assertThat(deserialized.admins().get(0).alias()).isEqualTo("Mod");
         }
 
         @Test

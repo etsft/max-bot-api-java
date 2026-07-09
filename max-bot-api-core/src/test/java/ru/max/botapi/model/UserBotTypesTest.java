@@ -77,11 +77,19 @@ class UserBotTypesTest {
 
     @Test
     void userWithPhoto_construction() {
-        var user = new UserWithPhoto(1L, "Alice", "@alice", false, 1000L,
+        var user = new UserWithPhoto(1L, "Alice", "Alice", null, "@alice", false, 1000L,
                 "desc", "http://avatar", "http://full");
         assertThat(user.description()).isEqualTo("desc");
         assertThat(user.avatarUrl()).isEqualTo("http://avatar");
         assertThat(user.fullAvatarUrl()).isEqualTo("http://full");
+    }
+
+    @Test
+    void userWithPhoto_firstName_lastName() {
+        var user = new UserWithPhoto(1L, "Ivan Petrov", "Ivan", "Petrov", null, false, 1000L,
+                null, null, null);
+        assertThat(user.firstName()).isEqualTo("Ivan");
+        assertThat(user.lastName()).isEqualTo("Petrov");
     }
 
     @Test

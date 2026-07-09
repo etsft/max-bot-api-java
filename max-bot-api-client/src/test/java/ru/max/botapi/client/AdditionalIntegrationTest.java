@@ -30,11 +30,13 @@ import ru.max.botapi.model.BotInfo;
 import ru.max.botapi.model.BotPatch;
 import ru.max.botapi.model.CallbackAnswer;
 import ru.max.botapi.model.Chat;
+import ru.max.botapi.model.ChatAdmin;
 import ru.max.botapi.model.ChatAdminsList;
 import ru.max.botapi.model.ChatList;
 import ru.max.botapi.model.ChatMember;
 import ru.max.botapi.model.ChatMembersList;
 import ru.max.botapi.model.ChatPatch;
+import ru.max.botapi.model.ChatPermission;
 import ru.max.botapi.model.GetPinnedMessageResult;
 import ru.max.botapi.model.GetSubscriptionsResult;
 import ru.max.botapi.model.Image;
@@ -574,17 +576,18 @@ class AdditionalIntegrationTest {
     // ===== Post Admins =====
 
     @Test
-    void postAdmins_sendsUserIdsInBody() {
+    void postAdmins_sendsAdminsInBody() {
         stubFor(post(urlPathEqualTo("/chats/789/members/admins"))
                 .withHeader(AUTH_HEADER, equalTo(TOKEN))
-                .withRequestBody(matchingJsonPath("$.user_ids"))
+                .withRequestBody(matchingJsonPath("$.admins"))
                 .willReturn(aResponse()
                         .withHeader("Content-Type", CONTENT_JSON)
                         .withBody("""
                                 {"success": true}
                                 """)));
 
-        ChatAdminsList adminsList = new ChatAdminsList(List.of(111L, 222L, 333L));
+        ChatAdmin admin = new ChatAdmin(111L, List.of(ChatPermission.WRITE), "Moderator");
+        ChatAdminsList adminsList = new ChatAdminsList(List.of(admin));
         SimpleQueryResult result = api.postAdmins(adminsList, 789L).execute();
 
         assertThat(result.success()).isTrue();

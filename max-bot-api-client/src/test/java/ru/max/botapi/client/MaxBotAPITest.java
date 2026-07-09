@@ -31,11 +31,13 @@ import ru.max.botapi.model.BotInfo;
 import ru.max.botapi.model.BotPatch;
 import ru.max.botapi.model.CallbackAnswer;
 import ru.max.botapi.model.Chat;
+import ru.max.botapi.model.ChatAdmin;
 import ru.max.botapi.model.ChatAdminsList;
 import ru.max.botapi.model.ChatList;
 import ru.max.botapi.model.ChatMember;
 import ru.max.botapi.model.ChatMembersList;
 import ru.max.botapi.model.ChatPatch;
+import ru.max.botapi.model.ChatPermission;
 import ru.max.botapi.model.GetPinnedMessageResult;
 import ru.max.botapi.model.GetSubscriptionsResult;
 import ru.max.botapi.model.Message;
@@ -349,6 +351,22 @@ class MaxBotAPITest {
     }
 
     @Test
+    void addMembers_failure_carriesExplanatoryMessage() {
+        String body = "{\"success\":false,\"message\":\"chat not found\"}";
+        stubFor(post(urlPathEqualTo("/chats/123/members"))
+                .withHeader(AUTH_HEADER, equalTo(TOKEN))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody(body)));
+
+        UserIdsList ids = new UserIdsList(List.of(111L));
+        AddMembersResult result = api.addMembers(ids, 123L).execute();
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.message()).isEqualTo("chat not found");
+    }
+
+    @Test
     void removeMember() {
         stubFor(delete(urlPathEqualTo("/chats/123/members"))
                 .withQueryParam("user_id", equalTo("456"))
@@ -439,7 +457,8 @@ class MaxBotAPITest {
                         .withHeader("Content-Type", CONTENT_JSON)
                         .withBody("{\"success\": true}")));
 
-        ChatAdminsList adminsList = new ChatAdminsList(List.of(99001L));
+        ChatAdmin admin = new ChatAdmin(99001L, List.of(ChatPermission.WRITE));
+        ChatAdminsList adminsList = new ChatAdminsList(List.of(admin));
         SimpleQueryResult result = api.postAdmins(adminsList, 123L).execute();
 
         assertThat(result.success()).isTrue();

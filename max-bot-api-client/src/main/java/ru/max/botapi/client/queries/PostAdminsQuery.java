@@ -21,7 +21,9 @@ import java.util.Objects;
 import ru.max.botapi.client.HttpMethod;
 import ru.max.botapi.client.MaxClient;
 import ru.max.botapi.client.MaxQuery;
+import ru.max.botapi.model.ChatAdmin;
 import ru.max.botapi.model.ChatAdminsList;
+import ru.max.botapi.model.ChatPermission;
 import ru.max.botapi.model.SimpleQueryResult;
 
 /**
@@ -29,7 +31,8 @@ import ru.max.botapi.model.SimpleQueryResult;
  *
  * <p>Example usage:</p>
  * <pre>{@code
- * api.postAdmins(new ChatAdminsList(List.of(new ChatAdmin(111L))), 123456789L).execute();
+ * var admin = new ChatAdmin(111L, List.of(ChatPermission.WRITE, ChatPermission.PIN_MESSAGE));
+ * api.postAdmins(new ChatAdminsList(List.of(admin)), 123456789L).execute();
  * }</pre>
  */
 public class PostAdminsQuery extends MaxQuery<SimpleQueryResult> {
@@ -37,13 +40,13 @@ public class PostAdminsQuery extends MaxQuery<SimpleQueryResult> {
     /**
      * Creates a PostAdminsQuery.
      *
-     * @param client     the MAX client to execute this query
-     * @param adminsList the list of admins to promote; must not be {@code null}
-     * @param chatId     the chat identifier
+     * @param client the MAX client to execute this query
+     * @param admins the admins to promote, each with their own permission set; must not be {@code null}
+     * @param chatId the chat identifier
      */
-    public PostAdminsQuery(MaxClient client, ChatAdminsList adminsList, long chatId) {
+    public PostAdminsQuery(MaxClient client, ChatAdminsList admins, long chatId) {
         super(client, "/chats/" + chatId + "/members/admins", HttpMethod.POST,
                 SimpleQueryResult.class);
-        this.body = Objects.requireNonNull(adminsList, "adminsList must not be null");
+        this.body = Objects.requireNonNull(admins, "admins must not be null");
     }
 }

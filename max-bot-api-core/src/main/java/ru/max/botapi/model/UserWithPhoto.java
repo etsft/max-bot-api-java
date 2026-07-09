@@ -22,7 +22,9 @@ import java.util.Objects;
  * User with extended profile information including avatar.
  *
  * @param userId          unique user identifier
- * @param name            display name
+ * @param name            composite display name (e.g. "Ivan Petrov")
+ * @param firstName       first name
+ * @param lastName        optional last name
  * @param username        optional username (handle)
  * @param isBot           {@code true} if this user is a bot
  * @param lastActivityTime timestamp of last activity (epoch millis)
@@ -33,6 +35,8 @@ import java.util.Objects;
 public record UserWithPhoto(
         long userId,
         String name,
+        @Nullable String firstName,
+        @Nullable String lastName,
         @Nullable String username,
         boolean isBot,
         long lastActivityTime,

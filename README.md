@@ -233,9 +233,10 @@ consumer = MaxLongPollingConsumer.builder()
 | `BOT_STARTED` | `bot_started` | A user started a direct conversation with the bot |
 | `BOT_STOPPED` | `bot_stopped` | A user stopped (blocked) the bot |
 | `CHAT_TITLE_CHANGED` | `chat_title_changed` | The chat title was changed |
-| `MESSAGE_CONSTRUCTION_REQUEST` | `message_construction_request` | A message construction session was requested |
-| `MESSAGE_CONSTRUCTED` | `message_constructed` | A message construction session completed |
-| `MESSAGE_CHAT_CREATED` | `message_chat_created` | A new chat was created via a message |
+| `DIALOG_CLEARED` | `dialog_cleared` | A user cleared the dialog history with the bot |
+| `DIALOG_MUTED` | `dialog_muted` | A user muted notifications for the dialog with the bot |
+| `DIALOG_UNMUTED` | `dialog_unmuted` | A user unmuted notifications for the dialog with the bot |
+| `DIALOG_REMOVED` | `dialog_removed` | A user deleted the dialog with the bot |
 
 ---
 
