@@ -41,15 +41,15 @@
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("ru.etsft.max:max-bot-api-client:0.3.1")
-    implementation("ru.etsft.max:max-bot-api-jackson:0.3.1")
-    implementation("ru.etsft.max:max-bot-api-longpolling:0.3.1")
+    implementation("ru.etsft.max:max-bot-api-client:0.3.2")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.3.2")
+    implementation("ru.etsft.max:max-bot-api-longpolling:0.3.2")
 
     // Опционально: поддержка webhook
-    // implementation("ru.etsft.max:max-bot-api-webhook:0.3.1")
+    // implementation("ru.etsft.max:max-bot-api-webhook:0.3.2")
 
     // Опционально: автоконфигурация Spring Boot (webhook + long polling)
-    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.3.1")
+    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.3.2")
 }
 ```
 
@@ -60,24 +60,24 @@ dependencies {
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-client</artifactId>
-        <version>0.3.1</version>
+        <version>0.3.2</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-jackson</artifactId>
-        <version>0.3.1</version>
+        <version>0.3.2</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-longpolling</artifactId>
-        <version>0.3.1</version>
+        <version>0.3.2</version>
     </dependency>
     <!-- Опционально: автоконфигурация Spring Boot (webhook + long polling) -->
     <!--
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-spring-boot</artifactId>
-        <version>0.3.1</version>
+        <version>0.3.2</version>
     </dependency>
     -->
 </dependencies>
@@ -467,19 +467,20 @@ api.sendMessage(new NewMessageBody("Video:", List.of(att), null, null, null))
 
 | Параметр | По умолчанию                  |
 |---|-------------------------------|
-| `baseUrl` | `https://platform-api.max.ru` |
+| `baseUrl` | `https://platform-api2.max.ru` |
 | `connectTimeout` | 10 секунд                     |
 | `requestTimeout` | 60 секунд                     |
 | `longPollTimeout` | 30 секунд                     |
 | `maxRetries` | 3                             |
 | `enableRateLimiting` | `true`                        |
 | `maxRequestsPerSecond` | 30                            |
+| `sslContext` | JVM trust store + встроенные доверенные сертификаты MAX |
 
 ### Пользовательская конфигурация
 
 ```java
 MaxClientConfig config = MaxClientConfig.builder()
-    .baseUrl("https://platform-api.max.ru")
+    .baseUrl("https://platform-api2.max.ru")
     .connectTimeout(Duration.ofSeconds(5))
     .requestTimeout(Duration.ofSeconds(20))
     .longPollTimeout(Duration.ofSeconds(60))
@@ -490,6 +491,35 @@ MaxClientConfig config = MaxClientConfig.builder()
 
 MaxBotAPI api = MaxBotAPI.create("your-token", config);
 ```
+
+### TLS-сертификаты
+
+Клиент включает сертификаты Russian Trusted Root CA и Russian Trusted Sub CA,
+которые нужны MAX, и использует их по умолчанию. Для стандартного endpoint
+`platform-api2.max.ru` отдельно настраивать JVM trust store не нужно.
+
+Чтобы добавить свои `.crt` или `.cer` файлы поверх встроенных сертификатов:
+
+```java
+MaxClientConfig config = MaxClientConfig.builder()
+    .trustedCertificates(
+        Path.of("company-root-ca.crt"),
+        Path.of("company-sub-ca.crt"))
+    .build();
+
+MaxBotAPI api = MaxBotAPI.create("your-token", config);
+```
+
+Чтобы использовать только стандартную SSL-конфигурацию JVM и не подключать
+встроенные сертификаты:
+
+```java
+MaxClientConfig config = MaxClientConfig.builder()
+    .withoutBundledTrustedCertificates()
+    .build();
+```
+
+Для полного контроля передайте собственный `SSLContext` через `.sslContext(...)`.
 
 ### Использование конфигурации по умолчанию
 

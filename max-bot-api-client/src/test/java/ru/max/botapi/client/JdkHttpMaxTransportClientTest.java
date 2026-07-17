@@ -18,11 +18,15 @@ package ru.max.botapi.client;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+
+import javax.net.ssl.SSLContext;
 
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
@@ -200,6 +204,19 @@ class JdkHttpMaxTransportClientTest {
     }
 
     @Test
+    void constructionWithCustomSslContext() throws Exception {
+        SSLContext sslContext = SSLContext.getDefault();
+        MaxClientConfig config = MaxClientConfig.builder()
+                .baseUrl(baseUrl)
+                .sslContext(sslContext)
+                .build();
+        try (JdkHttpMaxTransportClient transport =
+                     new JdkHttpMaxTransportClient("test-token", config)) {
+            assertThat(extractHttpClient(transport).sslContext()).isSameAs(sslContext);
+        }
+    }
+
+    @Test
     void nullAccessTokenThrows() {
         assertThatThrownBy(() -> new JdkHttpMaxTransportClient(null))
                 .isInstanceOf(NullPointerException.class);
@@ -219,5 +236,12 @@ class JdkHttpMaxTransportClientTest {
             MaxResponse response = client.execute(request);
             assertThat(response.statusCode()).isEqualTo(200);
         }
+    }
+
+    private static HttpClient extractHttpClient(JdkHttpMaxTransportClient transport)
+            throws NoSuchFieldException, IllegalAccessException {
+        Field field = JdkHttpMaxTransportClient.class.getDeclaredField("httpClient");
+        field.setAccessible(true);
+        return (HttpClient) field.get(transport);
     }
 }

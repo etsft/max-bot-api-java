@@ -16,8 +16,26 @@
 
 package ru.max.botapi.client;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.Objects;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
+
+import ru.max.botapi.model.Nullable;
 
 /**
  * Configuration for the MAX Bot API client.
@@ -29,6 +47,7 @@ import java.util.Objects;
  * @param maxRetries           maximum number of retries for retryable errors
  * @param enableRateLimiting   whether to enable client-side rate limiting
  * @param maxRequestsPerSecond maximum requests per second when rate limiting is enabled
+ * @param sslContext           SSL context for HTTPS requests, or {@code null} for the JVM default
  */
 public record MaxClientConfig(
         String baseUrl,
@@ -37,8 +56,14 @@ public record MaxClientConfig(
         Duration longPollTimeout,
         int maxRetries,
         boolean enableRateLimiting,
-        int maxRequestsPerSecond
+        int maxRequestsPerSecond,
+        @Nullable SSLContext sslContext
 ) {
+
+    private static final String[] BUNDLED_TRUSTED_CERTIFICATE_RESOURCES = {
+            "/ru/max/botapi/client/certificates/russian_trusted_root_ca_pem.crt",
+            "/ru/max/botapi/client/certificates/russian_trusted_sub_ca_2024_pem.crt"
+    };
 
     /**
      * Creates a MaxClientConfig.
@@ -68,15 +93,19 @@ public record MaxClientConfig(
      * @return default configuration
      */
     public static MaxClientConfig defaults() {
-        return new MaxClientConfig(
-                "https://platform-api.max.ru",
-                Duration.ofSeconds(10),
-                Duration.ofSeconds(60),
-                Duration.ofSeconds(30),
-                3,
-                true,
-                30
-        );
+        return builder().build();
+    }
+
+    /**
+     * Returns the default SSL context used by this client.
+     *
+     * <p>The context trusts both the JVM default certificate authorities and the
+     * bundled Russian Trusted Root/Sub CA certificates required by MAX.</p>
+     *
+     * @return the default SSL context
+     */
+    public static SSLContext defaultSslContext() {
+        return DefaultSslContextHolder.INSTANCE;
     }
 
     /**
@@ -93,13 +122,17 @@ public record MaxClientConfig(
      */
     public static class Builder {
 
-        private String baseUrl = "https://platform-api.max.ru";
+        private String baseUrl = "https://platform-api2.max.ru";
         private Duration connectTimeout = Duration.ofSeconds(10);
         private Duration requestTimeout = Duration.ofSeconds(60);
         private Duration longPollTimeout = Duration.ofSeconds(30);
         private int maxRetries = 3;
         private boolean enableRateLimiting = true;
         private int maxRequestsPerSecond = 30;
+        private @Nullable SSLContext sslContext;
+        private boolean customSslContext;
+        private boolean useBundledTrustedCertificates = true;
+        private Path[] trustedCertificateFiles = new Path[0];
 
         Builder() {
         }
@@ -182,15 +215,232 @@ public record MaxClientConfig(
         }
 
         /**
+         * Sets a custom SSL context for HTTPS requests.
+         *
+         * @param sslContext the SSL context to use
+         * @return this builder
+         */
+        public Builder sslContext(SSLContext sslContext) {
+            this.sslContext = Objects.requireNonNull(sslContext);
+            this.customSslContext = true;
+            return this;
+        }
+
+        /**
+         * Adds X.509 certificate files to the HTTPS trust configuration.
+         *
+         * <p>The resulting SSL context trusts both the default JDK certificate authorities
+         * and the bundled MAX trusted certificates. PEM and DER encoded {@code .crt}/{@code .cer}
+         * files provided here are added on top.</p>
+         *
+         * @param certificateFiles certificate files to trust
+         * @return this builder
+         * @throws IllegalArgumentException if no certificate files are provided
+         */
+        public Builder trustedCertificates(Path... certificateFiles) {
+            this.trustedCertificateFiles = requireCertificateFiles(certificateFiles);
+            this.customSslContext = false;
+            return this;
+        }
+
+        /**
+         * Disables bundled MAX trusted certificates and uses the JVM default trust store only.
+         *
+         * <p>If {@link #trustedCertificates(Path...)} is also configured, those certificates are
+         * added to the JVM default trust store without the bundled certificates.</p>
+         *
+         * @return this builder
+         */
+        public Builder withoutBundledTrustedCertificates() {
+            this.useBundledTrustedCertificates = false;
+            return this;
+        }
+
+        /**
          * Builds the configuration.
          *
          * @return the built MaxClientConfig
+         * @throws MaxClientException if configured certificates cannot be loaded
          */
         public MaxClientConfig build() {
+            SSLContext resolvedSslContext = customSslContext
+                    ? sslContext
+                    : resolveSslContext(useBundledTrustedCertificates, trustedCertificateFiles);
             return new MaxClientConfig(
                     baseUrl, connectTimeout, requestTimeout, longPollTimeout,
-                    maxRetries, enableRateLimiting, maxRequestsPerSecond
+                    maxRetries, enableRateLimiting, maxRequestsPerSecond, resolvedSslContext
             );
+        }
+    }
+
+    private static @Nullable SSLContext resolveSslContext(
+            boolean useBundledTrustedCertificates,
+            Path... certificateFiles
+    ) {
+        if (useBundledTrustedCertificates && certificateFiles.length == 0) {
+            return defaultSslContext();
+        }
+        if (!useBundledTrustedCertificates && certificateFiles.length == 0) {
+            return null;
+        }
+        return createSslContext(useBundledTrustedCertificates, certificateFiles);
+    }
+
+    private static SSLContext createSslContext(boolean useBundledTrustedCertificates, Path... certificateFiles) {
+        Objects.requireNonNull(certificateFiles, "certificateFiles must not be null");
+        if (!useBundledTrustedCertificates && certificateFiles.length == 0) {
+            throw new IllegalArgumentException("certificateFiles must not be empty");
+        }
+        try {
+            KeyStore additionalTrustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            additionalTrustStore.load(null, null);
+            CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+            int certificateIndex = 0;
+            if (useBundledTrustedCertificates) {
+                for (String resourceName : BUNDLED_TRUSTED_CERTIFICATE_RESOURCES) {
+                    certificateIndex = loadCertificateResource(
+                            certificateFactory, additionalTrustStore, resourceName, certificateIndex);
+                }
+            }
+            for (Path certificateFile : certificateFiles) {
+                certificateIndex = loadCertificateFile(
+                        certificateFactory, additionalTrustStore, certificateFile, certificateIndex);
+            }
+
+            TrustManagerFactory defaultFactory = TrustManagerFactory.getInstance(
+                    TrustManagerFactory.getDefaultAlgorithm());
+            defaultFactory.init((KeyStore) null);
+
+            TrustManagerFactory additionalFactory = TrustManagerFactory.getInstance(
+                    TrustManagerFactory.getDefaultAlgorithm());
+            additionalFactory.init(additionalTrustStore);
+
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, new TrustManager[] {
+                    new CompositeX509TrustManager(
+                            findX509TrustManager(defaultFactory.getTrustManagers()),
+                            findX509TrustManager(additionalFactory.getTrustManagers()))
+            }, null);
+            return context;
+        } catch (IOException | GeneralSecurityException e) {
+            throw new MaxClientException("Failed to load trusted certificates", e);
+        }
+    }
+
+    private static Path[] requireCertificateFiles(Path... certificateFiles) {
+        Objects.requireNonNull(certificateFiles, "certificateFiles must not be null");
+        if (certificateFiles.length == 0) {
+            throw new IllegalArgumentException("certificateFiles must not be empty");
+        }
+        Path[] trustedFiles = certificateFiles.clone();
+        for (Path certificateFile : trustedFiles) {
+            Objects.requireNonNull(certificateFile, "certificateFile must not be null");
+        }
+        return trustedFiles;
+    }
+
+    private static int loadCertificateFile(CertificateFactory certificateFactory, KeyStore trustStore,
+            Path certificateFile, int certificateIndex) throws IOException, GeneralSecurityException {
+        Objects.requireNonNull(certificateFile, "certificateFile must not be null");
+        try (InputStream input = Files.newInputStream(certificateFile)) {
+            return loadCertificates(
+                    certificateFactory, trustStore, input, certificateFile.toString(), certificateIndex);
+        }
+    }
+
+    private static int loadCertificateResource(CertificateFactory certificateFactory, KeyStore trustStore,
+            String resourceName, int certificateIndex) throws IOException, GeneralSecurityException {
+        try (InputStream input = MaxClientConfig.class.getResourceAsStream(resourceName)) {
+            if (input == null) {
+                throw new CertificateException("Certificate resource not found: " + resourceName);
+            }
+            return loadCertificates(certificateFactory, trustStore, input, resourceName, certificateIndex);
+        }
+    }
+
+    private static int loadCertificates(CertificateFactory certificateFactory, KeyStore trustStore,
+            InputStream input, String source, int certificateIndex) throws GeneralSecurityException {
+        Collection<? extends Certificate> certificates = certificateFactory.generateCertificates(input);
+        if (certificates.isEmpty()) {
+            throw new CertificateException("No X.509 certificates found in " + source);
+        }
+        int nextIndex = certificateIndex;
+        for (Certificate certificate : certificates) {
+            trustStore.setCertificateEntry("max-extra-ca-" + nextIndex, certificate);
+            nextIndex++;
+        }
+        return nextIndex;
+    }
+
+    private static X509TrustManager findX509TrustManager(TrustManager[] trustManagers) throws CertificateException {
+        for (TrustManager trustManager : trustManagers) {
+            if (trustManager instanceof X509TrustManager x509TrustManager) {
+                return x509TrustManager;
+            }
+        }
+        throw new CertificateException("No X.509 trust manager available");
+    }
+
+    private static final class DefaultSslContextHolder {
+
+        private static final SSLContext INSTANCE = createSslContext(true);
+    }
+
+    private static final class CompositeX509TrustManager implements X509TrustManager {
+
+        private final X509TrustManager defaultTrustManager;
+        private final X509TrustManager additionalTrustManager;
+
+        private CompositeX509TrustManager(
+                X509TrustManager defaultTrustManager,
+                X509TrustManager additionalTrustManager
+        ) {
+            this.defaultTrustManager = defaultTrustManager;
+            this.additionalTrustManager = additionalTrustManager;
+        }
+
+        @Override
+        public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+            try {
+                defaultTrustManager.checkClientTrusted(chain, authType);
+            } catch (CertificateException defaultException) {
+                try {
+                    additionalTrustManager.checkClientTrusted(chain, authType);
+                } catch (CertificateException additionalException) {
+                    throwWithSuppressedDefault(additionalException, defaultException);
+                }
+            }
+        }
+
+        @Override
+        public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+            try {
+                defaultTrustManager.checkServerTrusted(chain, authType);
+            } catch (CertificateException defaultException) {
+                try {
+                    additionalTrustManager.checkServerTrusted(chain, authType);
+                } catch (CertificateException additionalException) {
+                    throwWithSuppressedDefault(additionalException, defaultException);
+                }
+            }
+        }
+
+        @Override
+        public X509Certificate[] getAcceptedIssuers() {
+            X509Certificate[] defaultIssuers = defaultTrustManager.getAcceptedIssuers();
+            X509Certificate[] additionalIssuers = additionalTrustManager.getAcceptedIssuers();
+            X509Certificate[] issuers = new X509Certificate[defaultIssuers.length + additionalIssuers.length];
+            System.arraycopy(defaultIssuers, 0, issuers, 0, defaultIssuers.length);
+            System.arraycopy(additionalIssuers, 0, issuers, defaultIssuers.length, additionalIssuers.length);
+            return issuers;
+        }
+
+        private static void throwWithSuppressedDefault(
+                CertificateException additionalException,
+                CertificateException defaultException
+        ) throws CertificateException {
+            additionalException.addSuppressed(defaultException);
+            throw additionalException;
         }
     }
 }

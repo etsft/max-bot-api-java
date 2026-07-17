@@ -39,7 +39,6 @@ build:jdk21:
 build:jdk25:
   <<: *build_template
   image: gradle:9.4.1-jdk25
-  allow_failure: true
 
 # ---------------------------------------------------------------------------
 # Quality gates (run on JDK 21 after build)

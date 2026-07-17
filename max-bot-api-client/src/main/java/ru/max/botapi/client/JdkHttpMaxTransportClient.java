@@ -63,11 +63,14 @@ public class JdkHttpMaxTransportClient implements MaxTransportClient {
         this.baseUrl = config.baseUrl();
         this.requestTimeout = config.requestTimeout();
         this.virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
-        this.httpClient = HttpClient.newBuilder()
+        HttpClient.Builder builder = HttpClient.newBuilder()
                 .connectTimeout(config.connectTimeout())
                 .executor(virtualThreadExecutor)
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
+                .followRedirects(HttpClient.Redirect.NORMAL);
+        if (config.sslContext() != null) {
+            builder.sslContext(config.sslContext());
+        }
+        this.httpClient = builder.build();
     }
 
     /** {@inheritDoc} */
