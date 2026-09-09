@@ -27,9 +27,14 @@ import ru.max.botapi.model.SimpleQueryResult;
 /**
  * Query for {@code POST /chats/{chatId}/members/admins} — promotes members to admin role.
  *
+ * <p>Each administrator carries its own permissions. {@code WRITE}, {@code PIN_MESSAGE},
+ * {@code EDIT} and {@code DELETE} are only accepted alongside {@code READ_ALL_MESSAGES}.</p>
+ *
  * <p>Example usage:</p>
  * <pre>{@code
- * api.postAdmins(new ChatAdminsList(List.of(new ChatAdmin(111L))), 123456789L).execute();
+ * api.postAdmins(new ChatAdminsList(List.of(new ChatAdmin(111L,
+ *         List.of(ChatPermission.READ_ALL_MESSAGES, ChatPermission.WRITE)))), 123456789L)
+ *     .execute();
  * }</pre>
  */
 public class PostAdminsQuery extends MaxQuery<SimpleQueryResult> {

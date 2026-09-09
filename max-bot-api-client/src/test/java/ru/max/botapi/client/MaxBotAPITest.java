@@ -31,10 +31,12 @@ import ru.max.botapi.model.BotInfo;
 import ru.max.botapi.model.BotPatch;
 import ru.max.botapi.model.CallbackAnswer;
 import ru.max.botapi.model.Chat;
+import ru.max.botapi.model.ChatAdmin;
 import ru.max.botapi.model.ChatAdminsList;
 import ru.max.botapi.model.ChatMember;
 import ru.max.botapi.model.ChatMembersList;
 import ru.max.botapi.model.ChatPatch;
+import ru.max.botapi.model.ChatPermission;
 import ru.max.botapi.model.GetPinnedMessageResult;
 import ru.max.botapi.model.GetSubscriptionsResult;
 import ru.max.botapi.model.Message;
@@ -407,7 +409,8 @@ class MaxBotAPITest {
                         .withHeader("Content-Type", CONTENT_JSON)
                         .withBody("{\"success\": true}")));
 
-        ChatAdminsList adminsList = new ChatAdminsList(List.of(99001L));
+        ChatAdminsList adminsList = new ChatAdminsList(List.of(
+                new ChatAdmin(99001L, List.of(ChatPermission.READ_ALL_MESSAGES))));
         SimpleQueryResult result = api.postAdmins(adminsList, 123L).execute();
 
         assertThat(result.success()).isTrue();

@@ -32,6 +32,7 @@ import ru.max.botapi.model.BotPatch;
 import ru.max.botapi.model.ButtonIntent;
 import ru.max.botapi.model.CallbackButton;
 import ru.max.botapi.model.Chat;
+import ru.max.botapi.model.ChatAdmin;
 import ru.max.botapi.model.ChatAdminsList;
 import ru.max.botapi.model.ChatMember;
 import ru.max.botapi.model.ChatMembersList;
@@ -216,10 +217,18 @@ class AdditionalSerializationTest {
 
         @Test
         void chatAdminsList_roundTrip() {
-            var admins = new ChatAdminsList(List.of(1L, 2L, 3L));
+            var admins = new ChatAdminsList(List.of(new ChatAdmin(1L,
+                    List.of(ChatPermission.READ_ALL_MESSAGES, ChatPermission.WRITE), "mod")));
+
             String json = serializer.serialize(admins);
+
+            // The API rejects anything but this shape: HTTP 400 "Field 'admins' cannot be null".
+            assertThatJson(json).node("admins[0].user_id").isEqualTo(1);
+            assertThatJson(json).node("admins[0].permissions")
+                    .isEqualTo("[\"read_all_messages\", \"write\"]");
+            assertThatJson(json).node("admins[0].alias").isEqualTo("mod");
             ChatAdminsList deserialized = serializer.deserialize(json, ChatAdminsList.class);
-            assertThat(deserialized.userIds()).containsExactly(1L, 2L, 3L);
+            assertThat(deserialized.admins()).containsExactly(admins.admins().getFirst());
         }
 
         @Test

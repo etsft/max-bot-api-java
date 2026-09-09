@@ -87,8 +87,12 @@ class ChatTypesTest {
 
     @Test
     void chatAdminsList_construction() {
-        var admins = new ChatAdminsList(List.of(1L, 2L, 3L));
-        assertThat(admins.userIds()).containsExactly(1L, 2L, 3L);
+        var admin = new ChatAdmin(1L,
+                List.of(ChatPermission.READ_ALL_MESSAGES, ChatPermission.WRITE), "moderator");
+        var admins = new ChatAdminsList(List.of(admin));
+        assertThat(admins.admins()).containsExactly(admin);
+        assertThat(admin.alias()).isEqualTo("moderator");
+        assertThat(new ChatAdmin(2L, List.of()).alias()).isNull();
     }
 
     @Test

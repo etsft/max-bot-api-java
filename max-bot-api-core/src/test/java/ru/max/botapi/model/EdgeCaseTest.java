@@ -342,10 +342,12 @@ class EdgeCaseTest {
 
     @Test
     void chatAdminsList_defensiveCopy_inputListModification() {
-        var mutableList = new ArrayList<>(List.of(1L, 2L));
+        var mutableList = new ArrayList<>(List.of(
+                new ChatAdmin(1L, List.of(ChatPermission.READ_ALL_MESSAGES)),
+                new ChatAdmin(2L, List.of(ChatPermission.READ_ALL_MESSAGES))));
         var admins = new ChatAdminsList(mutableList);
-        mutableList.add(3L); // modify original
-        assertThat(admins.userIds()).hasSize(2); // record's list is unaffected
+        mutableList.add(new ChatAdmin(3L, List.of(ChatPermission.WRITE))); // modify original
+        assertThat(admins.admins()).hasSize(2); // record's list is unaffected
     }
 
     @Test

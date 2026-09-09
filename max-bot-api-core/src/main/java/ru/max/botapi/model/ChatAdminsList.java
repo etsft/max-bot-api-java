@@ -20,19 +20,23 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Request/response body for managing chat administrators.
+ * Request body of {@code POST /chats/{chatId}/members/admins} — the members to promote.
  *
- * @param userIds list of user IDs to add/remove as admins
+ * <p>The API expects the administrators under the {@code admins} key, each with its own
+ * permission set; a bare list of user ids is answered with
+ * {@code HTTP 400 Field 'admins' cannot be null}.</p>
+ *
+ * @param admins the users and bots to grant administrator rights to
  */
-public record ChatAdminsList(List<Long> userIds) {
+public record ChatAdminsList(List<ChatAdmin> admins) {
 
     /**
      * Creates a ChatAdminsList.
      *
-     * @param userIds must not be {@code null}
+     * @param admins must not be {@code null}
      */
     public ChatAdminsList {
-        Objects.requireNonNull(userIds, "userIds must not be null");
-        userIds = List.copyOf(userIds);
+        Objects.requireNonNull(admins, "admins must not be null");
+        admins = List.copyOf(admins);
     }
 }
