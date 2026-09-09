@@ -20,6 +20,7 @@ import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.longpolling.MaxLongPollingConsumer;
 import ru.max.botapi.model.MessageCreatedUpdate;
 import ru.max.botapi.model.NewMessageBody;
+import ru.max.botapi.model.User;
 
 /**
  * A simple echo bot that replies to every incoming text message with the same text.
@@ -55,9 +56,14 @@ public final class EchoBot {
                     if (update instanceof MessageCreatedUpdate msg) {
                         String text = msg.message().body().text();
                         Long chatId = msg.message().recipient().chatId();
+                        // A channel post is published by the channel itself, so it carries no
+                        // sender — Message.sender() is null there, not an error.
+                        User sender = msg.message().sender();
                         if (text != null && !text.isBlank() && chatId != null) {
                             try {
-                                api.sendMessage(new NewMessageBody(text, null, null, null, null))
+                                String reply = "Chat %d, User %s: %s".formatted(
+                                        chatId, sender == null ? "-" : sender.userId(), text);
+                                api.sendMessage(new NewMessageBody(reply, null, null, null, null))
                                         .chatId(chatId)
                                         .execute();
                             } catch (Exception e) {
