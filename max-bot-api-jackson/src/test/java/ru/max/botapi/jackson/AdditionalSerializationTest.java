@@ -81,6 +81,7 @@ import ru.max.botapi.model.VideoAttachment;
 import ru.max.botapi.model.VideoAttachmentDetails;
 import ru.max.botapi.model.VideoAttachmentRequest;
 import ru.max.botapi.model.VideoThumbnail;
+import ru.max.botapi.model.VideoUrls;
 import ru.max.botapi.testsupport.FixtureLoader;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -325,16 +326,51 @@ class AdditionalSerializationTest {
         @Test
         void videoAttachmentDetails_roundTrip() {
             var details = new VideoAttachmentDetails(
-                    "https://cdn.example.com/video.mp4", "vtok",
+                    "vtok",
+                    new VideoUrls("https://cdn.example.com/1080.mp4", null, null, null, null,
+                            null, "https://cdn.example.com/master.m3u8"),
                     new VideoThumbnail("https://cdn.example.com/thumb.jpg"), 1920, 1080, 120);
             String json = serializer.serialize(details);
+            assertThatJson(json).node("urls.mp4_1080")
+                    .isEqualTo("https://cdn.example.com/1080.mp4");
             VideoAttachmentDetails deserialized = serializer.deserialize(json,
                     VideoAttachmentDetails.class);
-            assertThat(deserialized.url()).isEqualTo("https://cdn.example.com/video.mp4");
+            assertThat(deserialized.urls().mp41080()).isEqualTo("https://cdn.example.com/1080.mp4");
+            assertThat(deserialized.urls().hls()).isEqualTo("https://cdn.example.com/master.m3u8");
             assertThat(deserialized.token()).isEqualTo("vtok");
             assertThat(deserialized.width()).isEqualTo(1920);
             assertThat(deserialized.height()).isEqualTo(1080);
             assertThat(deserialized.duration()).isEqualTo(120);
+        }
+
+        @Test
+        void videoAttachmentDetails_readsWhatTheApiActuallyReturns() {
+            // Captured from GET /videos/{videoToken} moments after an upload: no top-level url,
+            // and only the rendition MAX has transcoded so far.
+            String json = """
+                    {"token":"vtok","width":900,"height":720,"duration":17000,
+                     "urls":{"mp4_720":"https://cdn.example.com/720.mp4"},
+                     "thumbnail":{"url":"https://cdn.example.com/thumb.jpg"}}""";
+
+            VideoAttachmentDetails details = serializer.deserialize(json,
+                    VideoAttachmentDetails.class);
+
+            assertThat(details.token()).isEqualTo("vtok");
+            assertThat(details.urls().mp4720()).isEqualTo("https://cdn.example.com/720.mp4");
+            assertThat(details.urls().mp41080()).isNull();
+            assertThat(details.thumbnail().url()).isEqualTo("https://cdn.example.com/thumb.jpg");
+            assertThat(details.duration()).isEqualTo(17000);
+        }
+
+        @Test
+        void videoAttachmentDetails_stillProcessingCarriesTokenOnly() {
+            VideoAttachmentDetails details = serializer.deserialize(
+                    "{\"token\":\"vtok\"}", VideoAttachmentDetails.class);
+
+            assertThat(details.token()).isEqualTo("vtok");
+            assertThat(details.urls()).isNull();
+            assertThat(details.thumbnail()).isNull();
+            assertThat(details.width()).isNull();
         }
 
         @Test

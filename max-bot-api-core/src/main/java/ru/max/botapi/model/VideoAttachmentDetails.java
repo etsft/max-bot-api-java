@@ -21,16 +21,20 @@ import java.util.Objects;
 /**
  * Detailed information about a video attachment returned by {@code GET /videos/{videoToken}}.
  *
- * @param url       video URL
+ * <p>Only {@code token} is guaranteed. The remaining fields describe a video MAX may still be
+ * transcoding: a poll right after the upload can come back with nothing but the token, and the
+ * renditions, size and duration fill in as processing proceeds.</p>
+ *
  * @param token     video token
+ * @param urls      optional playback URLs, absent while the video is unavailable
  * @param thumbnail optional thumbnail object with its own URL
  * @param width     optional video width in pixels
  * @param height    optional video height in pixels
- * @param duration  optional duration in seconds
+ * @param duration  optional duration
  */
 public record VideoAttachmentDetails(
-        String url,
         String token,
+        @Nullable VideoUrls urls,
         @Nullable VideoThumbnail thumbnail,
         @Nullable Integer width,
         @Nullable Integer height,
@@ -40,11 +44,9 @@ public record VideoAttachmentDetails(
     /**
      * Creates a VideoAttachmentDetails.
      *
-     * @param url   must not be {@code null}
      * @param token must not be {@code null}
      */
     public VideoAttachmentDetails {
-        Objects.requireNonNull(url, "url must not be null");
         Objects.requireNonNull(token, "token must not be null");
     }
 }

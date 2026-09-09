@@ -742,8 +742,10 @@ class MaxBotAPITest {
                         .withHeader("Content-Type", CONTENT_JSON)
                         .withBody("""
                                 {
-                                  "url": "https://cdn.example.com/video/abc.mp4",
                                   "token": "vtoken",
+                                  "urls": {
+                                    "mp4_720": "https://cdn.example.com/video/abc_720.mp4"
+                                  },
                                   "thumbnail": {
                                     "url": "https://cdn.example.com/thumb/abc.jpg"
                                   },
@@ -757,6 +759,8 @@ class MaxBotAPITest {
 
         assertThat(details).isNotNull();
         assertThat(details.token()).isEqualTo("vtoken");
+        assertThat(details.urls().mp4720()).isEqualTo(
+                "https://cdn.example.com/video/abc_720.mp4");
         assertThat(details.thumbnail().url()).isEqualTo(
                 "https://cdn.example.com/thumb/abc.jpg");
         assertThat(details.width()).isEqualTo(1280);

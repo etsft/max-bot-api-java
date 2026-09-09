@@ -27,6 +27,7 @@ import ru.max.botapi.model.NewMessageBody;
 import ru.max.botapi.model.PinMessageBody;
 import ru.max.botapi.model.Update;
 import ru.max.botapi.model.UpdateList;
+import ru.max.botapi.model.VideoUrls;
 
 /**
  * Custom Jackson module that registers deserializers for sealed type hierarchies
@@ -71,5 +72,6 @@ public class MaxBotApiModule extends SimpleModule {
         context.setMixInAnnotations(PinMessageBody.class, NotifyFieldMixIn.class);
         context.setMixInAnnotations(ChatPatch.class, NotifyFieldMixIn.class);
         context.setMixInAnnotations(FileUploadedInfo.class, FileUploadedInfoMixIn.class);
+        context.setMixInAnnotations(VideoUrls.class, VideoUrlsMixIn.class);
     }
 }

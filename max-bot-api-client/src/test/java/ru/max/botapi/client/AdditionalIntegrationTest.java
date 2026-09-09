@@ -451,8 +451,11 @@ class AdditionalIntegrationTest {
                         .withHeader("Content-Type", CONTENT_JSON)
                         .withBody("""
                                 {
-                                  "url": "https://cdn.example.com/vid.mp4",
                                   "token": "video_token_xyz",
+                                  "urls": {
+                                    "mp4_1080": "https://cdn.example.com/vid_1080.mp4",
+                                    "hls": "https://cdn.example.com/vid.m3u8"
+                                  },
                                   "thumbnail": { "url": "https://cdn.example.com/thumb.jpg" },
                                   "width": 3840,
                                   "height": 2160,
@@ -462,7 +465,8 @@ class AdditionalIntegrationTest {
 
         VideoAttachmentDetails details = api.getVideoAttachmentDetails("video_token_xyz").execute();
 
-        assertThat(details.url()).isEqualTo("https://cdn.example.com/vid.mp4");
+        assertThat(details.urls().mp41080()).isEqualTo("https://cdn.example.com/vid_1080.mp4");
+        assertThat(details.urls().hls()).isEqualTo("https://cdn.example.com/vid.m3u8");
         assertThat(details.token()).isEqualTo("video_token_xyz");
         assertThat(details.thumbnail().url()).isEqualTo("https://cdn.example.com/thumb.jpg");
         assertThat(details.width()).isEqualTo(3840);
@@ -478,14 +482,14 @@ class AdditionalIntegrationTest {
                         .withHeader("Content-Type", CONTENT_JSON)
                         .withBody("""
                                 {
-                                  "url": "https://cdn.example.com/vid.mp4",
                                   "token": "vtok_min"
                                 }
                                 """)));
 
         VideoAttachmentDetails details = api.getVideoAttachmentDetails("vtok_min").execute();
 
-        assertThat(details.url()).isEqualTo("https://cdn.example.com/vid.mp4");
+        assertThat(details.token()).isEqualTo("vtok_min");
+        assertThat(details.urls()).isNull();
         assertThat(details.thumbnail()).isNull();
         assertThat(details.width()).isNull();
         assertThat(details.height()).isNull();
