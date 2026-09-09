@@ -22,6 +22,8 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import ru.max.botapi.jackson.JacksonMaxSerializer;
 import ru.max.botapi.model.ActionRequestBody;
@@ -1085,5 +1087,52 @@ class MaxBotAPITest {
 
         assertThat(chat).isNotNull();
         assertThat(chat.chatId()).isEqualTo(55556L);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "my_chat",
+        "@my_chat",
+        "max.ru/my_chat",
+        "https://max.ru/my_chat",
+        "http://max.ru/my_chat/",
+        "  https://max.ru/my_chat  "
+    })
+    void getChatByLinkNormalizesEveryAcceptedLinkForm(String link) {
+        // The API routes on one path segment: a full URL is answered with method.not.found.
+        stubFor(get(urlPathMatching("/chats/@?my_chat"))
+                .withHeader(AUTH_HEADER, equalTo(TOKEN))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody("""
+                                {
+                                  "chat_id": 55557,
+                                  "type": "channel",
+                                  "status": "active",
+                                  "title": "Public Chat",
+                                  "last_event_time": 1700000500000,
+                                  "participants_count": 3,
+                                  "owner_id": 99003,
+                                  "is_public": true
+                                }
+                                """)));
+
+        Chat chat = api.getChatByLink(link).execute();
+
+        assertThat(chat.chatId()).isEqualTo(55557L);
+    }
+
+    @Test
+    void getChatByLinkRejectsAnInviteLink() {
+        assertThatThrownBy(() -> api.getChatByLink(
+                "https://max.ru/join/pa0UoPP0dLOekr48DvmGt5KYpLlspO3S"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invite link");
+    }
+
+    @Test
+    void getChatByLinkRejectsABlankLink() {
+        assertThatThrownBy(() -> api.getChatByLink("https://max.ru/"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }
