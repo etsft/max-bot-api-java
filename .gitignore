@@ -16,3 +16,7 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local secrets for the live integration suite
+.env
+.env.*

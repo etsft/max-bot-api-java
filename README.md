@@ -178,6 +178,7 @@ api.sendMessage(new NewMessageBody(
 | `max-bot-api-longpolling` | Long polling consumer backed by virtual threads, with exponential backoff. |
 | `max-bot-api-webhook` | HTTPS webhook server with secret-header validation. |
 | `max-bot-api-test-support` | WireMock stubs, JSON fixtures, and test helpers for integration tests. |
+| `max-bot-api-integration-tests` | Hand-run suite against the live API with a real bot token. Excluded from `build` and CI — see the [module README](max-bot-api-integration-tests/README.md). |
 | `max-bot-api-spring-boot` | Spring Boot auto-configuration for both webhook and long-polling modes — controller, subscription registration, lifecycle management. |
 | `max-bot-api-examples` | Runnable examples: `EchoBot`, `KeyboardBot`, `FileUploadBot`. |
 
@@ -453,7 +454,15 @@ api.sendMessage(new NewMessageBody("Video:", List.of(att), null, null, null))
     .chatId(chatId).execute();
 ```
 
-The MAX server may need a few seconds to finish processing the uploaded media. If `sendMessage` returns `attachment.not.ready`, retry the message send with a short backoff (no need to re-upload).
+The MAX server may need a few seconds to finish processing the uploaded media. Until it has, `sendMessage` answers HTTP 400 with the code `attachment.not.ready`, which the library raises as `AttachmentNotReadyException` — a subclass of `MaxApiException`. Catch it and retry the message send with a short backoff; the upload token stays valid, so there is no need to upload again.
+
+```java
+try {
+    api.sendMessage(body).chatId(chatId).execute();
+} catch (AttachmentNotReadyException e) {
+    Thread.sleep(2_000);   // then retry the same body
+}
+```
 
 Supported `UploadType` values: `IMAGE`, `VIDEO`, `AUDIO`, `FILE`.
 
@@ -604,6 +613,16 @@ cd max-bot-api-java
 # Build without tests
 ./gradlew build -x test
 ```
+
+The live integration suite is deliberately not part of any of the above. It talks to the real
+MAX API with a real bot token and is run by name:
+
+```bash
+./gradlew :max-bot-api-integration-tests:liveTest --console=plain
+```
+
+See [max-bot-api-integration-tests/README.md](max-bot-api-integration-tests/README.md) for the
+environment variables it expects and the side effects it has.
 
 Build output and coverage reports are placed under each module's `build/` directory. The aggregated coverage report is at `build/reports/jacoco/`.
 

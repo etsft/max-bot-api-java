@@ -178,6 +178,7 @@ api.sendMessage(new NewMessageBody(
 | `max-bot-api-longpolling` | Потребитель long polling на базе виртуальных потоков с экспоненциальным откатом. |
 | `max-bot-api-webhook` | HTTPS-сервер webhook с проверкой секретного заголовка. |
 | `max-bot-api-test-support` | WireMock-заглушки, JSON-фикстуры и вспомогательные классы для интеграционных тестов. |
+| `max-bot-api-integration-tests` | Ручной набор тестов против боевого API с реальным токеном бота. Исключён из `build` и CI — см. [README модуля](max-bot-api-integration-tests/README.md). |
 | `max-bot-api-spring-boot` | Автоконфигурация Spring Boot для режимов webhook и long polling — контроллер, регистрация подписки, управление жизненным циклом. |
 | `max-bot-api-examples` | Запускаемые примеры: `EchoBot`, `KeyboardBot`, `FileUploadBot`. |
 
@@ -453,7 +454,15 @@ api.sendMessage(new NewMessageBody("Video:", List.of(att), null, null, null))
     .chatId(chatId).execute();
 ```
 
-Серверу MAX может потребоваться несколько секунд, чтобы завершить обработку загруженного медиа. Если `sendMessage` возвращает `attachment.not.ready`, повторите отправку сообщения с небольшим откатом (повторная загрузка не нужна).
+Серверу MAX может потребоваться несколько секунд, чтобы завершить обработку загруженного медиа. До этого `sendMessage` отвечает HTTP 400 с кодом `attachment.not.ready`, который библиотека выбрасывает как `AttachmentNotReadyException` — наследник `MaxApiException`. Поймайте его и повторите отправку с небольшим откатом: токен загрузки остаётся действительным, повторная загрузка не нужна.
+
+```java
+try {
+    api.sendMessage(body).chatId(chatId).execute();
+} catch (AttachmentNotReadyException e) {
+    Thread.sleep(2_000);   // затем повторите ту же отправку
+}
+```
 
 Поддерживаемые значения `UploadType`: `IMAGE`, `VIDEO`, `AUDIO`, `FILE`.
 
@@ -605,6 +614,16 @@ cd max-bot-api-java
 # Сборка без тестов
 ./gradlew build -x test
 ```
+
+Живой интеграционный набор намеренно не входит ни в одну из команд выше. Он обращается к
+боевому MAX API с реальным токеном бота и запускается явно:
+
+```bash
+./gradlew :max-bot-api-integration-tests:liveTest --console=plain
+```
+
+Список переменных окружения и описание побочных эффектов — в
+[max-bot-api-integration-tests/README.md](max-bot-api-integration-tests/README.md).
 
 Артефакты сборки и отчёты о покрытии размещаются в директории `build/` каждого модуля. Агрегированный отчёт о покрытии находится в `build/reports/jacoco/`.
 

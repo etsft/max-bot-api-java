@@ -24,6 +24,12 @@ import ru.max.botapi.model.SimpleQueryResult;
 /**
  * Query for {@code DELETE /chats/{chatId}} — deletes a chat.
  *
+ * <p>The endpoint is absent from the MAX documentation and, in testing, refuses every bot:
+ * it answers HTTP 200 with {@code success=false} and {@code "Insufficient access rights to
+ * perform this action"} even for an administrator holding every right a bot can be granted,
+ * in a group chat and in a channel alike. It appears to require ownership of the chat, which
+ * a bot cannot obtain. Treat a {@code false} result as expected rather than exceptional.</p>
+ *
  * <p>Example usage:</p>
  * <pre>{@code
  * SimpleQueryResult result = api.deleteChat(123456789L).execute();
