@@ -40,6 +40,11 @@ import ru.max.botapi.model.VideoAttachment;
  *
  * <p>Uses the {@code type} JSON field as a discriminator to resolve the concrete
  * attachment type. Unknown types produce {@link UnknownAttachment}.</p>
+ *
+ * <p>A <em>known</em> type that cannot be constructed — a required payload field
+ * missing, for example — also produces {@link UnknownAttachment} with the original
+ * discriminator and the raw JSON, so that one odd attachment does not fail the whole
+ * message it belongs to.</p>
  */
 final class AttachmentDeserializer extends StdDeserializer<Attachment> {
 
@@ -54,16 +59,31 @@ final class AttachmentDeserializer extends StdDeserializer<Attachment> {
         JsonNode node = p.getCodec().readTree(p);
         String type = node.has("type") ? node.get("type").asText() : "unknown";
         return switch (type) {
-            case "image" -> ctxt.readTreeAsValue(node, PhotoAttachment.class);
-            case "video" -> ctxt.readTreeAsValue(node, VideoAttachment.class);
-            case "audio" -> ctxt.readTreeAsValue(node, AudioAttachment.class);
-            case "file" -> ctxt.readTreeAsValue(node, FileAttachment.class);
-            case "sticker" -> ctxt.readTreeAsValue(node, StickerAttachment.class);
-            case "contact" -> ctxt.readTreeAsValue(node, ContactAttachment.class);
-            case "inline_keyboard" -> ctxt.readTreeAsValue(node, InlineKeyboardAttachment.class);
-            case "share" -> ctxt.readTreeAsValue(node, ShareAttachment.class);
-            case "location" -> ctxt.readTreeAsValue(node, LocationAttachment.class);
+            case "image" -> parseOrUnknown(ctxt, node, PhotoAttachment.class, type);
+            case "video" -> parseOrUnknown(ctxt, node, VideoAttachment.class, type);
+            case "audio" -> parseOrUnknown(ctxt, node, AudioAttachment.class, type);
+            case "file" -> parseOrUnknown(ctxt, node, FileAttachment.class, type);
+            case "sticker" -> parseOrUnknown(ctxt, node, StickerAttachment.class, type);
+            case "contact" -> parseOrUnknown(ctxt, node, ContactAttachment.class, type);
+            case "inline_keyboard" -> parseOrUnknown(ctxt, node, InlineKeyboardAttachment.class, type);
+            case "share" -> parseOrUnknown(ctxt, node, ShareAttachment.class, type);
+            case "location" -> parseOrUnknown(ctxt, node, LocationAttachment.class, type);
             default -> new UnknownAttachment(type, node.toString());
         };
+    }
+
+    /**
+     * Reads {@code node} as {@code attachmentType}, degrading to {@link UnknownAttachment} on failure.
+     *
+     * @param ctxt           the active deserialization context
+     * @param node           the JSON node of the attachment
+     * @param attachmentType the concrete attachment type resolved from the discriminator
+     * @param type           the {@code type} discriminator value
+     * @return the deserialized attachment, or an {@link UnknownAttachment} fallback
+     */
+    private static Attachment parseOrUnknown(DeserializationContext ctxt, JsonNode node,
+            Class<? extends Attachment> attachmentType, String type) {
+        return LenientReads.readOrFallback(ctxt, node, attachmentType, type,
+                () -> new UnknownAttachment(type, node.toString()));
     }
 }

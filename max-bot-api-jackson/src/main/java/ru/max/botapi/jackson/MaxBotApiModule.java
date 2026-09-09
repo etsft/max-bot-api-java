@@ -26,6 +26,7 @@ import ru.max.botapi.model.FileUploadedInfo;
 import ru.max.botapi.model.NewMessageBody;
 import ru.max.botapi.model.PinMessageBody;
 import ru.max.botapi.model.Update;
+import ru.max.botapi.model.UpdateList;
 
 /**
  * Custom Jackson module that registers deserializers for sealed type hierarchies
@@ -34,6 +35,7 @@ import ru.max.botapi.model.Update;
  * <p>Registered types:</p>
  * <ul>
  *   <li>{@link Update} — discriminated by {@code update_type}</li>
+ *   <li>{@link UpdateList} — deserialized element by element, skipping malformed updates</li>
  *   <li>{@link Attachment} — discriminated by {@code type}</li>
  *   <li>{@link AttachmentRequest} — discriminated by {@code type}</li>
  *   <li>{@link Button} — discriminated by {@code type}</li>
@@ -51,6 +53,7 @@ public class MaxBotApiModule extends SimpleModule {
         super("MaxBotApiModule");
 
         addDeserializer(Update.class, new UpdateDeserializer());
+        addDeserializer(UpdateList.class, new UpdateListDeserializer());
         addDeserializer(Attachment.class, new AttachmentDeserializer());
         addDeserializer(AttachmentRequest.class, new AttachmentRequestDeserializer());
         addDeserializer(Button.class, new ButtonDeserializer());

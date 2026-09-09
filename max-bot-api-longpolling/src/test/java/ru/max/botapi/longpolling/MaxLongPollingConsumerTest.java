@@ -33,6 +33,8 @@ import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.MaxClient;
 import ru.max.botapi.client.MaxClientConfig;
 import ru.max.botapi.jackson.JacksonMaxSerializer;
+import ru.max.botapi.model.BotStartedUpdate;
+import ru.max.botapi.model.UnknownUpdate;
 import ru.max.botapi.model.Update;
 import ru.max.botapi.model.UpdateType;
 
@@ -166,6 +168,64 @@ class MaxLongPollingConsumerTest {
         assertThat(consumer.getMarker()).isEqualTo(9999L);
 
         verify(moreThanOrExactly(2), getRequestedFor(urlPathEqualTo("/updates")));
+    }
+
+    @Test
+    void malformedUpdateInBatchStillAdvancesMarker() throws Exception {
+        CountDownLatch secondPollLatch = new CountDownLatch(1);
+        List<Update> received = new CopyOnWriteArrayList<>();
+
+        // The first update lacks the required "message" field; it must not abort the batch
+        // nor stall the marker, otherwise the server replays the same batch forever.
+        stubFor(get(urlPathEqualTo("/updates"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody("""
+                                {
+                                  "updates": [
+                                    {
+                                      "update_type": "message_created",
+                                      "timestamp": 1700002000000,
+                                      "user_locale": "ru"
+                                    },
+                                    {
+                                      "update_type": "bot_started",
+                                      "timestamp": 1700001000000,
+                                      "chat_id": 60001,
+                                      "user": {
+                                        "user_id": 99001,
+                                        "name": "Alice",
+                                        "is_bot": false,
+                                        "last_activity_time": 1700000100000
+                                      }
+                                    }
+                                  ],
+                                  "marker": 4242
+                                }
+                                """)));
+
+        MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
+                .api(api)
+                .pollTimeout(1)
+                .handler(update -> {
+                    received.add(update);
+                    if (received.size() >= 4) {
+                        secondPollLatch.countDown();
+                    }
+                })
+                .build();
+
+        consumer.start();
+        boolean secondPollReceived = secondPollLatch.await(10, TimeUnit.SECONDS);
+        consumer.stop();
+
+        assertThat(secondPollReceived).isTrue();
+        assertThat(consumer.getMarker()).isEqualTo(4242L);
+        assertThat(received.get(0)).isInstanceOf(UnknownUpdate.class);
+        assertThat(received.get(0).updateType()).isEqualTo("message_created");
+        assertThat(received.get(1)).isInstanceOf(BotStartedUpdate.class);
+        verify(moreThanOrExactly(2), getRequestedFor(urlPathEqualTo("/updates"))
+                .withQueryParam("marker", containing("4242")));
     }
 
     @Test

@@ -38,6 +38,10 @@ import ru.max.botapi.model.UnknownButton;
  *
  * <p>Uses the {@code type} JSON field as a discriminator to resolve the concrete
  * button type. Unknown types produce {@link UnknownButton}.</p>
+ *
+ * <p>A <em>known</em> type that cannot be constructed — a required field missing,
+ * for example — also produces {@link UnknownButton} with the original discriminator
+ * and the raw JSON, so that one odd button does not fail the whole keyboard.</p>
  */
 final class ButtonDeserializer extends StdDeserializer<Button> {
 
@@ -52,17 +56,40 @@ final class ButtonDeserializer extends StdDeserializer<Button> {
         JsonNode node = p.getCodec().readTree(p);
         String type = node.has("type") ? node.get("type").asText() : "unknown";
         return switch (type) {
-            case "callback" -> ctxt.readTreeAsValue(node, CallbackButton.class);
-            case "link" -> ctxt.readTreeAsValue(node, LinkButton.class);
-            case "request_contact" -> ctxt.readTreeAsValue(node, RequestContactButton.class);
-            case "request_geo_location" -> ctxt.readTreeAsValue(node, RequestGeoLocationButton.class);
-            case "chat" -> ctxt.readTreeAsValue(node, ChatButton.class);
-            case "open_app" -> ctxt.readTreeAsValue(node, OpenAppButton.class);
-            case "message" -> ctxt.readTreeAsValue(node, MessageButton.class);
-            default -> {
-                String text = node.has("text") ? node.get("text").asText() : "";
-                yield new UnknownButton(type, text, node.toString());
-            }
+            case "callback" -> parseOrUnknown(ctxt, node, CallbackButton.class, type);
+            case "link" -> parseOrUnknown(ctxt, node, LinkButton.class, type);
+            case "request_contact" -> parseOrUnknown(ctxt, node, RequestContactButton.class, type);
+            case "request_geo_location" -> parseOrUnknown(ctxt, node, RequestGeoLocationButton.class, type);
+            case "chat" -> parseOrUnknown(ctxt, node, ChatButton.class, type);
+            case "open_app" -> parseOrUnknown(ctxt, node, OpenAppButton.class, type);
+            case "message" -> parseOrUnknown(ctxt, node, MessageButton.class, type);
+            default -> unknown(node, type);
         };
+    }
+
+    /**
+     * Reads {@code node} as {@code buttonType}, degrading to {@link UnknownButton} on failure.
+     *
+     * @param ctxt       the active deserialization context
+     * @param node       the JSON node of the button
+     * @param buttonType the concrete button type resolved from the discriminator
+     * @param type       the {@code type} discriminator value
+     * @return the deserialized button, or an {@link UnknownButton} fallback
+     */
+    private static Button parseOrUnknown(DeserializationContext ctxt, JsonNode node,
+            Class<? extends Button> buttonType, String type) {
+        return LenientReads.readOrFallback(ctxt, node, buttonType, type, () -> unknown(node, type));
+    }
+
+    /**
+     * Builds the {@link UnknownButton} representation of a node.
+     *
+     * @param node the JSON node of the button
+     * @param type the {@code type} discriminator value
+     * @return the fallback button
+     */
+    private static UnknownButton unknown(JsonNode node, String type) {
+        String text = node.has("text") ? node.get("text").asText() : "";
+        return new UnknownButton(type, text, node.toString());
     }
 }

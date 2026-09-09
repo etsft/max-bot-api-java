@@ -61,6 +61,9 @@ public class MaxLongPollingConsumer implements AutoCloseable {
 
     private static final long MAX_BACKOFF_MS = 30_000L;
 
+    /** Consecutive failures after which the loop is reported as stalled. */
+    private static final int STALL_WARNING_THRESHOLD = 3;
+
     private static final Consumer<Exception> DEFAULT_ERROR_HANDLER =
             e -> LOG.warn("Error during long polling", e);
 
@@ -176,6 +179,10 @@ public class MaxLongPollingConsumer implements AutoCloseable {
                 } catch (Exception e) {
                     errorHandler.accept(e);
                     errorStreak++;
+                    if (errorStreak >= STALL_WARNING_THRESHOLD) {
+                        LOG.warn("Long polling has failed {} times in a row; the marker is still {}. "
+                                + "The same batch is likely being replayed.", errorStreak, marker);
+                    }
                     sleepOnError(errorStreak);
                 }
             }
