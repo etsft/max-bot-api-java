@@ -361,6 +361,40 @@ class MaxClientTest {
     }
 
     @Test
+    void throwsAttachmentNotReadyExceptionOn400WithDottedCode() {
+        String errorBody = "{\"code\":\"attachment.not.ready\","
+                + "\"message\":\"Key: errors.process.attachment.file.not.processed\"}";
+        MaxClient client = new MaxClient(stubTransport(400, errorBody), stubSerializer,
+                MaxClientConfig.builder().enableRateLimiting(false).build());
+        assertThatThrownBy(() -> client.execute(simpleRequest(), String.class))
+                .isInstanceOf(AttachmentNotReadyException.class)
+                .satisfies(ex -> {
+                    MaxApiException apiEx = (MaxApiException) ex;
+                    assertThat(apiEx.statusCode()).isEqualTo(400);
+                    assertThat(apiEx.errorCode()).isEqualTo("attachment.not.ready");
+                });
+    }
+
+    @Test
+    void throwsAttachmentNotReadyExceptionOn400WithNotProcessedMessageOnly() {
+        String errorBody = "{\"message\":\"Key: errors.process.attachment.video.not.processed\"}";
+        MaxClient client = new MaxClient(stubTransport(400, errorBody), stubSerializer,
+                MaxClientConfig.builder().enableRateLimiting(false).build());
+        assertThatThrownBy(() -> client.execute(simpleRequest(), String.class))
+                .isInstanceOf(AttachmentNotReadyException.class);
+    }
+
+    @Test
+    void throwsPlainMaxApiExceptionOn400WithUnrelatedCode() {
+        String errorBody = "{\"code\":\"chat.not.found\",\"message\":\"Chat not found\"}";
+        MaxClient client = new MaxClient(stubTransport(400, errorBody), stubSerializer,
+                MaxClientConfig.builder().enableRateLimiting(false).build());
+        assertThatThrownBy(() -> client.execute(simpleRequest(), String.class))
+                .isInstanceOf(MaxApiException.class)
+                .isNotInstanceOf(AttachmentNotReadyException.class);
+    }
+
+    @Test
     void throwsMaxApiExceptionOn409WithOtherCode() {
         String errorBody = "{\"code\":\"conflict\",\"message\":\"Resource conflict\"}";
         MaxClient client = new MaxClient(stubTransport(409, errorBody), stubSerializer,

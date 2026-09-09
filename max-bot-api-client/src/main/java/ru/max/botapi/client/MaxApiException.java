@@ -48,7 +48,9 @@ public class MaxApiException extends RuntimeException {
      * @param errorCode    optional API error code
      */
     public MaxApiException(int statusCode, String errorMessage, @Nullable String errorCode) {
-        super("HTTP " + statusCode + ": " + errorMessage);
+        super("HTTP " + statusCode
+                + (errorCode == null ? "" : " (" + errorCode + ")")
+                + ": " + errorMessage);
         this.statusCode = statusCode;
         this.errorMessage = errorMessage;
         this.errorCode = errorCode;

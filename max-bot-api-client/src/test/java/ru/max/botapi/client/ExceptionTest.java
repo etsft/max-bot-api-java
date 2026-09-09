@@ -34,13 +34,14 @@ class ExceptionTest {
         assertThat(ex.statusCode()).isEqualTo(400);
         assertThat(ex.errorMessage()).isEqualTo("Bad Request");
         assertThat(ex.errorCode()).isEqualTo("bad_request");
-        assertThat(ex.getMessage()).isEqualTo("HTTP 400: Bad Request");
+        assertThat(ex.getMessage()).isEqualTo("HTTP 400 (bad_request): Bad Request");
     }
 
     @Test
     void maxApiExceptionWithNullErrorCode() {
         MaxApiException ex = new MaxApiException(500, "Internal Error", null);
         assertThat(ex.errorCode()).isNull();
+        assertThat(ex.getMessage()).isEqualTo("HTTP 500: Internal Error");
     }
 
     @Test
@@ -71,8 +72,8 @@ class ExceptionTest {
     @Test
     void attachmentNotReadyException() {
         AttachmentNotReadyException ex = new AttachmentNotReadyException(
-                409, "Attachment not ready", "attachment_not_ready");
-        assertThat(ex.statusCode()).isEqualTo(409);
+                400, "Key: errors.process.attachment.file.not.processed", "attachment.not.ready");
+        assertThat(ex.statusCode()).isEqualTo(400);
         assertThat(ex).isInstanceOf(MaxApiException.class);
     }
 }

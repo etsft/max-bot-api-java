@@ -43,8 +43,21 @@ public class MaxClient {
 
     private static final int HTTP_TOO_MANY_REQUESTS = 429;
     private static final int HTTP_METHOD_NOT_ALLOWED = 405;
-    private static final int HTTP_CONFLICT = 409;
-    private static final String ERROR_ATTACHMENT_NOT_READY = "attachment_not_ready";
+    private static final int HTTP_BAD_REQUEST = 400;
+    private static final int HTTP_SERVER_ERROR = 500;
+
+    /**
+     * Error code MAX returns while an uploaded attachment is still being processed. The API
+     * answers HTTP 400 with {@code {"code":"attachment.not.ready","message":"Key:
+     * errors.process.attachment.file.not.processed"}}; the underscore spelling is accepted as
+     * well because it appeared in earlier documentation.
+     */
+    private static final String ERROR_ATTACHMENT_NOT_READY = "attachment.not.ready";
+    private static final String ERROR_ATTACHMENT_NOT_READY_LEGACY = "attachment_not_ready";
+
+    /** Message key prefix and suffix of the same condition, used when the code is absent. */
+    private static final String NOT_PROCESSED_PREFIX = "Key: errors.process.attachment.";
+    private static final String NOT_PROCESSED_SUFFIX = ".not.processed";
 
     private static final Executor VIRTUAL_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -221,6 +234,9 @@ public class MaxClient {
                 errorMessage = body;
             }
         }
+        if (isAttachmentNotReady(statusCode, errorCode, errorMessage)) {
+            return new AttachmentNotReadyException(statusCode, errorMessage, errorCode);
+        }
         return switch (statusCode) {
             case HTTP_TOO_MANY_REQUESTS -> {
                 Duration retryAfter = parseRetryAfter(response.headers());
@@ -228,14 +244,36 @@ public class MaxClient {
             }
             case HTTP_METHOD_NOT_ALLOWED ->
                     new MaxMethodNotAllowedException(statusCode, errorMessage, errorCode);
-            case HTTP_CONFLICT -> {
-                if (ERROR_ATTACHMENT_NOT_READY.equals(errorCode)) {
-                    yield new AttachmentNotReadyException(statusCode, errorMessage, errorCode);
-                }
-                yield new MaxApiException(statusCode, errorMessage, errorCode);
-            }
             default -> new MaxApiException(statusCode, errorMessage, errorCode);
         };
+    }
+
+    /**
+     * Tells whether the error response means the attachment is still being processed.
+     *
+     * <p>MAX reports this as HTTP 400 with the code {@code attachment.not.ready}, not as the
+     * HTTP 409 the earlier documentation described, so the status is only narrowed to 4xx and
+     * the decision is made on the code. When the body carries no code the message key is used
+     * instead: it names the media kind ({@code file}, {@code video}, ...) between a fixed
+     * prefix and suffix.</p>
+     *
+     * @param statusCode   the HTTP status code
+     * @param errorCode    the {@code code} field of the body, or {@code null}
+     * @param errorMessage the {@code message} field of the body
+     * @return {@code true} if the caller should retry the request unchanged
+     */
+    private static boolean isAttachmentNotReady(int statusCode, @Nullable String errorCode,
+                                                String errorMessage) {
+        if (statusCode < HTTP_BAD_REQUEST || statusCode >= HTTP_SERVER_ERROR) {
+            return false;
+        }
+        if (ERROR_ATTACHMENT_NOT_READY.equals(errorCode)
+                || ERROR_ATTACHMENT_NOT_READY_LEGACY.equals(errorCode)) {
+            return true;
+        }
+        return errorCode == null
+                && errorMessage.startsWith(NOT_PROCESSED_PREFIX)
+                && errorMessage.endsWith(NOT_PROCESSED_SUFFIX);
     }
 
     /**
