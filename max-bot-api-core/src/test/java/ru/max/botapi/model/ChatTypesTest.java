@@ -64,15 +64,6 @@ class ChatTypesTest {
     }
 
     @Test
-    void chatList_construction() {
-        var chat = new Chat(1L, ChatType.CHAT, ChatStatus.ACTIVE, "G",
-                null, 0L, 1, null, null, false, null, null, null, null, null, null);
-        var list = new ChatList(List.of(chat), 42L);
-        assertThat(list.chats()).hasSize(1);
-        assertThat(list.marker()).isEqualTo(42L);
-    }
-
-    @Test
     void chatPatch_allNulls() {
         var patch = new ChatPatch(null, null, null, null);
         assertThat(patch.title()).isNull();

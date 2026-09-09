@@ -33,7 +33,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 /**
  * WireMock stub factory for the MAX Bot API.
  *
- * <p>Provides static methods that register WireMock stubs for all 31 API endpoints.
+ * <p>Provides static methods that register WireMock stubs for supported API endpoints.
  * Each stub verifies the {@code Authorization} header and returns the appropriate
  * JSON fixture response.
  *
@@ -91,20 +91,6 @@ public final class MaxApiStubs {
     }
 
     // ===== Chat Methods =====
-
-    /**
-     * Stubs {@code GET /chats} — returns chat list fixture.
-     *
-     * @return the registered stub mapping
-     */
-    public static StubMapping stubGetChats() {
-        return stubFor(get(urlPathEqualTo("/chats"))
-                .withHeader(AUTH_HEADER, matching(TOKEN_PATTERN))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader(CONTENT_TYPE, APPLICATION_JSON)
-                        .withBody(FixtureLoader.loadFixture("chats/chat-list.json"))));
-    }
 
     /**
      * Stubs {@code GET /chats/{chatId}} — returns single chat fixture.

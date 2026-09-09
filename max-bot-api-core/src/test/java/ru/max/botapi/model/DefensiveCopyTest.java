@@ -37,18 +37,6 @@ class DefensiveCopyTest {
     // ========== Non-nullable List fields ==========
 
     @Test
-    void chatList_defensiveCopy() {
-        var chat = new Chat(1L, ChatType.CHAT, ChatStatus.ACTIVE, "G",
-                null, 0L, 1, null, null, false, null, null, null, null, null, null);
-        var mutable = new ArrayList<>(List.of(chat));
-        var chatList = new ChatList(mutable, null);
-        mutable.clear();
-        assertThat(chatList.chats()).hasSize(1);
-        assertThatThrownBy(() -> chatList.chats().add(chat))
-                .isInstanceOf(UnsupportedOperationException.class);
-    }
-
-    @Test
     void chatMembersList_defensiveCopy() {
         var member = new ChatMember(1L, "A", null, null, null, false, 0L,
                 null, null, null, 0L, false, false, 0L, null);

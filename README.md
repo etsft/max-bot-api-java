@@ -11,7 +11,7 @@ A modern Java 21 client library for the [MAX Messenger Bot API](https://dev.max.
 
 ## Overview
 
-This library provides a complete, idiomatic Java 21 interface to all 31 MAX Bot API methods. It is designed to be lightweight, type-safe, and forward-compatible, with no dependencies outside the JDK for the core module.
+This library provides a complete, idiomatic Java 21 interface to supported MAX Bot API methods. It is designed to be lightweight, type-safe, and forward-compatible, with no dependencies outside the JDK for the core module.
 
 **Key capabilities:**
 
@@ -19,7 +19,7 @@ This library provides a complete, idiomatic Java 21 interface to all 31 MAX Bot 
 - **Sealed interfaces** for union types (`Attachment`, `Button`, `Update`) with full pattern matching support.
 - **Virtual threads** for non-blocking I/O in both long polling and webhook modes.
 - **`java.net.http.HttpClient`** transport — no external HTTP library required.
-- **Fluent query builders** for all 31 API methods, supporting both synchronous (`execute()`) and asynchronous (`enqueue()`) invocation.
+- **Fluent query builders** for supported API methods, supporting both synchronous (`execute()`) and asynchronous (`enqueue()`) invocation.
 - **Forward-compatible deserialization** — unknown types produce `Unknown*` fallback records instead of parse errors.
 - **Built-in rate limiter** (30 rps token bucket) and **retry policy** (exponential backoff on HTTP 429/503).
 - **Streaming file upload** — no heap buffering for large files.

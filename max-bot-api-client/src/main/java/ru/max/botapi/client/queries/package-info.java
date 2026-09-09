@@ -15,7 +15,7 @@
  */
 
 /**
- * Query builder classes for all 31 MAX Bot API endpoints.
+ * Query builder classes for supported MAX Bot API endpoints.
  *
  * <p>Each class extends {@link ru.max.botapi.client.MaxQuery} and exposes fluent
  * setter methods for optional request parameters. Use these classes through

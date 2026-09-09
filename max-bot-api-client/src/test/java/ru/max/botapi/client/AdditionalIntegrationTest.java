@@ -31,7 +31,6 @@ import ru.max.botapi.model.BotPatch;
 import ru.max.botapi.model.CallbackAnswer;
 import ru.max.botapi.model.Chat;
 import ru.max.botapi.model.ChatAdminsList;
-import ru.max.botapi.model.ChatList;
 import ru.max.botapi.model.ChatMember;
 import ru.max.botapi.model.ChatMembersList;
 import ru.max.botapi.model.ChatPatch;
@@ -99,38 +98,6 @@ class AdditionalIntegrationTest {
     }
 
     // ===== Pagination Tests =====
-
-    @Test
-    void getChats_withCountAndMarker() {
-        stubFor(get(urlPathEqualTo("/chats"))
-                .withQueryParam("count", equalTo("5"))
-                .withQueryParam("marker", equalTo("100"))
-                .withHeader(AUTH_HEADER, equalTo(TOKEN))
-                .willReturn(aResponse()
-                        .withHeader("Content-Type", CONTENT_JSON)
-                        .withBody("""
-                                {
-                                  "chats": [
-                                    {
-                                      "chat_id": 50003,
-                                      "type": "chat",
-                                      "status": "active",
-                                      "title": "Page 2 Chat",
-                                      "last_event_time": 1700000300000,
-                                      "participants_count": 3,
-                                      "is_public": false
-                                    }
-                                  ],
-                                  "marker": 50003
-                                }
-                                """)));
-
-        ChatList list = api.getChats().count(5).marker(100L).execute();
-
-        assertThat(list.chats()).hasSize(1);
-        assertThat(list.chats().getFirst().title()).isEqualTo("Page 2 Chat");
-        assertThat(list.marker()).isEqualTo(50003L);
-    }
 
     @Test
     void getMembers_withPagination() {
@@ -373,22 +340,6 @@ class AdditionalIntegrationTest {
     }
 
     // ===== Empty List Responses =====
-
-    @Test
-    void getChats_returnsEmptyList() {
-        stubFor(get(urlPathEqualTo("/chats"))
-                .withHeader(AUTH_HEADER, equalTo(TOKEN))
-                .willReturn(aResponse()
-                        .withHeader("Content-Type", CONTENT_JSON)
-                        .withBody("""
-                                {"chats": [], "marker": null}
-                                """)));
-
-        ChatList list = api.getChats().execute();
-
-        assertThat(list.chats()).isEmpty();
-        assertThat(list.marker()).isNull();
-    }
 
     @Test
     void getMembers_returnsEmptyList() {

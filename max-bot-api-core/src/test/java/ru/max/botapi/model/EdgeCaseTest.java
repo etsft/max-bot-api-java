@@ -127,24 +127,6 @@ class EdgeCaseTest {
         assertThat(body.format()).isNull();
     }
 
-    // ===== ChatList edge cases =====
-
-    @Test
-    void chatList_withEmptyChatsAndNullMarker() {
-        var list = new ChatList(List.of(), null);
-        assertThat(list.chats()).isEmpty();
-        assertThat(list.marker()).isNull();
-    }
-
-    @Test
-    void chatList_withSingleChatAndMarker() {
-        var chat = new Chat(1L, ChatType.CHAT, ChatStatus.ACTIVE, "G",
-                null, 0L, 1, null, null, false, null, null, null, null, null, null);
-        var list = new ChatList(List.of(chat), 100L);
-        assertThat(list.chats()).hasSize(1);
-        assertThat(list.marker()).isEqualTo(100L);
-    }
-
     // ===== MessageList edge cases =====
 
     @Test
@@ -339,25 +321,6 @@ class EdgeCaseTest {
     }
 
     // ===== Defensive copies =====
-
-    @Test
-    void chatList_defensiveCopy_inputListModification() {
-        var chat = new Chat(1L, ChatType.CHAT, ChatStatus.ACTIVE, "G",
-                null, 0L, 1, null, null, false, null, null, null, null, null, null);
-        var mutableList = new ArrayList<>(List.of(chat));
-        var list = new ChatList(mutableList, null);
-        mutableList.add(chat); // modify original
-        assertThat(list.chats()).hasSize(1); // record's list is unaffected
-    }
-
-    @Test
-    void chatList_immutableList_cannotModify() {
-        var chat = new Chat(1L, ChatType.CHAT, ChatStatus.ACTIVE, "G",
-                null, 0L, 1, null, null, false, null, null, null, null, null, null);
-        var list = new ChatList(List.of(chat), null);
-        assertThatThrownBy(() -> list.chats().add(chat))
-                .isInstanceOf(UnsupportedOperationException.class);
-    }
 
     @Test
     void messageList_defensiveCopy_inputListModification() {

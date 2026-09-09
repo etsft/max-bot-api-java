@@ -32,7 +32,6 @@ import ru.max.botapi.model.BotPatch;
 import ru.max.botapi.model.CallbackAnswer;
 import ru.max.botapi.model.Chat;
 import ru.max.botapi.model.ChatAdminsList;
-import ru.max.botapi.model.ChatList;
 import ru.max.botapi.model.ChatMember;
 import ru.max.botapi.model.ChatMembersList;
 import ru.max.botapi.model.ChatPatch;
@@ -66,7 +65,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * WireMock integration tests for {@link MaxBotAPI} — covers all 31 API methods
+ * WireMock integration tests for {@link MaxBotAPI} — covers all supported API methods
  * plus error scenarios.
  */
 @WireMockTest
@@ -140,37 +139,6 @@ class MaxBotAPITest {
     }
 
     // ===== Chat Methods =====
-
-    @Test
-    void getChats() {
-        stubFor(get(urlPathEqualTo("/chats"))
-                .withHeader(AUTH_HEADER, equalTo(TOKEN))
-                .willReturn(aResponse()
-                        .withHeader("Content-Type", CONTENT_JSON)
-                        .withBody("""
-                                {
-                                  "chats": [
-                                    {
-                                      "chat_id": 50001,
-                                      "type": "chat",
-                                      "status": "active",
-                                      "title": "Test Chat",
-                                      "last_event_time": 1700000200000,
-                                      "participants_count": 3,
-                                      "owner_id": 99001,
-                                      "is_public": false
-                                    }
-                                  ],
-                                  "marker": null
-                                }
-                                """)));
-
-        ChatList list = api.getChats().count(10).execute();
-
-        assertThat(list).isNotNull();
-        assertThat(list.chats()).hasSize(1);
-        assertThat(list.chats().get(0).chatId()).isEqualTo(50001L);
-    }
 
     @Test
     void getChat() {
@@ -960,24 +928,6 @@ class MaxBotAPITest {
                 .userIds(List.of(99001L, 99002L))
                 .marker(5000L)
                 .execute();
-
-        assertThat(list).isNotNull();
-    }
-
-    @Test
-    void getChatsWithMarker() {
-        stubFor(get(urlPathEqualTo("/chats"))
-                .withHeader(AUTH_HEADER, equalTo(TOKEN))
-                .willReturn(aResponse()
-                        .withHeader("Content-Type", CONTENT_JSON)
-                        .withBody("""
-                                {
-                                  "chats": [],
-                                  "marker": null
-                                }
-                                """)));
-
-        ChatList list = api.getChats().marker(1000L).execute();
 
         assertThat(list).isNotNull();
     }

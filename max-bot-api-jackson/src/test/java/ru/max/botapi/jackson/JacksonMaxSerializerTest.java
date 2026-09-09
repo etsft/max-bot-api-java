@@ -41,7 +41,6 @@ import ru.max.botapi.model.ButtonIntent;
 import ru.max.botapi.model.CallbackButton;
 import ru.max.botapi.model.Chat;
 import ru.max.botapi.model.ChatButton;
-import ru.max.botapi.model.ChatList;
 import ru.max.botapi.model.ChatPatch;
 import ru.max.botapi.model.ChatStatus;
 import ru.max.botapi.model.ChatTitleChangedUpdate;
@@ -159,14 +158,6 @@ class JacksonMaxSerializerTest {
             assertThat(chat.status()).isEqualTo(ChatStatus.ACTIVE);
             assertThat(chat.title()).isEqualTo("Test Group");
             assertThat(chat.participantsCount()).isEqualTo(5);
-        }
-
-        @Test
-        void chatListRoundTrip() {
-            String json = loadFixture("chat-list.json");
-            ChatList list = serializer.deserialize(json, ChatList.class);
-            assertThat(list.chats()).hasSize(2);
-            assertThat(list.marker()).isEqualTo(50002L);
         }
 
         @Test

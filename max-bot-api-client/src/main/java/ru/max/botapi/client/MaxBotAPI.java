@@ -30,7 +30,6 @@ import ru.max.botapi.client.queries.EditMyInfoQuery;
 import ru.max.botapi.client.queries.GetAdminsQuery;
 import ru.max.botapi.client.queries.GetChatByLinkQuery;
 import ru.max.botapi.client.queries.GetChatQuery;
-import ru.max.botapi.client.queries.GetChatsQuery;
 import ru.max.botapi.client.queries.GetMembersQuery;
 import ru.max.botapi.client.queries.GetMembershipQuery;
 import ru.max.botapi.client.queries.GetMessageByIdQuery;
@@ -65,7 +64,7 @@ import ru.max.botapi.model.UserIdsList;
 /**
  * High-level facade for the MAX Bot API.
  *
- * <p>Provides factory methods for all 31 API endpoints as query builder objects.
+ * <p>Provides factory methods for all supported API endpoints as query builder objects.
  * Use {@link #create(String)} to create an instance with default configuration, or
  * {@link #create(String, MaxClientConfig)} for custom settings.</p>
  *
@@ -200,15 +199,6 @@ public class MaxBotAPI implements AutoCloseable {
     }
 
     // ===== Chat Methods =====
-
-    /**
-     * Returns a query for {@code GET /chats} that retrieves the list of chats.
-     *
-     * @return a {@link GetChatsQuery}
-     */
-    public GetChatsQuery getChats() {
-        return new GetChatsQuery(client);
-    }
 
     /**
      * Returns a query for {@code GET /chats/{chatId}} that retrieves a specific chat.

@@ -33,7 +33,6 @@ import ru.max.botapi.model.ButtonIntent;
 import ru.max.botapi.model.CallbackButton;
 import ru.max.botapi.model.Chat;
 import ru.max.botapi.model.ChatAdminsList;
-import ru.max.botapi.model.ChatList;
 import ru.max.botapi.model.ChatMember;
 import ru.max.botapi.model.ChatMembersList;
 import ru.max.botapi.model.ChatPatch;
@@ -686,18 +685,6 @@ class AdditionalSerializationTest {
             assertThat(mccu.messageId()).isEqualTo("msg_020");
             assertThat(mccu.startPayload()).isEqualTo("start_data");
             assertThat(mccu.chat().participantsCount()).isEqualTo(2);
-        }
-
-        @Test
-        void chatList_fromFixture_roundTrip() {
-            String json = FixtureLoader.loadFixture("chat-list.json");
-            ChatList list = serializer.deserialize(json, ChatList.class);
-            assertThat(list.chats()).hasSize(2);
-            assertThat(list.marker()).isEqualTo(50002L);
-            String reserialized = serializer.serialize(list);
-            ChatList roundTripped = serializer.deserialize(reserialized, ChatList.class);
-            assertThat(roundTripped.chats()).hasSize(2);
-            assertThat(roundTripped.marker()).isEqualTo(50002L);
         }
 
         @Test
