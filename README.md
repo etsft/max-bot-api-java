@@ -144,6 +144,42 @@ switch (update) {
 }
 ```
 
+### Moderating Channel Comments
+
+Comments on a channel post are a separate group of methods. The bot must be an administrator of
+the channel: `READ_ALL_MESSAGES` to read comments, plus `WRITE` to post, `EDIT` to edit and
+`DELETE` to remove them. Comments carry no attachments and cannot be forwarded, which is why they
+use `NewCommentBody` and `CommentMessage` rather than the message types.
+
+```java
+String postId = "mid.abc123";
+
+// Post a comment, then read the page of comments back.
+SendCommentResult posted = api.sendComment(new NewCommentBody("Thanks!"), postId).execute();
+CommentList comments = api.getComments(postId).count(50).execute();
+
+// A single comment by its identifier.
+CommentMessage one = api.getCommentById(postId, posted.message().body().mid()).execute();
+
+// Edit and delete. A deleted comment cannot be restored.
+api.editComment(new NewCommentBody("Thanks a lot!"), postId, one.body().mid()).execute();
+api.deleteComment(postId, one.body().mid()).execute();
+```
+
+Subscribe to `COMMENT_CREATED`, `COMMENT_EDITED` and `COMMENT_REMOVED` to react to comments as
+they arrive. The post a comment belongs to is in `message.recipient().postId()`.
+
+### Setting Bot Commands
+
+```java
+api.editMyCommands(new BotCommandsPatch(List.of(
+        new BotCommand("start", "Start the bot"),
+        new BotCommand("help",  "Show help")))).execute();
+
+// An empty list removes every command.
+api.editMyCommands(new BotCommandsPatch(List.of())).execute();
+```
+
 ### Uploading a File
 
 File upload is a two-step process: first obtain an upload URL from the API, then stream the file to that URL. The upload response shape and the result type depend on the `UploadType` — see [File Upload](#file-upload) below for the full picture.
@@ -237,6 +273,17 @@ consumer = MaxLongPollingConsumer.builder()
 | `MESSAGE_CONSTRUCTION_REQUEST` | `message_construction_request` | A message construction session was requested |
 | `MESSAGE_CONSTRUCTED` | `message_constructed` | A message construction session completed |
 | `MESSAGE_CHAT_CREATED` | `message_chat_created` | A new chat was created via a message |
+| `DIALOG_CLEARED` | `dialog_cleared` | A user cleared the history of their dialog with the bot |
+| `DIALOG_MUTED` | `dialog_muted` | A user muted notifications in their dialog with the bot |
+| `DIALOG_UNMUTED` | `dialog_unmuted` | A user unmuted notifications in their dialog with the bot |
+| `DIALOG_REMOVED` | `dialog_removed` | A user deleted their dialog with the bot (arrives with `bot_stopped`) |
+| `COMMENT_CREATED` | `comment_created` | A new comment was published on a channel post |
+| `COMMENT_EDITED` | `comment_edited` | A comment on a channel post was edited |
+| `COMMENT_REMOVED` | `comment_removed` | A comment on a channel post was deleted |
+
+`message_construction_request`, `message_constructed` and `message_chat_created` are inherited
+from the TamTam API and are not part of the MAX API documentation. They are deprecated and kept only so that a response still carrying them
+deserializes.
 
 ---
 

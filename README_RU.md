@@ -144,6 +144,42 @@ switch (update) {
 }
 ```
 
+### Модерация комментариев в канале
+
+Комментарии к посту в канале — отдельная группа методов. Бот должен быть администратором канала:
+`READ_ALL_MESSAGES` — чтобы читать комментарии, `WRITE` — публиковать, `EDIT` — редактировать,
+`DELETE` — удалять. Комментарии не содержат вложений и не пересылаются, поэтому для них
+используются `NewCommentBody` и `CommentMessage`, а не типы обычных сообщений.
+
+```java
+String postId = "mid.abc123";
+
+// Опубликовать комментарий и прочитать страницу комментариев.
+SendCommentResult posted = api.sendComment(new NewCommentBody("Спасибо!"), postId).execute();
+CommentList comments = api.getComments(postId).count(50).execute();
+
+// Один комментарий по его идентификатору.
+CommentMessage one = api.getCommentById(postId, posted.message().body().mid()).execute();
+
+// Редактирование и удаление. Удалённый комментарий восстановить нельзя.
+api.editComment(new NewCommentBody("Большое спасибо!"), postId, one.body().mid()).execute();
+api.deleteComment(postId, one.body().mid()).execute();
+```
+
+Чтобы реагировать на комментарии, подпишитесь на `COMMENT_CREATED`, `COMMENT_EDITED` и
+`COMMENT_REMOVED`. Пост, к которому относится комментарий, — в `message.recipient().postId()`.
+
+### Команды бота
+
+```java
+api.editMyCommands(new BotCommandsPatch(List.of(
+        new BotCommand("start", "Запустить бота"),
+        new BotCommand("help",  "Показать справку")))).execute();
+
+// Пустой список удаляет все команды.
+api.editMyCommands(new BotCommandsPatch(List.of())).execute();
+```
+
 ### Загрузка файла
 
 Загрузка файла выполняется в два шага: сначала запрашивается URL для загрузки через API, затем файл передаётся потоком на этот URL. Форма ответа и тип результата зависят от `UploadType` — см. [Загрузка файлов](#загрузка-файлов) ниже.
@@ -237,6 +273,17 @@ consumer = MaxLongPollingConsumer.builder()
 | `MESSAGE_CONSTRUCTION_REQUEST` | `message_construction_request` | Запрошена сессия конструирования сообщения |
 | `MESSAGE_CONSTRUCTED` | `message_constructed` | Сессия конструирования сообщения завершена |
 | `MESSAGE_CHAT_CREATED` | `message_chat_created` | Чат создан через сообщение |
+| `DIALOG_CLEARED` | `dialog_cleared` | Пользователь очистил историю диалога с ботом |
+| `DIALOG_MUTED` | `dialog_muted` | Пользователь отключил уведомления в диалоге с ботом |
+| `DIALOG_UNMUTED` | `dialog_unmuted` | Пользователь включил уведомления в диалоге с ботом |
+| `DIALOG_REMOVED` | `dialog_removed` | Пользователь удалил диалог с ботом (приходит вместе с `bot_stopped`) |
+| `COMMENT_CREATED` | `comment_created` | Опубликован новый комментарий к посту в канале |
+| `COMMENT_EDITED` | `comment_edited` | Комментарий к посту в канале изменён |
+| `COMMENT_REMOVED` | `comment_removed` | Комментарий к посту в канале удалён |
+
+`message_construction_request`, `message_constructed` и `message_chat_created` достались
+библиотеке от TamTam API и в документации MAX не описаны. Они помечены `@Deprecated` и
+оставлены только для того, чтобы ответ, который их всё ещё содержит, десериализовался.
 
 ---
 
