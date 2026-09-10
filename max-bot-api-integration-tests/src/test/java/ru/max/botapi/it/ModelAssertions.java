@@ -16,7 +16,15 @@
 
 package ru.max.botapi.it;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ru.max.botapi.model.Attachment;
 import ru.max.botapi.model.Button;
@@ -98,6 +106,7 @@ public final class ModelAssertions {
      * @param message the deserialized message
      */
     public static void assertFullyMapped(Message message) {
+        assertRecipientsFullyMapped();
         assertFullyMapped(message.body());
         LinkedMessage link = message.link();
         if (link != null) {
@@ -157,6 +166,63 @@ public final class ModelAssertions {
         if (button instanceof UnknownButton unknown) {
             throw drift("button type '" + unknown.type() + "' was not mapped to a concrete type",
                     unknown.rawJson());
+        }
+    }
+
+    /**
+     * The properties of a {@code recipient} object that {@code MessageRecipient} models.
+     *
+     * <p>The MAX documentation names {@code Recipient} but never publishes its schema, so the
+     * only way to learn its shape is to watch what the live API actually sends.</p>
+     */
+    private static final Set<String> KNOWN_RECIPIENT_FIELDS =
+            Set.of("chat_id", "chat_type", "user_id", "post_id");
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /**
+     * Asserts that every {@code recipient} object in the payload just deserialized consists
+     * only of properties {@code MessageRecipient} models.
+     *
+     * <p>An unrecognised property is silently discarded by the deserializer, so without this
+     * check a field the API adds would go unnoticed until someone needed it.</p>
+     */
+    public static void assertRecipientsFullyMapped() {
+        String raw = RecordingSerializer.lastJson();
+        JsonNode root;
+        try {
+            root = MAPPER.readTree(raw);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            return; // Not JSON: nothing to inspect, and the payload is reported elsewhere.
+        }
+
+        Set<String> unknown = new TreeSet<>();
+        collectUnknownRecipientFields(root, unknown);
+        if (!unknown.isEmpty()) {
+            throw drift("the recipient object carries " + unknown
+                    + ", which MessageRecipient does not model", raw);
+        }
+    }
+
+    private static void collectUnknownRecipientFields(JsonNode node, Set<String> unknown) {
+        if (node.isArray()) {
+            node.forEach(child -> collectUnknownRecipientFields(child, unknown));
+            return;
+        }
+        if (!node.isObject()) {
+            return;
+        }
+        for (Iterator<Map.Entry<String, JsonNode>> it = node.fields(); it.hasNext();) {
+            Map.Entry<String, JsonNode> field = it.next();
+            JsonNode value = field.getValue();
+            if ("recipient".equals(field.getKey()) && value.isObject()) {
+                List<String> names = new ArrayList<>();
+                value.fieldNames().forEachRemaining(names::add);
+                names.stream()
+                        .filter(name -> !KNOWN_RECIPIENT_FIELDS.contains(name))
+                        .forEach(unknown::add);
+            }
+            collectUnknownRecipientFields(value, unknown);
         }
     }
 

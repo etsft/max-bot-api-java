@@ -19,10 +19,13 @@ package ru.max.botapi.it;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
+import ru.max.botapi.client.MaxApiException;
+import ru.max.botapi.model.ChatType;
 import ru.max.botapi.model.GetPinnedMessageResult;
 import ru.max.botapi.model.Message;
 import ru.max.botapi.model.MessageLinkType;
@@ -49,6 +52,8 @@ class MessageLifecycleLiveTest extends LiveTestBase {
     private String messageId;
 
     private String replyMessageId;
+
+    private String dialogMessageId;
 
     @Test
     @Order(1)
@@ -161,12 +166,84 @@ class MessageLifecycleLiveTest extends LiveTestBase {
         messageId = null;
     }
 
+    @Test
+    @Order(8)
+    @DisplayName("sendMessage to a user answers with a dialog recipient carrying user_id")
+    void sendDirectMessage() {
+        // The only step that addresses a user rather than a chat. It exists because the shape
+        // of `recipient` in a dialog cannot be observed any other way: the MAX documentation
+        // names the Recipient object but never publishes its schema, and every other step here
+        // talks to a group chat, where `user_id` would not appear even if the API sent it.
+        long userId = IntegrationConfig.userId();
+
+        NewMessageBody body = new NewMessageBody(
+                "Live integration test (direct) " + System.currentTimeMillis(),
+                null, null, false, null);
+
+        SendMessageResult result;
+        try {
+            result = api().sendMessage(body).userId(userId).execute();
+        } catch (MaxApiException e) {
+            // A bot may only write to a user who has started it. That is a property of the
+            // account behind MAX_IT_USER_ID, not of this library.
+            throw Assumptions.<RuntimeException>abort("sendMessage to " + IntegrationConfig.USER_ID
+                    + " (" + userId + ") was refused: " + e.errorMessage()
+                    + ". Open the dialog with the bot from that account and press Start, or "
+                    + "point " + IntegrationConfig.USER_ID + " at an account that has.");
+        }
+
+        Message message = result.message();
+        ModelAssertions.assertFullyMapped(message);
+        dialogMessageId = message.body().mid();
+
+        assertThat(message.recipient().chatType())
+                .withFailMessage("a message addressed to a user came back as %s, not a dialog",
+                        message.recipient().chatType())
+                .isEqualTo(ChatType.DIALOG);
+
+        // The open question this step exists to settle. MessageRecipient.userId rests on a
+        // single sentence of the documentation -- the recipient of a message is "a user or a
+        // bot (for a dialog)" -- while the Recipient schema itself is never published, so the
+        // field has never been seen in a real response. Asserted rather than logged: a passing
+        // run has to mean the field arrived and a failing one has to say it did not, otherwise
+        // the question stays open however often the suite runs.
+        assertThat(message.recipient().userId())
+                .withFailMessage("""
+                        recipient.user_id was absent from a dialog response.
+                        chat_id=%s, chat_type=%s, expected user_id=%s
+
+                        MessageRecipient.userId was modelled on the wording of the
+                        documentation, not on an observed response. If it is absent
+                        here, drop the component and remove "user_id" from
+                        ModelAssertions.KNOWN_RECIPIENT_FIELDS - do not relax this
+                        assertion.
+
+                        Full response body:
+                        %s""",
+                        message.recipient().chatId(), message.recipient().chatType(), userId,
+                        RecordingSerializer.lastJson())
+                .isEqualTo(userId);
+    }
+
+    @Test
+    @Order(9)
+    @DisplayName("deleteMessage removes the direct message again")
+    void deleteDirectMessage() {
+        Assumptions.assumeTrue(dialogMessageId != null, "sendDirectMessage did not run");
+
+        SimpleQueryResult result = api().deleteMessage(dialogMessageId).execute();
+
+        assertThat(result.success()).isTrue();
+        dialogMessageId = null;
+    }
+
     /**
      * Removes anything the scenario left behind when it failed part-way.
      */
     @AfterAll
     void removeLeftovers() {
-        for (String leftover : List.of(nullSafe(messageId), nullSafe(replyMessageId))) {
+        for (String leftover : List.of(nullSafe(messageId), nullSafe(replyMessageId),
+                nullSafe(dialogMessageId))) {
             if (!leftover.isEmpty()) {
                 cleanUp("delete message " + leftover,
                         () -> api().deleteMessage(leftover).execute());

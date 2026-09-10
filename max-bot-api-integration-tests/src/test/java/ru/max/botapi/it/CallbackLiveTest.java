@@ -85,7 +85,9 @@ class CallbackLiveTest extends LiveTestBase {
         ModelAssertions.assertFullyMapped(sent.message());
         messageId = sent.message().body().mid();
 
-        Prompts.step("Press the \"Press me\" button on the message the bot just posted.");
+        Prompts.step(Prompts.groupChat(),
+                "Press the \"Press me\" button on the message the bot just posted there. "
+                + "Nothing to type: the button is on the message itself.");
 
         MessageCallbackUpdate callback = awaitCallback();
 

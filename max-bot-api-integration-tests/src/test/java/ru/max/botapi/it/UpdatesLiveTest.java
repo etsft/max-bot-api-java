@@ -98,7 +98,9 @@ class UpdatesLiveTest extends LiveTestBase {
     @Order(3)
     @DisplayName("the consumer receives a real incoming message")
     void receivesIncomingMessage() {
-        Prompts.step("Send any text message to the bot in the test chat.");
+        Prompts.step(Prompts.groupChat(),
+                "Send any text message to the bot there. Not a direct message to the bot: "
+                + "this step watches the chat above.");
 
         List<Update> received = new CopyOnWriteArrayList<>();
         CountDownLatch latch = new CountDownLatch(1);

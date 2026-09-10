@@ -114,7 +114,8 @@ class SubscriptionWebhookLiveTest extends LiveTestBase {
                 .extracting(Subscription::url)
                 .contains(publicUrl);
 
-        Prompts.step("Send any text message to the bot so MAX delivers it to the webhook.");
+        Prompts.step(Prompts.groupChat(),
+                "Send any text message to the bot there, so MAX delivers it to the webhook.");
 
         boolean arrived = await(latch);
 

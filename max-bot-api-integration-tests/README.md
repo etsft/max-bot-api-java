@@ -9,8 +9,10 @@ notice that the live API has changed shape. This suite can: whenever a response 
 that caused it. Treat such a failure as a model bug to fix, not an assertion to relax.
 
 > **This suite has real side effects.** It posts, edits, pins and deletes messages, changes the
-> bot profile and the chat title, and can subscribe a webhook. Point it at a chat you own and
-> do not mind disturbing.
+> bot profile and the chat title, comments on a channel post, sends one direct message to
+> `MAX_IT_USER_ID`, and can subscribe a webhook. Everything it creates it deletes again, but
+> the direct message and the comment are briefly visible to a real person. Point it at a chat
+> you own and do not mind disturbing.
 
 ## Running
 
@@ -39,11 +41,13 @@ the normal build, so they cannot rot.
 |---|---|---|
 | `MAX_BOT_TOKEN` | yes | Bot access token. Without it every class is skipped. |
 | `MAX_IT_CHAT_ID` | for most tests | Main test chat. The bot must be an administrator. |
-| `MAX_IT_USER_ID` | for membership tests | A real user id to add, remove and promote. |
+| `MAX_IT_USER_ID` | for membership and direct-message tests | A real user id to add, remove and promote, and to receive one direct message. That account must have started the bot, otherwise the direct-message step reports a skip. |
 | `MAX_IT_CHAT_LINK` | no | Public chat link or username for `getChatByLink`: `@my_chat`, `my_chat` or `https://max.ru/my_chat`. An invite link (`https://max.ru/join/…`) points at a private chat, which this endpoint cannot resolve, so the test is skipped when one is configured. |
 | `MAX_IT_BASE_URL` | no | Overrides the API base URL. |
 | `MAX_IT_INTERACTIVE` | no | `true` enables the steps that need a human. |
 | `MAX_IT_PROMPT_TIMEOUT_SECONDS` | no | How long a prompt waits for Enter, default 30. Also settable per run as `-Pit.promptTimeout=<seconds>`, which wins over the variable. |
+| `MAX_IT_CHANNEL_ID` | for comment tests | Channel where the bot is an administrator with `read_all_messages`, `write`, `edit` and `delete`. |
+| `MAX_IT_POST_ID` | for comment tests | A post (`mid`) in that channel whose comments are enabled. The comment tests post, edit and delete one comment on it. |
 | `MAX_IT_VIDEO_PATH` | no | A real video file; without it the video tests are skipped. |
 | `MAX_IT_AUDIO_PATH` | no | A real audio file; without it the audio test is skipped. |
 | `MAX_IT_WEBHOOK_URL` | no | Public HTTPS URL proxied to this machine, path preserved. Without a path of its own, `/max-bot/live-test` is appended and subscribed; the proxy must forward that path unchanged to `MAX_IT_WEBHOOK_PORT`. |

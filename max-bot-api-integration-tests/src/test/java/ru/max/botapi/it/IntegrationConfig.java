@@ -76,6 +76,12 @@ public final class IntegrationConfig {
     /** Secret expected in the {@code X-Max-Bot-Api-Secret} header. */
     public static final String WEBHOOK_SECRET = "MAX_IT_WEBHOOK_SECRET";
 
+    /** Channel the bot administers, used by the comment tests. */
+    public static final String CHANNEL_ID = "MAX_IT_CHANNEL_ID";
+
+    /** Identifier (mid) of a post in {@link #CHANNEL_ID} that accepts comments. */
+    public static final String POST_ID = "MAX_IT_POST_ID";
+
     /** Path to a real video file for upload tests. */
     public static final String VIDEO_PATH = "MAX_IT_VIDEO_PATH";
 
@@ -139,6 +145,26 @@ public final class IntegrationConfig {
      */
     public static long userId() {
         return requireLong(USER_ID);
+    }
+
+    /**
+     * Returns the channel id used by the comment tests, aborting the test if it is not
+     * configured.
+     *
+     * @return the channel id
+     */
+    public static long channelId() {
+        return requireLong(CHANNEL_ID);
+    }
+
+    /**
+     * Returns the identifier of the post the comment tests operate on, aborting the test if it
+     * is not configured.
+     *
+     * @return the post identifier (mid)
+     */
+    public static String postId() {
+        return requireString(POST_ID);
     }
 
     /**

@@ -48,21 +48,35 @@ public final class Prompts {
     }
 
     /**
-     * Shows an instruction and waits for the operator to press Enter.
+     * Names the group chat the suite works in, for the {@code WHERE} line of a prompt.
      *
-     * @param instruction what the operator has to do
+     * @return a description of the group chat, naming the variable that configures it
      */
-    public static void step(String instruction) {
-        ask(instruction + "\n  Press Enter when done");
+    public static String groupChat() {
+        return "the test GROUP CHAT - " + IntegrationConfig.CHAT_ID + " = "
+                + IntegrationConfig.chatId();
     }
 
     /**
-     * Shows a question and returns the line the operator typed.
+     * Asks the operator to perform something and to press Enter when they are done.
      *
-     * @param question what to ask
-     * @return the entered line, possibly empty
+     * @param where       where to do it, e.g. {@link #groupChat()}
+     * @param instruction what to do there
      */
-    public static String ask(String question) {
+    public static void step(String where, String instruction) {
+        ask(where, instruction + "\n  Press Enter when done");
+    }
+
+    /**
+     * Asks the operator a question and returns what they typed.
+     *
+     * <p>Skips the step when the suite is not running interactively.</p>
+     *
+     * @param where    where the operator has to act, e.g. {@link #groupChat()}
+     * @param question what to ask
+     * @return the line the operator typed, trimmed
+     */
+    public static String ask(String where, String question) {
         Assumptions.assumeTrue(IntegrationConfig.interactive(),
                 () -> "interactive step skipped (set " + IntegrationConfig.INTERACTIVE
                         + "=true to run it): " + question);
@@ -70,7 +84,8 @@ public final class Prompts {
         Duration timeout = IntegrationConfig.promptTimeout();
         System.out.println();
         System.out.println("=== ACTION REQUIRED (" + timeout.toSeconds() + "s) ===");
-        System.out.println(question);
+        System.out.println("WHERE: " + where);
+        System.out.println("WHAT:  " + question);
         System.out.flush();
 
         return readLine(timeout);
