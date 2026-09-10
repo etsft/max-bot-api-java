@@ -37,6 +37,10 @@ public record Subscription(
      */
     public Subscription {
         Objects.requireNonNull(url, "url must not be null");
-        updateTypes = updateTypes == null ? null : List.copyOf(updateTypes);
+        // An update type the API knows and this library does not deserializes to null;
+        // drop those rather than let List.copyOf reject the whole response.
+        updateTypes = updateTypes == null ? null : updateTypes.stream()
+                .filter(Objects::nonNull)
+                .toList();
     }
 }

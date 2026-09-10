@@ -29,7 +29,7 @@ class UpdateTest {
 
     private static final User USER = new User(1L, "Alice", null, null, null, false, 100L);
     private static final MessageRecipient RECIPIENT =
-            new MessageRecipient(1L, ChatType.CHAT);
+            new MessageRecipient(1L, ChatType.CHAT, null, null);
     private static final MessageBody BODY = new MessageBody("m1", 1L, "Hi", null, null);
     private static final Message MSG = new Message(USER, RECIPIENT, 100L, null, BODY,
             null, null, null);

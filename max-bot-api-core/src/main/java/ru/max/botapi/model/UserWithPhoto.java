@@ -16,13 +16,19 @@
 
 package ru.max.botapi.model;
 
-import java.util.Objects;
-
 /**
  * User with extended profile information including avatar.
  *
+ * <p>The MAX API documents {@code name} as a legacy field that will be removed, and
+ * {@code first_name} as its replacement. Neither can be relied on today: the documentation's
+ * own {@code GET /me} example answers with {@code name} and no {@code first_name}, so both are
+ * modelled as nullable and a caller that needs a display name should fall back from one to the
+ * other.
+ *
  * @param userId          unique user identifier
  * @param name            display name
+ * @param firstName       first name
+ * @param lastName        optional last name
  * @param username        optional username (handle)
  * @param isBot           {@code true} if this user is a bot
  * @param lastActivityTime timestamp of last activity (epoch millis)
@@ -32,7 +38,9 @@ import java.util.Objects;
  */
 public record UserWithPhoto(
         long userId,
-        String name,
+        @Nullable String name,
+        @Nullable String firstName,
+        @Nullable String lastName,
         @Nullable String username,
         boolean isBot,
         long lastActivityTime,
@@ -40,13 +48,4 @@ public record UserWithPhoto(
         @Nullable String avatarUrl,
         @Nullable String fullAvatarUrl
 ) {
-
-    /**
-     * Creates a UserWithPhoto.
-     *
-     * @param name must not be {@code null}
-     */
-    public UserWithPhoto {
-        Objects.requireNonNull(name, "name must not be null");
-    }
 }

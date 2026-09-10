@@ -544,7 +544,7 @@ class JacksonMaxSerializerTest {
 
         @Test
         void chatPatchNotifyMapping() {
-            ChatPatch patch = new ChatPatch("New Title", null, null, true);
+            ChatPatch patch = new ChatPatch("New Title", null, null, null, true);
             String json = serializer.serialize(patch);
             assertThatJson(json).node("notify").isEqualTo(true);
             assertThatJson(json).node("notify_recipients").isAbsent();

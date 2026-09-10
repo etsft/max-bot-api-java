@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Tests for all enum types: values exist and are complete.
  */
+@SuppressWarnings("deprecation") // asserts on the legacy types on purpose
 class EnumTest {
 
     @Test
@@ -40,7 +41,7 @@ class EnumTest {
 
     @Test
     void chatPermission_hasAllValues() {
-        assertThat(ChatPermission.values()).hasSize(11);
+        assertThat(ChatPermission.values()).hasSize(14);
         assertThat(ChatPermission.valueOf("READ_ALL_MESSAGES")).isNotNull();
         assertThat(ChatPermission.valueOf("ADD_REMOVE_MEMBERS")).isNotNull();
         assertThat(ChatPermission.valueOf("ADD_ADMINS")).isNotNull();
@@ -52,6 +53,29 @@ class EnumTest {
         assertThat(ChatPermission.valueOf("DELETE")).isNotNull();
         assertThat(ChatPermission.valueOf("EDIT")).isNotNull();
         assertThat(ChatPermission.valueOf("VIEW_STATS")).isNotNull();
+        assertThat(ChatPermission.valueOf("POST_EDIT_DELETE_MESSAGE")).isNotNull();
+        assertThat(ChatPermission.valueOf("EDIT_MESSAGE")).isNotNull();
+        assertThat(ChatPermission.valueOf("DELETE_MESSAGE")).isNotNull();
+    }
+
+    @Test
+    void chatPermission_canonical_foldsRenamedValues() {
+        assertThat(ChatPermission.POST_EDIT_DELETE_MESSAGE.canonical())
+                .isEqualTo(ChatPermission.WRITE);
+        assertThat(ChatPermission.EDIT_MESSAGE.canonical()).isEqualTo(ChatPermission.EDIT);
+        assertThat(ChatPermission.DELETE_MESSAGE.canonical()).isEqualTo(ChatPermission.DELETE);
+    }
+
+    @Test
+    void chatPermission_canonical_isIdentityForCurrentValues() {
+        var renamed = java.util.Set.of(ChatPermission.POST_EDIT_DELETE_MESSAGE,
+                ChatPermission.EDIT_MESSAGE, ChatPermission.DELETE_MESSAGE);
+        for (ChatPermission permission : ChatPermission.values()) {
+            if (renamed.contains(permission)) {
+                continue;
+            }
+            assertThat(permission.canonical()).isSameAs(permission);
+        }
     }
 
     @Test

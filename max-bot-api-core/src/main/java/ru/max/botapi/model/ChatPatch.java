@@ -22,12 +22,14 @@ package ru.max.botapi.model;
  * <p>All fields are optional; only non-null fields will be updated.</p>
  *
  * @param title  new chat title
+ * @param description new chat or channel description; pass an empty string to clear it
  * @param icon   new chat icon
  * @param pin    message ID to pin
  * @param notifyRecipients whether to notify participants about the change
  */
 public record ChatPatch(
         @Nullable String title,
+        @Nullable String description,
         @Nullable Image icon,
         @Nullable String pin,
         // TODO: Jackson adapter must map this field to "notify" in JSON

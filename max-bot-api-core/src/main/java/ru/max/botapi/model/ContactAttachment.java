@@ -43,12 +43,21 @@ public record ContactAttachment(ContactPayload payload) implements Attachment {
     /**
      * Payload for a contact attachment.
      *
-     * @param vcfInfo vCard string
-     * @param tamInfo MAX Messenger user reference
+     * <p>When the contact arrives because the user pressed a {@link RequestContactButton},
+     * {@code hash} is present and lets the bot confirm that the phone number really is the
+     * one attached to that user's MAX account: it equals
+     * {@code HMAC-SHA256(access_token, vcfInfo)}, with the {@code \r\n} sequences of
+     * {@code vcfInfo} turned into real line breaks before hashing. A contact shared any other
+     * way carries no hash, and then the number cannot be verified.
+     *
+     * @param vcfInfo vCard string describing the contact
+     * @param maxInfo MAX user reference
+     * @param hash    HMAC of {@code vcfInfo}, present only for a shared contact
      */
     public record ContactPayload(
             @Nullable String vcfInfo,
-            @Nullable User tamInfo
+            @Nullable User maxInfo,
+            @Nullable String hash
     ) {
     }
 }

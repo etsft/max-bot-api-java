@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 class MessageTypesTest {
 
     private static final MessageRecipient RECIPIENT =
-            new MessageRecipient(1L, ChatType.CHAT);
+            new MessageRecipient(1L, ChatType.CHAT, null, null);
     private static final MessageBody BODY =
             new MessageBody("mid1", 1L, "Hello", null, null);
 

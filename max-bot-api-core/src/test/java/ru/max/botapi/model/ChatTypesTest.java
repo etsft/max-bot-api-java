@@ -65,14 +65,14 @@ class ChatTypesTest {
 
     @Test
     void chatPatch_allNulls() {
-        var patch = new ChatPatch(null, null, null, null);
+        var patch = new ChatPatch(null, null, null, null, null);
         assertThat(patch.title()).isNull();
     }
 
     @Test
     void chatMember_construction() {
         var member = new ChatMember(1L, "Alice", null, null, null, false, 100L,
-                null, null, null, 200L, true, true, 50L, List.of(ChatPermission.WRITE));
+                null, null, null, 200L, true, true, 50L, List.of(ChatPermission.WRITE), null);
         assertThat(member.isOwner()).isTrue();
         assertThat(member.isAdmin()).isTrue();
         assertThat(member.permissions()).containsExactly(ChatPermission.WRITE);

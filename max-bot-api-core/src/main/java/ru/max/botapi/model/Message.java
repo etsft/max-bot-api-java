@@ -28,7 +28,9 @@ import java.util.Objects;
  * @param body        the message content
  * @param stat        view statistics (null for non-channel messages)
  * @param url         public URL of the message (null for private chats)
- * @param constructor the bot that constructed this message (message construction flow)
+ * @param constructor the bot that constructed this message; belongs to the
+ *                    message-construction flow, which is not part of the MAX API
+ *                    documentation, and is deprecated for that reason
  */
 public record Message(
         @Nullable User sender,

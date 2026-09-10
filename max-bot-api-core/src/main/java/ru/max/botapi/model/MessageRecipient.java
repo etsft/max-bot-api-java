@@ -23,10 +23,15 @@ import java.util.Objects;
  *
  * @param chatId   chat identifier (null when recipient is identified by other means)
  * @param chatType type of the chat
+ * @param userId   the user on the other side of a dialog; absent for a chat or a channel
+ * @param postId   identifier of the post a comment belongs to; set on {@code comment_*} events
+ *                 and on comments returned by the {@code /comments} methods, absent otherwise
  */
 public record MessageRecipient(
         @Nullable Long chatId,
-        ChatType chatType
+        ChatType chatType,
+        @Nullable Long userId,
+        @Nullable String postId
 ) {
 
     /**

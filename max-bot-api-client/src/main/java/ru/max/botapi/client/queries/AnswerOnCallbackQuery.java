@@ -50,4 +50,15 @@ public class AnswerOnCallbackQuery extends MaxQuery<SimpleQueryResult> {
         queryParams.put("callback_id",
                 Objects.requireNonNull(callbackId, "callbackId must not be null"));
     }
+
+    /**
+     * Controls whether the server generates previews for links in the answer's text.
+     *
+     * @param disable {@code true} to suppress link previews
+     * @return this query for chaining
+     */
+    public AnswerOnCallbackQuery disableLinkPreview(boolean disable) {
+        queryParams.put("disable_link_preview", String.valueOf(disable));
+        return this;
+    }
 }

@@ -213,7 +213,7 @@ class MaxBotAPITest {
                                 }
                                 """)));
 
-        ChatPatch chatPatch = new ChatPatch("New Title", null, null, null);
+        ChatPatch chatPatch = new ChatPatch("New Title", null, null, null, null);
         Chat chat = api.editChat(chatPatch, 123L).execute();
 
         assertThat(chat).isNotNull();

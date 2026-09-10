@@ -114,7 +114,7 @@ class ChatLiveTest extends LiveTestBase {
         String title = "Live test " + System.currentTimeMillis();
 
         Chat updated = api()
-                .editChat(new ChatPatch(title, null, null, false), IntegrationConfig.chatId())
+                .editChat(new ChatPatch(title, null, null, null, false), IntegrationConfig.chatId())
                 .execute();
 
         assertThat(updated.title()).isEqualTo(title);
@@ -146,7 +146,7 @@ class ChatLiveTest extends LiveTestBase {
             return;
         }
         cleanUp("restore chat title", () -> api()
-                .editChat(new ChatPatch(originalTitle, null, null, false), IntegrationConfig.chatId())
+                .editChat(new ChatPatch(originalTitle, null, null, null, false), IntegrationConfig.chatId())
                 .execute());
     }
 }

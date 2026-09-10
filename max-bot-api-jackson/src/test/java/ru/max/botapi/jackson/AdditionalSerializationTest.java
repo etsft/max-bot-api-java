@@ -102,7 +102,7 @@ class AdditionalSerializationTest {
     }
 
     private static final User USER = new User(99001L, "John Doe", null, null, "johndoe", false, 1700000100000L);
-    private static final MessageRecipient RECIPIENT = new MessageRecipient(50001L, ChatType.CHAT);
+    private static final MessageRecipient RECIPIENT = new MessageRecipient(50001L, ChatType.CHAT, null, null);
     private static final MessageBody BODY = new MessageBody("msg_001", 1L, "Hello, world!", null, null);
     private static final Message MSG = new Message(USER, RECIPIENT, 1700000500000L, null, BODY, null, null, null);
 
@@ -167,7 +167,7 @@ class AdditionalSerializationTest {
             var member = new ChatMember(99001L, "Alice", null, null, "@alice", false, 1700000100000L,
                     "A member", "http://avatar.jpg", "http://full.jpg",
                     1700000200000L, true, true, 1699000000000L,
-                    List.of(ChatPermission.WRITE, ChatPermission.PIN_MESSAGE));
+                    List.of(ChatPermission.WRITE, ChatPermission.PIN_MESSAGE), null);
             String json = serializer.serialize(member);
             ChatMember deserialized = serializer.deserialize(json, ChatMember.class);
             assertThat(deserialized.userId()).isEqualTo(99001L);
@@ -207,7 +207,7 @@ class AdditionalSerializationTest {
         @Test
         void chatMembersList_roundTrip() {
             var member = new ChatMember(1L, "Bob", null, null, null, false, 100L,
-                    null, null, null, 200L, false, false, 50L, null);
+                    null, null, null, 200L, false, false, 50L, null, null);
             var list = new ChatMembersList(List.of(member), 999L);
             String json = serializer.serialize(list);
             ChatMembersList deserialized = serializer.deserialize(json, ChatMembersList.class);
@@ -384,7 +384,7 @@ class AdditionalSerializationTest {
 
         @Test
         void chatPatch_roundTrip() {
-            var patch = new ChatPatch("Updated Title", new Image("http://icon.png"), "pin_123", true);
+            var patch = new ChatPatch("Updated Title", null, new Image("http://icon.png"), "pin_123", true);
             String json = serializer.serialize(patch);
             assertThatJson(json).node("title").isEqualTo("Updated Title");
             assertThatJson(json).node("notify").isEqualTo(true);
@@ -515,7 +515,7 @@ class AdditionalSerializationTest {
         @Test
         void snakeCase_fieldMapping() {
             var member = new ChatMember(1L, "Test", null, null, null, true, 100L,
-                    null, null, null, 200L, true, false, 50L, null);
+                    null, null, null, 200L, true, false, 50L, null, null);
             String json = serializer.serialize(member);
             assertThatJson(json).node("user_id").isEqualTo(1);
             assertThatJson(json).node("is_bot").isEqualTo(true);

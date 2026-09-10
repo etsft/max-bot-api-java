@@ -69,7 +69,7 @@ class AttachmentTest {
 
     @Test
     void contactAttachment_construction() {
-        var payload = new ContactAttachment.ContactPayload("vcf-data", null);
+        var payload = new ContactAttachment.ContactPayload("vcf-data", null, null);
         var att = new ContactAttachment(payload);
         assertThat(att.type()).isEqualTo("contact");
         assertThat(att.payload().vcfInfo()).isEqualTo("vcf-data");
@@ -116,7 +116,7 @@ class AttachmentTest {
                 new AudioAttachment(new MediaPayload("u", "t")),
                 new FileAttachment(new MediaPayload("u", "t"), "f", 0),
                 new StickerAttachment(new StickerAttachment.StickerPayload("u", "c"), 1, 1),
-                new ContactAttachment(new ContactAttachment.ContactPayload(null, null)),
+                new ContactAttachment(new ContactAttachment.ContactPayload(null, null, null)),
                 new InlineKeyboardAttachment(
                         new InlineKeyboardAttachment.KeyboardPayload(java.util.List.of())),
                 new ShareAttachment(null, null, null, null),

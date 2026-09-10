@@ -293,7 +293,7 @@ class AdditionalIntegrationTest {
                                 {"code": "not_found", "message": "Chat not found"}
                                 """)));
 
-        ChatPatch patch = new ChatPatch("Title", null, null, null);
+        ChatPatch patch = new ChatPatch("Title", null, null, null, null);
         assertThatThrownBy(() -> api.editChat(patch, 99999L).execute())
                 .isInstanceOf(MaxApiException.class)
                 .satisfies(ex -> {
@@ -519,7 +519,7 @@ class AdditionalIntegrationTest {
                                 }
                                 """)));
 
-        ChatPatch chatPatch = new ChatPatch("Updated Chat Title",
+        ChatPatch chatPatch = new ChatPatch("Updated Chat Title", null,
                 new Image("http://icon.png"), "pin_msg_001", true);
         Chat chat = api.editChat(chatPatch, 456L).execute();
 

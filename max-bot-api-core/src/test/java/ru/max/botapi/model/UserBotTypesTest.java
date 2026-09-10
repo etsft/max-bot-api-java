@@ -55,9 +55,21 @@ class UserBotTypesTest {
     }
 
     @Test
-    void user_nullName_throws() {
-        assertThatNullPointerException()
-                .isThrownBy(() -> new User(1L, null, null, null, null, false, 0L));
+    void user_nullName_isAccepted() {
+        // MAX documents `name` as a legacy field on its way out, so a response without it
+        // must still deserialize.
+        var user = new User(1L, null, "Ivan", "Petrov", null, false, 0L);
+        assertThat(user.name()).isNull();
+        assertThat(user.firstName()).isEqualTo("Ivan");
+    }
+
+    @Test
+    void user_nullFirstName_isAccepted() {
+        // ...and the documentation's own GET /me example answers with `name` and no
+        // `first_name`, so the reverse must deserialize too.
+        var user = new User(1L, "My Bot", null, null, "my_bot", true, 0L);
+        assertThat(user.firstName()).isNull();
+        assertThat(user.name()).isEqualTo("My Bot");
     }
 
     @Test
@@ -77,7 +89,7 @@ class UserBotTypesTest {
 
     @Test
     void userWithPhoto_construction() {
-        var user = new UserWithPhoto(1L, "Alice", "@alice", false, 1000L,
+        var user = new UserWithPhoto(1L, "Alice", null, null, "@alice", false, 1000L,
                 "desc", "http://avatar", "http://full");
         assertThat(user.description()).isEqualTo("desc");
         assertThat(user.avatarUrl()).isEqualTo("http://avatar");
@@ -102,7 +114,7 @@ class UserBotTypesTest {
     @Test
     void botInfo_construction() {
         var cmd = new BotCommand("start", "Start bot");
-        var bot = new BotInfo(1L, "MyBot", null, "@mybot", true, 1000L,
+        var bot = new BotInfo(1L, "MyBot", null, null, "@mybot", true, 1000L,
                 "A bot", "http://avatar", "http://full", List.of(cmd));
         assertThat(bot.commands()).hasSize(1);
         assertThat(bot.isBot()).isTrue();

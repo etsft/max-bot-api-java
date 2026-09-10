@@ -39,7 +39,7 @@ class DefensiveCopyTest {
     @Test
     void chatMembersList_defensiveCopy() {
         var member = new ChatMember(1L, "A", null, null, null, false, 0L,
-                null, null, null, 0L, false, false, 0L, null);
+                null, null, null, 0L, false, false, 0L, null, null);
         var mutable = new ArrayList<>(List.of(member));
         var list = new ChatMembersList(mutable, null);
         mutable.clear();
@@ -74,7 +74,7 @@ class DefensiveCopyTest {
     @Test
     void messageList_defensiveCopy() {
         var body = new MessageBody("m1", 1L, "hi", null, null);
-        var recipient = new MessageRecipient(1L, ChatType.CHAT);
+        var recipient = new MessageRecipient(1L, ChatType.CHAT, null, null);
         var msg = new Message(null, recipient, 0L, null, body, null, null, null);
         var mutable = new ArrayList<>(List.of(msg));
         var list = new MessageList(mutable, null);
@@ -124,7 +124,7 @@ class DefensiveCopyTest {
     void botInfo_commands_defensiveCopy() {
         var cmd = new BotCommand("help", "Show help");
         var mutable = new ArrayList<>(List.of(cmd));
-        var bot = new BotInfo(1L, "Bot", null, null, true, 0L,
+        var bot = new BotInfo(1L, "Bot", null, null, null, true, 0L,
                 null, null, null, mutable);
         mutable.clear();
         assertThat(bot.commands()).hasSize(1);
@@ -134,7 +134,7 @@ class DefensiveCopyTest {
 
     @Test
     void botInfo_commands_null_preserved() {
-        var bot = new BotInfo(1L, "Bot", null, null, true, 0L,
+        var bot = new BotInfo(1L, "Bot", null, null, null, true, 0L,
                 null, null, null, null);
         assertThat(bot.commands()).isNull();
     }
@@ -160,7 +160,7 @@ class DefensiveCopyTest {
     void chatMember_permissions_defensiveCopy() {
         var mutable = new ArrayList<>(List.of(ChatPermission.READ_ALL_MESSAGES, ChatPermission.ADD_REMOVE_MEMBERS));
         var member = new ChatMember(1L, "A", null, null, null, false, 0L,
-                null, null, null, 0L, false, false, 0L, mutable);
+                null, null, null, 0L, false, false, 0L, mutable, null);
         mutable.clear();
         assertThat(member.permissions()).hasSize(2);
         assertThatThrownBy(() -> member.permissions().add(ChatPermission.ADD_ADMINS))
@@ -170,7 +170,7 @@ class DefensiveCopyTest {
     @Test
     void chatMember_permissions_null_preserved() {
         var member = new ChatMember(1L, "A", null, null, null, false, 0L,
-                null, null, null, 0L, false, false, 0L, null);
+                null, null, null, 0L, false, false, 0L, null, null);
         assertThat(member.permissions()).isNull();
     }
 
