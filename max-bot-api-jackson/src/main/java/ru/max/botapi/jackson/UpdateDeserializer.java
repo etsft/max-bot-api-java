@@ -28,6 +28,13 @@ import ru.max.botapi.model.BotRemovedUpdate;
 import ru.max.botapi.model.BotStartedUpdate;
 import ru.max.botapi.model.BotStoppedUpdate;
 import ru.max.botapi.model.ChatTitleChangedUpdate;
+import ru.max.botapi.model.CommentCreatedUpdate;
+import ru.max.botapi.model.CommentEditedUpdate;
+import ru.max.botapi.model.CommentRemovedUpdate;
+import ru.max.botapi.model.DialogClearedUpdate;
+import ru.max.botapi.model.DialogMutedUpdate;
+import ru.max.botapi.model.DialogRemovedUpdate;
+import ru.max.botapi.model.DialogUnmutedUpdate;
 import ru.max.botapi.model.MessageCallbackUpdate;
 import ru.max.botapi.model.MessageChatCreatedUpdate;
 import ru.max.botapi.model.MessageConstructedUpdate;
@@ -87,6 +94,13 @@ final class UpdateDeserializer extends StdDeserializer<Update> {
                     parseOrUnknown(ctxt, node, MessageConstructionRequestUpdate.class, updateType);
             case "message_constructed" -> parseOrUnknown(ctxt, node, MessageConstructedUpdate.class, updateType);
             case "message_chat_created" -> parseOrUnknown(ctxt, node, MessageChatCreatedUpdate.class, updateType);
+            case "dialog_cleared" -> parseOrUnknown(ctxt, node, DialogClearedUpdate.class, updateType);
+            case "dialog_muted" -> parseOrUnknown(ctxt, node, DialogMutedUpdate.class, updateType);
+            case "dialog_unmuted" -> parseOrUnknown(ctxt, node, DialogUnmutedUpdate.class, updateType);
+            case "dialog_removed" -> parseOrUnknown(ctxt, node, DialogRemovedUpdate.class, updateType);
+            case "comment_created" -> parseOrUnknown(ctxt, node, CommentCreatedUpdate.class, updateType);
+            case "comment_edited" -> parseOrUnknown(ctxt, node, CommentEditedUpdate.class, updateType);
+            case "comment_removed" -> parseOrUnknown(ctxt, node, CommentRemovedUpdate.class, updateType);
             default -> unknown(node, updateType);
         };
     }

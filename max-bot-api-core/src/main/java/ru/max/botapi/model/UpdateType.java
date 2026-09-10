@@ -83,7 +83,28 @@ public enum UpdateType {
     MESSAGE_CONSTRUCTED("message_constructed"),
 
     /** A new chat was created via a message. */
-    MESSAGE_CHAT_CREATED("message_chat_created");
+    MESSAGE_CHAT_CREATED("message_chat_created"),
+
+    /** The user cleared the history of their dialog with the bot. */
+    DIALOG_CLEARED("dialog_cleared"),
+
+    /** The user muted notifications in their dialog with the bot. */
+    DIALOG_MUTED("dialog_muted"),
+
+    /** The user unmuted notifications in their dialog with the bot. */
+    DIALOG_UNMUTED("dialog_unmuted"),
+
+    /** The user deleted their dialog with the bot; {@link #BOT_STOPPED} arrives alongside it. */
+    DIALOG_REMOVED("dialog_removed"),
+
+    /** A new comment was published on a channel post. */
+    COMMENT_CREATED("comment_created"),
+
+    /** A comment on a channel post was edited. */
+    COMMENT_EDITED("comment_edited"),
+
+    /** A comment on a channel post was deleted. */
+    COMMENT_REMOVED("comment_removed");
 
     private final String value;
 

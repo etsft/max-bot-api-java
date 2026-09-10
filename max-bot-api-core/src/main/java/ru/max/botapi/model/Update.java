@@ -28,7 +28,9 @@ public sealed interface Update permits
         UserAddedUpdate, UserRemovedUpdate, BotStartedUpdate, BotStoppedUpdate,
         ChatTitleChangedUpdate, MessageConstructionRequestUpdate,
         MessageConstructedUpdate, MessageChatCreatedUpdate,
-        UnknownUpdate {
+        DialogClearedUpdate, DialogMutedUpdate, DialogUnmutedUpdate,
+        DialogRemovedUpdate, CommentCreatedUpdate, CommentEditedUpdate,
+        CommentRemovedUpdate, UnknownUpdate {
 
     /**
      * Returns the update type discriminator string.

@@ -16,14 +16,28 @@
 
 package ru.max.botapi.jackson;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import ru.max.botapi.model.ChatMember;
 import ru.max.botapi.model.ChatPermission;
+import ru.max.botapi.model.ClipboardButton;
+import ru.max.botapi.model.CommentCreatedUpdate;
+import ru.max.botapi.model.CommentEditedUpdate;
+import ru.max.botapi.model.CommentMessage;
+import ru.max.botapi.model.CommentRemovedUpdate;
 import ru.max.botapi.model.ContactAttachment;
+import ru.max.botapi.model.DialogClearedUpdate;
+import ru.max.botapi.model.DialogMutedUpdate;
+import ru.max.botapi.model.DialogRemovedUpdate;
+import ru.max.botapi.model.DialogUnmutedUpdate;
 import ru.max.botapi.model.GetSubscriptionsResult;
+import ru.max.botapi.model.NewCommentBody;
 import ru.max.botapi.model.Subscription;
+import ru.max.botapi.model.TextFormat;
+import ru.max.botapi.model.Update;
 import ru.max.botapi.model.UpdateType;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -87,7 +101,7 @@ class ApiConformanceTest {
                   "subscriptions": [
                     {
                       "url": "https://example.com/webhook",
-                      "update_types": ["message_created", "some_future_event"]
+                      "update_types": ["comment_created", "some_future_event"]
                     }
                   ]
                 }
@@ -97,7 +111,7 @@ class ApiConformanceTest {
                 serializer.deserialize(json, GetSubscriptionsResult.class);
 
         Subscription subscription = result.subscriptions().getFirst();
-        assertThat(subscription.updateTypes()).containsExactly(UpdateType.MESSAGE_CREATED);
+        assertThat(subscription.updateTypes()).containsExactly(UpdateType.COMMENT_CREATED);
     }
 
     @Test
@@ -124,5 +138,120 @@ class ApiConformanceTest {
         assertThat(attachment.payload().hash()).isEqualTo("deadbeef");
         assertThat(attachment.payload().maxInfo()).isNotNull();
         assertThat(attachment.payload().maxInfo().userId()).isEqualTo(7L);
+    }
+
+    @Test
+    void clipboardButton_roundTrips() {
+        String json = serializer.serialize(new ClipboardButton("Copy", "PROMO-1"));
+
+        assertThat(json).contains("\"type\":\"clipboard\"")
+                .contains("\"payload\":\"PROMO-1\"");
+        assertThat(serializer.deserialize(json, ru.max.botapi.model.Button.class))
+                .isEqualTo(new ClipboardButton("Copy", "PROMO-1"));
+    }
+
+    @Test
+    void newCommentBody_serializesWithoutAttachments() {
+        String json = serializer.serialize(
+                new NewCommentBody("Hi", null, TextFormat.MARKDOWN));
+
+        assertThat(json).contains("\"text\":\"Hi\"")
+                .contains("\"format\":\"markdown\"")
+                .doesNotContain("attachments");
+    }
+
+    @Test
+    void dialogUpdates_deserializeToTheirOwnTypes() {
+        assertThat(parse("dialog_cleared")).isInstanceOf(DialogClearedUpdate.class);
+        assertThat(parse("dialog_muted")).isInstanceOf(DialogMutedUpdate.class);
+        assertThat(parse("dialog_unmuted")).isInstanceOf(DialogUnmutedUpdate.class);
+
+        Update removed = parse("dialog_removed");
+        assertThat(removed).isInstanceOf(DialogRemovedUpdate.class);
+        assertThat(((DialogRemovedUpdate) removed).chatId()).isEqualTo(42L);
+        assertThat(removed.updateType()).isEqualTo("dialog_removed");
+    }
+
+    @Test
+    void dialogUpdate_toleratesAnUndocumentedField() {
+        // The payload of these events is not published, so an unknown property must not
+        // push the update into the unknown-type fallback.
+        String json = """
+                {
+                  "update_type": "dialog_muted",
+                  "timestamp": 1700000000000,
+                  "chat_id": 42,
+                  "muted_until": 1700000600000
+                }
+                """;
+
+        assertThat(serializer.deserialize(json, Update.class))
+                .isInstanceOf(DialogMutedUpdate.class);
+    }
+
+    @Test
+    void commentUpdates_carryTheCommentAndItsPostId() {
+        String json = """
+                {
+                  "update_type": "comment_created",
+                  "timestamp": 1700000000000,
+                  "message": {
+                    "recipient": {
+                      "chat_id": 42,
+                      "chat_type": "channel",
+                      "post_id": "mid.post123"
+                    },
+                    "timestamp": 1700000000000,
+                    "body": {"mid": "mid.c1", "seq": 1, "text": "Nice post"}
+                  }
+                }
+                """;
+
+        Update update = serializer.deserialize(json, Update.class);
+
+        assertThat(update).isInstanceOf(CommentCreatedUpdate.class);
+        CommentMessage comment = ((CommentCreatedUpdate) update).message();
+        assertThat(comment).isNotNull();
+        assertThat(comment.body().text()).isEqualTo("Nice post");
+        assertThat(comment.recipient().postId()).isEqualTo("mid.post123");
+
+        assertThat(serializer.deserialize(
+                json.replace("comment_created", "comment_edited"), Update.class))
+                .isInstanceOf(CommentEditedUpdate.class);
+        assertThat(serializer.deserialize(
+                json.replace("comment_created", "comment_removed"), Update.class))
+                .isInstanceOf(CommentRemovedUpdate.class);
+    }
+
+    @Test
+    void everyDocumentedUpdateType_hasItsOwnUpdateClass() {
+        List<UpdateType> types = List.of(
+                UpdateType.DIALOG_CLEARED, UpdateType.DIALOG_MUTED,
+                UpdateType.DIALOG_UNMUTED, UpdateType.DIALOG_REMOVED,
+                UpdateType.COMMENT_CREATED, UpdateType.COMMENT_EDITED,
+                UpdateType.COMMENT_REMOVED);
+
+        for (UpdateType type : types) {
+            Update update = serializer.deserialize("""
+                    {"update_type": "%s", "timestamp": 1}
+                    """.formatted(type.value()), Update.class);
+            assertThat(update.updateType()).isEqualTo(type.value());
+        }
+    }
+
+    private Update parse(String updateType) {
+        return serializer.deserialize("""
+                {
+                  "update_type": "%s",
+                  "timestamp": 1700000000000,
+                  "chat_id": 42,
+                  "user": {
+                    "user_id": 7,
+                    "first_name": "Ivan",
+                    "is_bot": false,
+                    "last_activity_time": 0
+                  }
+                }
+                """.formatted(updateType), Update.class);
     }
 }

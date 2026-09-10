@@ -26,8 +26,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class UpdateTypeTest {
 
     @Test
-    void allValues_hasAll14KnownTypes() {
-        assertThat(UpdateType.values()).hasSize(14);
+    void allValues_hasAll21KnownTypes() {
+        assertThat(UpdateType.values()).hasSize(21);
     }
 
     @Test
@@ -47,6 +47,13 @@ class UpdateTypeTest {
                 .isEqualTo("message_construction_request");
         assertThat(UpdateType.MESSAGE_CONSTRUCTED.value()).isEqualTo("message_constructed");
         assertThat(UpdateType.MESSAGE_CHAT_CREATED.value()).isEqualTo("message_chat_created");
+        assertThat(UpdateType.DIALOG_CLEARED.value()).isEqualTo("dialog_cleared");
+        assertThat(UpdateType.DIALOG_MUTED.value()).isEqualTo("dialog_muted");
+        assertThat(UpdateType.DIALOG_UNMUTED.value()).isEqualTo("dialog_unmuted");
+        assertThat(UpdateType.DIALOG_REMOVED.value()).isEqualTo("dialog_removed");
+        assertThat(UpdateType.COMMENT_CREATED.value()).isEqualTo("comment_created");
+        assertThat(UpdateType.COMMENT_EDITED.value()).isEqualTo("comment_edited");
+        assertThat(UpdateType.COMMENT_REMOVED.value()).isEqualTo("comment_removed");
     }
 
     @Test
@@ -78,15 +85,17 @@ class UpdateTypeTest {
     }
 
     @Test
-    void allValuesStrings_hasAll14Values() {
+    void allValuesStrings_hasAll21Values() {
         Set<String> all = UpdateType.allValues();
-        assertThat(all).hasSize(14);
+        assertThat(all).hasSize(21);
         assertThat(all).contains(
                 "message_created", "message_callback", "message_edited",
                 "message_removed", "bot_added", "bot_removed",
                 "user_added", "user_removed", "bot_started", "bot_stopped",
                 "chat_title_changed", "message_construction_request",
-                "message_constructed", "message_chat_created");
+                "message_constructed", "message_chat_created",
+                "dialog_cleared", "dialog_muted", "dialog_unmuted", "dialog_removed",
+                "comment_created", "comment_edited", "comment_removed");
     }
 
     @Test

@@ -94,6 +94,7 @@ class ButtonTest {
                 new ChatButton("t", "ct", null, null, null),
                 new OpenAppButton("t", "u", null),
                 new MessageButton("t", "m"),
+                new ClipboardButton("t", "PROMO"),
                 new UnknownButton("x", "t", "{}")
         };
         for (Button btn : all) {
@@ -105,6 +106,7 @@ class ButtonTest {
                 case ChatButton b -> "chat";
                 case OpenAppButton b -> "app";
                 case MessageButton b -> "message";
+                case ClipboardButton b -> "clipboard";
                 case UnknownButton b -> "unknown";
             };
             assertThat(desc).isNotBlank();

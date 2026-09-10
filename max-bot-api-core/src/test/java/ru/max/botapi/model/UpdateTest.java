@@ -165,10 +165,17 @@ class UpdateTest {
                 new MessageConstructionRequestUpdate(0, USER, null, "s", null, null),
                 new MessageConstructedUpdate(0, USER, "s", cm),
                 new MessageChatCreatedUpdate(0, chat, "m", null),
+                new DialogClearedUpdate(0, 1L, USER),
+                new DialogMutedUpdate(0, 1L, USER),
+                new DialogUnmutedUpdate(0, 1L, USER),
+                new DialogRemovedUpdate(0, 1L, USER),
+                new CommentCreatedUpdate(0, null),
+                new CommentEditedUpdate(0, null),
+                new CommentRemovedUpdate(0, null),
                 new UnknownUpdate("x", 0, "{}")
         };
 
-        assertThat(all).hasSize(15);
+        assertThat(all).hasSize(22);
 
         for (Update upd : all) {
             String desc = switch (upd) {
@@ -186,6 +193,13 @@ class UpdateTest {
                 case MessageConstructionRequestUpdate u -> u.updateType();
                 case MessageConstructedUpdate u -> u.updateType();
                 case MessageChatCreatedUpdate u -> u.updateType();
+                case DialogClearedUpdate u -> u.updateType();
+                case DialogMutedUpdate u -> u.updateType();
+                case DialogUnmutedUpdate u -> u.updateType();
+                case DialogRemovedUpdate u -> u.updateType();
+                case CommentCreatedUpdate u -> u.updateType();
+                case CommentEditedUpdate u -> u.updateType();
+                case CommentRemovedUpdate u -> u.updateType();
                 case UnknownUpdate u -> u.updateType();
             };
             assertThat(desc).isNotBlank();

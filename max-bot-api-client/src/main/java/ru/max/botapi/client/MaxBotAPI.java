@@ -23,13 +23,18 @@ import ru.max.botapi.client.queries.AddMembersQuery;
 import ru.max.botapi.client.queries.AnswerOnCallbackQuery;
 import ru.max.botapi.client.queries.DeleteAdminsQuery;
 import ru.max.botapi.client.queries.DeleteChatQuery;
+import ru.max.botapi.client.queries.DeleteCommentQuery;
 import ru.max.botapi.client.queries.DeleteMessageQuery;
 import ru.max.botapi.client.queries.EditChatQuery;
+import ru.max.botapi.client.queries.EditCommentQuery;
 import ru.max.botapi.client.queries.EditMessageQuery;
+import ru.max.botapi.client.queries.EditMyCommandsQuery;
 import ru.max.botapi.client.queries.EditMyInfoQuery;
 import ru.max.botapi.client.queries.GetAdminsQuery;
 import ru.max.botapi.client.queries.GetChatByLinkQuery;
 import ru.max.botapi.client.queries.GetChatQuery;
+import ru.max.botapi.client.queries.GetCommentByIdQuery;
+import ru.max.botapi.client.queries.GetCommentsQuery;
 import ru.max.botapi.client.queries.GetMembersQuery;
 import ru.max.botapi.client.queries.GetMembershipQuery;
 import ru.max.botapi.client.queries.GetMessageByIdQuery;
@@ -45,16 +50,19 @@ import ru.max.botapi.client.queries.PinMessageQuery;
 import ru.max.botapi.client.queries.PostAdminsQuery;
 import ru.max.botapi.client.queries.RemoveMemberQuery;
 import ru.max.botapi.client.queries.SendActionQuery;
+import ru.max.botapi.client.queries.SendCommentQuery;
 import ru.max.botapi.client.queries.SendMessageQuery;
 import ru.max.botapi.client.queries.SubscribeQuery;
 import ru.max.botapi.client.queries.UnpinMessageQuery;
 import ru.max.botapi.client.queries.UnsubscribeQuery;
 import ru.max.botapi.core.MaxSerializer;
 import ru.max.botapi.model.ActionRequestBody;
+import ru.max.botapi.model.BotCommandsPatch;
 import ru.max.botapi.model.BotPatch;
 import ru.max.botapi.model.CallbackAnswer;
 import ru.max.botapi.model.ChatAdminsList;
 import ru.max.botapi.model.ChatPatch;
+import ru.max.botapi.model.NewCommentBody;
 import ru.max.botapi.model.NewMessageBody;
 import ru.max.botapi.model.PinMessageBody;
 import ru.max.botapi.model.SubscriptionRequestBody;
@@ -196,6 +204,19 @@ public class MaxBotAPI implements AutoCloseable {
      */
     public EditMyInfoQuery editMyInfo(BotPatch botPatch) {
         return new EditMyInfoQuery(client, botPatch);
+    }
+
+    /**
+     * Returns a query for {@code PATCH /me/commands} that sets the bot's commands.
+     *
+     * <p>The list replaces the previous one wholesale, so passing an empty list removes every
+     * command. At most 32 are accepted.</p>
+     *
+     * @param patch the commands to set; must not be {@code null}
+     * @return an {@link EditMyCommandsQuery}
+     */
+    public EditMyCommandsQuery editMyCommands(BotCommandsPatch patch) {
+        return new EditMyCommandsQuery(client, patch);
     }
 
     // ===== Chat Methods =====
@@ -436,6 +457,68 @@ public class MaxBotAPI implements AutoCloseable {
      */
     public DeleteMessageQuery deleteMessage(String messageId) {
         return new DeleteMessageQuery(client, messageId);
+    }
+
+    // ===== Comments =====
+
+    /**
+     * Returns a query for {@code GET /messages/{messageId}/comments} that retrieves the
+     * comments on a channel post.
+     *
+     * @param messageId the post identifier (mid); must not be {@code null}
+     * @return a {@link GetCommentsQuery}
+     */
+    public GetCommentsQuery getComments(String messageId) {
+        return new GetCommentsQuery(client, messageId);
+    }
+
+    /**
+     * Returns a query for {@code GET /messages/{messageId}/comments/{commentId}} that retrieves
+     * one comment by its identifier.
+     *
+     * @param messageId the post identifier (mid); must not be {@code null}
+     * @param commentId the comment identifier (mid); must not be {@code null}
+     * @return a {@link GetCommentByIdQuery}
+     */
+    public GetCommentByIdQuery getCommentById(String messageId, String commentId) {
+        return new GetCommentByIdQuery(client, messageId, commentId);
+    }
+
+    /**
+     * Returns a query for {@code POST /messages/{messageId}/comments} that posts a comment on a
+     * channel post.
+     *
+     * @param body      the comment to post; must not be {@code null}
+     * @param messageId the post identifier (mid); must not be {@code null}
+     * @return a {@link SendCommentQuery}
+     */
+    public SendCommentQuery sendComment(NewCommentBody body, String messageId) {
+        return new SendCommentQuery(client, body, messageId);
+    }
+
+    /**
+     * Returns a query for {@code PUT /messages/{messageId}/comments} that edits a comment.
+     *
+     * @param body      the updated comment; must not be {@code null}
+     * @param messageId the post identifier (mid); must not be {@code null}
+     * @param commentId the identifier of the comment to edit; must not be {@code null}
+     * @return an {@link EditCommentQuery}
+     */
+    public EditCommentQuery editComment(NewCommentBody body, String messageId, String commentId) {
+        return new EditCommentQuery(client, body, messageId, commentId);
+    }
+
+    /**
+     * Returns a query for {@code DELETE /messages/{messageId}/comments} that deletes a comment.
+     *
+     * <p>A deleted comment cannot be restored.</p>
+     *
+     * @param messageId the post identifier (mid); must not be {@code null}
+     * @param commentId the identifier of the comment to delete; must not be {@code null}
+     * @return a {@link DeleteCommentQuery}
+     */
+    public DeleteCommentQuery deleteComment(String messageId, String commentId) {
+        return new DeleteCommentQuery(client, messageId, commentId);
     }
 
     // ===== Callback =====

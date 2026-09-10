@@ -25,7 +25,7 @@ package ru.max.botapi.model;
 public sealed interface Button permits
         CallbackButton, LinkButton, RequestContactButton,
         RequestGeoLocationButton, ChatButton, OpenAppButton,
-        MessageButton, UnknownButton {
+        MessageButton, ClipboardButton, UnknownButton {
 
     /**
      * Returns the button type discriminator string.

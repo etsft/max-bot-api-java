@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import ru.max.botapi.model.Button;
 import ru.max.botapi.model.CallbackButton;
 import ru.max.botapi.model.ChatButton;
+import ru.max.botapi.model.ClipboardButton;
 import ru.max.botapi.model.LinkButton;
 import ru.max.botapi.model.MessageButton;
 import ru.max.botapi.model.OpenAppButton;
@@ -63,6 +64,7 @@ final class ButtonDeserializer extends StdDeserializer<Button> {
             case "chat" -> parseOrUnknown(ctxt, node, ChatButton.class, type);
             case "open_app" -> parseOrUnknown(ctxt, node, OpenAppButton.class, type);
             case "message" -> parseOrUnknown(ctxt, node, MessageButton.class, type);
+            case "clipboard" -> parseOrUnknown(ctxt, node, ClipboardButton.class, type);
             default -> unknown(node, type);
         };
     }
