@@ -71,6 +71,7 @@ final class UpdateDeserializer extends StdDeserializer<Update> {
     }
 
     @Override
+    @SuppressWarnings("deprecation") // still dispatches the legacy types the API may send
     public Update deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
         JsonNode node = p.getCodec().readTree(p);
         if (!node.isObject()) {

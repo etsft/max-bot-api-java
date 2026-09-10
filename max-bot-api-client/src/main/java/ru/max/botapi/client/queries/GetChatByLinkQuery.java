@@ -48,7 +48,11 @@ import ru.max.botapi.model.Chat;
  * <pre>{@code
  * Chat chat = api.getChatByLink("@my-public-chat").execute();
  * }</pre>
+ *
+ * @deprecated {@code GET /chats/{chatLink}} is not part of the MAX API documentation and may
+ *             stop working without notice.
  */
+@Deprecated
 public class GetChatByLinkQuery extends MaxQuery<Chat> {
 
     private static final String INVITE_PREFIX = "join/";

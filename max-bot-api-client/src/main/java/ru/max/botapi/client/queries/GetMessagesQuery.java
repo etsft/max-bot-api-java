@@ -60,7 +60,10 @@ public class GetMessagesQuery extends MaxQuery<MessageList> {
      *
      * @param userId the user identifier
      * @return this query for chaining
+     *
+     * @deprecated {@code GET /messages} does not document a {@code user_id} parameter.
      */
+    @Deprecated
     public GetMessagesQuery userId(long userId) {
         queryParams.put("user_id", String.valueOf(userId));
         return this;

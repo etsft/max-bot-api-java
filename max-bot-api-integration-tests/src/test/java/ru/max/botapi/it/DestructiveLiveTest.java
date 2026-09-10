@@ -46,6 +46,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @Order(9)
 @DisplayName("Live: destructive operations")
+@SuppressWarnings("deprecation") // exercises the endpoints MAX no longer documents
 class DestructiveLiveTest extends LiveTestBase {
 
     private long chatId;

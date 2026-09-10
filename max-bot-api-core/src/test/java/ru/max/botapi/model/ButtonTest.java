@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Tests for the Button sealed hierarchy.
  */
+@SuppressWarnings("deprecation") // asserts on the legacy types on purpose
 class ButtonTest {
 
     @Test

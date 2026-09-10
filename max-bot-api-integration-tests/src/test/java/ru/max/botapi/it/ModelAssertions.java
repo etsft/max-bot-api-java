@@ -44,6 +44,7 @@ import ru.max.botapi.model.UpdateList;
  * suite exists to notice the drift, so a fallback anywhere in the returned graph is a failure,
  * reported together with the raw JSON that produced it.</p>
  */
+@SuppressWarnings("deprecation") // still inspects the legacy update types
 public final class ModelAssertions {
 
     private ModelAssertions() {

@@ -76,13 +76,28 @@ public enum UpdateType {
     /** The title of a chat was changed. */
     CHAT_TITLE_CHANGED("chat_title_changed"),
 
-    /** A message construction session was requested. */
+    /**
+     * A message construction session was requested.
+     *
+     * @deprecated not part of the MAX API documentation.
+     */
+    @Deprecated
     MESSAGE_CONSTRUCTION_REQUEST("message_construction_request"),
 
-    /** A message construction session was completed. */
+    /**
+     * A message construction session was completed.
+     *
+     * @deprecated not part of the MAX API documentation.
+     */
+    @Deprecated
     MESSAGE_CONSTRUCTED("message_constructed"),
 
-    /** A new chat was created via a message. */
+    /**
+     * A new chat was created via a message.
+     *
+     * @deprecated not part of the MAX API documentation.
+     */
+    @Deprecated
     MESSAGE_CHAT_CREATED("message_chat_created"),
 
     /** The user cleared the history of their dialog with the bot. */

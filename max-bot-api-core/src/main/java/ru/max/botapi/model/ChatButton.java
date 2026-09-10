@@ -26,7 +26,10 @@ import java.util.Objects;
  * @param chatDescription optional description of the chat
  * @param startPayload    optional payload sent to the bot when chat is created
  * @param uuid            optional unique identifier for the button
+ *
+ * @deprecated the {@code chat} button type is not part of the MAX API documentation.
  */
+@Deprecated
 public record ChatButton(
         String text,
         String chatTitle,

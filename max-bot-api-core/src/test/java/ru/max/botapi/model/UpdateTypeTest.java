@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@SuppressWarnings("deprecation") // asserts on the legacy types on purpose
 class UpdateTypeTest {
 
     @Test

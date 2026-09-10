@@ -34,7 +34,11 @@ import ru.max.botapi.model.SimpleQueryResult;
  * <pre>{@code
  * SimpleQueryResult result = api.deleteChat(123456789L).execute();
  * }</pre>
+ *
+ * @deprecated {@code DELETE /chats/{chatId}} is not part of the MAX API documentation, and
+ *             MAX rejects the call for a bot.
  */
+@Deprecated
 public class DeleteChatQuery extends MaxQuery<SimpleQueryResult> {
 
     /**

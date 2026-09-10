@@ -22,6 +22,7 @@ package ru.max.botapi.model;
  * <p>Discriminated by the {@code type} field in JSON. {@link UnknownButton} serves
  * as a forward-compatibility fallback for unrecognized button types.</p>
  */
+@SuppressWarnings("deprecation") // the permits clause must still name the legacy types
 public sealed interface Button permits
         CallbackButton, LinkButton, RequestContactButton,
         RequestGeoLocationButton, ChatButton, OpenAppButton,

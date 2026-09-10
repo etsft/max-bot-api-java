@@ -41,7 +41,12 @@ import ru.max.botapi.model.UserIdsList;
  *         System.out.println(f.errorCode() + " for " + f.userIds()));
  * }
  * }</pre>
+ *
+ * @deprecated {@code POST /chats/{chatId}/members} has been restricted since 9 September 2026
+ *             and is removed on 30 September 2026. The MAX API then offers no way to add
+ *             members to a group chat.
  */
+@Deprecated
 public class AddMembersQuery extends MaxQuery<AddMembersResult> {
 
     /**

@@ -27,7 +27,10 @@ import java.util.Objects;
  * @param sessionId  construction session identifier
  * @param data       optional data from the previous construction step
  * @param input      optional input from the user (raw JSON string)
+ *
+ * @deprecated the {@code message_construction_request} event is not part of the MAX API documentation.
  */
+@Deprecated
 public record MessageConstructionRequestUpdate(
         long timestamp,
         User user,

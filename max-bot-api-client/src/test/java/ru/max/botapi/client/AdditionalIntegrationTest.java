@@ -78,6 +78,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * NOT covered in {@link MaxBotAPITest}.
  */
 @WireMockTest
+@SuppressWarnings("deprecation") // exercises the endpoints MAX no longer documents
 class AdditionalIntegrationTest {
 
     private static final String AUTH_HEADER = "Authorization";

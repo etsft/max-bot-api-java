@@ -53,6 +53,7 @@ final class ButtonDeserializer extends StdDeserializer<Button> {
     }
 
     @Override
+    @SuppressWarnings("deprecation") // still dispatches the legacy types the API may send
     public Button deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
         JsonNode node = p.getCodec().readTree(p);
         String type = node.has("type") ? node.get("type").asText() : "unknown";

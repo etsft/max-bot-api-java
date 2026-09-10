@@ -37,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @Order(1)
 @DisplayName("Live: bot profile")
+@SuppressWarnings("deprecation") // exercises the endpoints MAX no longer documents
 class BotInfoLiveTest extends LiveTestBase {
 
     private BotInfo original;

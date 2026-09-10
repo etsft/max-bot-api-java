@@ -201,7 +201,11 @@ public class MaxBotAPI implements AutoCloseable {
      *
      * @param botPatch the patch with fields to update; must not be {@code null}
      * @return an {@link EditMyInfoQuery}
+     *
+     * @deprecated {@code PATCH /me} is not part of the MAX API documentation. Use
+     *             {@link #editMyCommands(BotCommandsPatch)} to manage the bot's commands.
      */
+    @Deprecated
     public EditMyInfoQuery editMyInfo(BotPatch botPatch) {
         return new EditMyInfoQuery(client, botPatch);
     }
@@ -236,7 +240,11 @@ public class MaxBotAPI implements AutoCloseable {
      *
      * @param chatLink the public chat link or username; must not be {@code null}
      * @return a {@link GetChatByLinkQuery}
+     *
+     * @deprecated {@code GET /chats/{chatLink}} is not part of the MAX API documentation and
+     *             may stop working without notice.
      */
+    @Deprecated
     public GetChatByLinkQuery getChatByLink(String chatLink) {
         return new GetChatByLinkQuery(client, chatLink);
     }
@@ -257,7 +265,11 @@ public class MaxBotAPI implements AutoCloseable {
      *
      * @param chatId the chat identifier
      * @return a {@link DeleteChatQuery}
+     *
+     * @deprecated {@code DELETE /chats/{chatId}} is not part of the MAX API documentation, and
+     *             MAX rejects the call for a bot.
      */
+    @Deprecated
     public DeleteChatQuery deleteChat(long chatId) {
         return new DeleteChatQuery(client, chatId);
     }
@@ -292,7 +304,11 @@ public class MaxBotAPI implements AutoCloseable {
      * @param userIds the list of user IDs to add; must not be {@code null}
      * @param chatId  the chat identifier
      * @return an {@link AddMembersQuery}
+     *
+     * @deprecated {@code POST /chats/{chatId}/members} has been restricted since 9 September
+     *             2026 and is removed on 30 September 2026.
      */
+    @Deprecated
     public AddMembersQuery addMembers(UserIdsList userIds, long chatId) {
         return new AddMembersQuery(client, userIds, chatId);
     }

@@ -73,6 +73,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * plus error scenarios.
  */
 @WireMockTest
+@SuppressWarnings("deprecation") // exercises the endpoints MAX no longer documents
 class MaxBotAPITest {
 
     private static final String TOKEN = "test-token";

@@ -92,6 +92,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Additional serialization/deserialization tests for types NOT covered
  * in {@link JacksonMaxSerializerTest}.
  */
+@SuppressWarnings("deprecation") // asserts on the legacy types on purpose
 class AdditionalSerializationTest {
 
     private JacksonMaxSerializer serializer;

@@ -25,7 +25,10 @@ import java.util.Objects;
  * @param chat         the created chat
  * @param messageId    ID of the message that triggered chat creation
  * @param startPayload optional payload from the chat button
+ *
+ * @deprecated the {@code message_chat_created} event is not part of the MAX API documentation.
  */
+@Deprecated
 public record MessageChatCreatedUpdate(
         long timestamp,
         Chat chat,

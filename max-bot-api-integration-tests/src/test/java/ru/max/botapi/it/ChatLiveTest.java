@@ -40,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @Order(2)
 @DisplayName("Live: chat")
+@SuppressWarnings("deprecation") // exercises the endpoints MAX no longer documents
 class ChatLiveTest extends LiveTestBase {
 
     private String originalTitle;

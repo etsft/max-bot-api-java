@@ -25,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Tests for the Update sealed hierarchy — construction and exhaustive switch.
  */
+@SuppressWarnings("deprecation") // asserts on the legacy types on purpose
 class UpdateTest {
 
     private static final User USER = new User(1L, "Alice", null, null, null, false, 100L);

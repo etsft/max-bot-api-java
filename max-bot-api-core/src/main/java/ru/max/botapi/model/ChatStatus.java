@@ -33,6 +33,11 @@ public enum ChatStatus {
     /** Chat has been closed. */
     CLOSED,
 
-    /** Chat has been suspended by administration. */
+    /**
+     * Chat has been suspended by administration.
+     *
+     * @deprecated not one of the statuses the MAX API documents for a chat.
+     */
+    @Deprecated
     SUSPENDED
 }

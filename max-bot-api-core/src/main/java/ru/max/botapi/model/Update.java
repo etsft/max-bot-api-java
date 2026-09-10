@@ -22,6 +22,7 @@ package ru.max.botapi.model;
  * <p>Discriminated by the {@code update_type} field in JSON. {@link UnknownUpdate}
  * serves as a forward-compatibility fallback for unrecognized update types.</p>
  */
+@SuppressWarnings("deprecation") // the permits clause must still name the legacy types
 public sealed interface Update permits
         MessageCreatedUpdate, MessageCallbackUpdate, MessageEditedUpdate,
         MessageRemovedUpdate, BotAddedUpdate, BotRemovedUpdate,

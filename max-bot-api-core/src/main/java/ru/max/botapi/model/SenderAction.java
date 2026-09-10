@@ -36,6 +36,11 @@ public enum SenderAction {
     /** Bot is uploading a file. */
     SENDING_FILE,
 
-    /** Bot has read the messages (mark as seen). */
+    /**
+     * Bot has read the messages (mark as seen).
+     *
+     * @deprecated not one of the actions {@code POST /chats/{chatId}/actions} documents.
+     */
+    @Deprecated
     MARK_SEEN
 }

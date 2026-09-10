@@ -25,7 +25,10 @@ import java.util.Objects;
  * @param user      the user for whom the message was constructed
  * @param sessionId construction session identifier
  * @param message   the constructed message
+ *
+ * @deprecated the {@code message_constructed} event is not part of the MAX API documentation.
  */
+@Deprecated
 public record MessageConstructedUpdate(
         long timestamp,
         User user,

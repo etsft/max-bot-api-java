@@ -31,7 +31,11 @@ import ru.max.botapi.model.BotPatch;
  * <pre>{@code
  * BotInfo updated = api.editMyInfo(new BotPatch("New Bot Name", null, null)).execute();
  * }</pre>
+ *
+ * @deprecated {@code PATCH /me} is not part of the MAX API documentation. Use
+ *             {@link EditMyCommandsQuery} to manage the bot's commands.
  */
+@Deprecated
 public class EditMyInfoQuery extends MaxQuery<BotInfo> {
 
     /**
