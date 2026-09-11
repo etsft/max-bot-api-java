@@ -74,6 +74,11 @@ With `MAX_IT_INTERACTIVE=true` the suite pauses and prints what to do:
 - **Webhook** — send a message so MAX delivers it to the subscribed URL. The suite prints the
   exact URL it subscribed; MAX posts to precisely that, so the proxy has to reach the local
   server on the same path.
+- **Comments** — delete the comment the bot posts under `MAX_IT_POST_ID`, as a channel
+  administrator. MAX sends a bot no events for its own actions, so this is the only way to
+  observe `comment_removed`. The step checks every identifier in the event against the comment
+  it posted, and fails if the event carries a field the schema does not list. A comment left
+  undeleted is removed in teardown.
 
 ## Keyboard buttons
 
