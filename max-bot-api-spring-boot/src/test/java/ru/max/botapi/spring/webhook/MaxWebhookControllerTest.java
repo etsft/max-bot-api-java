@@ -19,6 +19,8 @@ package ru.max.botapi.spring.webhook;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
@@ -31,6 +33,7 @@ import ru.max.botapi.jackson.JacksonMaxSerializer;
 import ru.max.botapi.model.Update;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 class MaxWebhookControllerTest {
 
@@ -181,6 +184,38 @@ class MaxWebhookControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(captured.get()).isNull();
+    }
+
+    @Test
+    void dispatchExecutor_runsTheHandlerAfterResponding() throws IOException {
+        List<Runnable> queued = new ArrayList<>();
+        AtomicReference<Update> captured = new AtomicReference<>();
+        MaxWebhookController controller = new MaxWebhookController(
+                captured::set, serializer, new MaxWebhookProperties(), queued::add);
+
+        ResponseEntity<Void> response =
+                controller.handleWebhook(loadFixture("message-created.json"), null);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(captured.get()).isNull();
+        assertThat(queued).hasSize(1);
+
+        queued.getFirst().run();
+        assertThat(captured.get()).isNotNull();
+    }
+
+    @Test
+    void dispatchExecutor_containsAHandlerException() throws IOException {
+        List<Runnable> queued = new ArrayList<>();
+        UpdateHandler handler = update -> {
+            throw new RuntimeException("handler exploded");
+        };
+        MaxWebhookController controller = new MaxWebhookController(
+                handler, serializer, new MaxWebhookProperties(), queued::add);
+
+        controller.handleWebhook(loadFixture("message-created.json"), null);
+
+        assertThatCode(() -> queued.getFirst().run()).doesNotThrowAnyException();
     }
 
     @Test

@@ -24,6 +24,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
@@ -263,6 +265,90 @@ class MaxWebhookServerTest {
 
         verify(com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor(
                 urlPathEqualTo("/subscriptions")));
+    }
+
+    @Test
+    void registerFailsWhenMaxRejectsTheSubscription(WireMockRuntimeInfo wmInfo) {
+        // MAX can refuse with HTTP 200 and success=false.
+        stubFor(post(urlPathEqualTo("/subscriptions"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody("{\"success\": false, \"message\": \"Registration denied\"}")));
+
+        MaxBotAPI api = createApi(wmInfo);
+        server = MaxWebhookServer.builder()
+                .handler(update -> {
+                })
+                .serializer(new JacksonMaxSerializer())
+                .port(webhookPort)
+                .build();
+
+        assertThatThrownBy(() -> server.register(api, "https://example.com/webhook", null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Registration denied");
+    }
+
+    @Test
+    void unregisterFailsWhenMaxRejectsIt(WireMockRuntimeInfo wmInfo) {
+        stubFor(delete(urlPathEqualTo("/subscriptions"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody("{\"success\": false, \"message\": \"Not subscribed\"}")));
+
+        MaxBotAPI api = createApi(wmInfo);
+        server = MaxWebhookServer.builder()
+                .handler(update -> {
+                })
+                .serializer(new JacksonMaxSerializer())
+                .port(webhookPort)
+                .build();
+
+        assertThatThrownBy(() -> server.unregister(api, "https://example.com/webhook"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Not subscribed");
+    }
+
+    @Test
+    void dispatchExecutor_answersBeforeTheHandlerFinishes() throws Exception {
+        // MAX gives the endpoint 30 seconds; with an executor the answer must not wait for
+        // the handler at all.
+        CountDownLatch release = new CountDownLatch(1);
+        CountDownLatch handled = new CountDownLatch(1);
+
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            try {
+                server = MaxWebhookServer.builder()
+                        .handler(update -> {
+                            try {
+                                release.await();
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                            handled.countDown();
+                        })
+                        .serializer(new JacksonMaxSerializer())
+                        .port(webhookPort)
+                        .dispatchExecutor(executor)
+                        .build();
+                server.start();
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(webhookBaseUrl + "/webhook"))
+                        .header("Content-Type", CONTENT_JSON)
+                        .POST(HttpRequest.BodyPublishers.ofString(UPDATE_JSON))
+                        .build();
+
+                HttpResponse<String> response = httpClient
+                        .sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                        .get(5, TimeUnit.SECONDS);
+
+                assertThat(response.statusCode()).isEqualTo(200);
+                assertThat(handled.getCount()).isEqualTo(1);
+            } finally {
+                release.countDown();
+            }
+            assertThat(handled.await(5, TimeUnit.SECONDS)).isTrue();
+        }
     }
 
     private MaxBotAPI createApi(WireMockRuntimeInfo wmInfo) {

@@ -201,6 +201,41 @@ class MaxWebhookAutoConfigurationTest {
                 });
     }
 
+    @Test
+    void dispatchExecutorNotCreated_byDefault() {
+        contextRunner
+                .withUserConfiguration(
+                        HandlerConfig.class, SerializerConfig.class)
+                .withPropertyValues(
+                        "max.bot.mode=webhook",
+                        "max.bot.webhook.token=test-token")
+                .run(context -> {
+                    assertThat(context).doesNotHaveBean(
+                            MaxWebhookAutoConfiguration.DISPATCH_EXECUTOR);
+                    assertThat(context).hasSingleBean(
+                            MaxWebhookController.class);
+                });
+    }
+
+    @Test
+    void dispatchExecutorCreated_whenAsyncDispatchEnabled() {
+        contextRunner
+                .withUserConfiguration(
+                        HandlerConfig.class, SerializerConfig.class)
+                .withPropertyValues(
+                        "max.bot.mode=webhook",
+                        "max.bot.webhook.token=test-token",
+                        "max.bot.webhook.async-dispatch=true")
+                .run(context -> {
+                    assertThat(context).hasBean(
+                            MaxWebhookAutoConfiguration.DISPATCH_EXECUTOR);
+                    assertThat(context).hasSingleBean(
+                            MaxWebhookController.class);
+                    assertThat(context.getBean(MaxWebhookProperties.class)
+                            .isAsyncDispatch()).isTrue();
+                });
+    }
+
     @Configuration(proxyBeanMethods = false)
     static class HandlerConfig {
 

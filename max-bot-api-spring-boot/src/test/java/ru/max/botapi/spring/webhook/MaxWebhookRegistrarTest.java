@@ -25,6 +25,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.queries.SubscribeQuery;
 import ru.max.botapi.client.queries.UnsubscribeQuery;
+import ru.max.botapi.model.SimpleQueryResult;
 import ru.max.botapi.model.SubscriptionRequestBody;
 import ru.max.botapi.model.UpdateType;
 
@@ -49,6 +50,8 @@ class MaxWebhookRegistrarTest {
                     captured.set(invocation.getArgument(0));
                     return subscribeQuery;
                 });
+
+        when(subscribeQuery.execute()).thenReturn(new SimpleQueryResult(true, null));
 
         MaxWebhookProperties props = new MaxWebhookProperties();
         props.setUrl("https://example.com/webhook");
@@ -136,6 +139,7 @@ class MaxWebhookRegistrarTest {
         MaxBotAPI api = mock(MaxBotAPI.class);
         UnsubscribeQuery unsubscribeQuery = mock(UnsubscribeQuery.class);
         when(api.unsubscribe(anyString())).thenReturn(unsubscribeQuery);
+        when(unsubscribeQuery.execute()).thenReturn(new SimpleQueryResult(true, null));
 
         MaxWebhookProperties props = new MaxWebhookProperties();
         props.setUrl("https://example.com/webhook");
@@ -188,5 +192,43 @@ class MaxWebhookRegistrarTest {
 
         assertThatCode(() -> registrar.destroy())
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    void rejectedRegistration_doesNotThrow() {
+        // MAX can refuse with HTTP 200 and success=false; that is logged, never propagated.
+        MaxBotAPI api = mock(MaxBotAPI.class);
+        SubscribeQuery subscribeQuery = mock(SubscribeQuery.class);
+        when(api.subscribe(any(SubscriptionRequestBody.class))).thenReturn(subscribeQuery);
+        when(subscribeQuery.execute())
+                .thenReturn(new SimpleQueryResult(false, "Registration denied"));
+
+        MaxWebhookProperties props = new MaxWebhookProperties();
+        props.setUrl("https://example.com/webhook");
+
+        MaxWebhookRegistrar registrar = new MaxWebhookRegistrar(api, props);
+
+        assertThatCode(() -> registrar.onApplicationEvent(
+                mock(ApplicationReadyEvent.class)))
+                .doesNotThrowAnyException();
+        verify(subscribeQuery).execute();
+    }
+
+    @Test
+    void rejectedUnregistration_doesNotThrow() {
+        MaxBotAPI api = mock(MaxBotAPI.class);
+        UnsubscribeQuery unsubscribeQuery = mock(UnsubscribeQuery.class);
+        when(api.unsubscribe(anyString())).thenReturn(unsubscribeQuery);
+        when(unsubscribeQuery.execute())
+                .thenReturn(new SimpleQueryResult(false, "Not subscribed"));
+
+        MaxWebhookProperties props = new MaxWebhookProperties();
+        props.setUrl("https://example.com/webhook");
+        props.setAutoUnregister(true);
+
+        MaxWebhookRegistrar registrar = new MaxWebhookRegistrar(api, props);
+
+        assertThatCode(registrar::destroy).doesNotThrowAnyException();
+        verify(unsubscribeQuery).execute();
     }
 }

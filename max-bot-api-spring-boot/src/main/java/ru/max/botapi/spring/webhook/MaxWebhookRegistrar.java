@@ -26,6 +26,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 
 import ru.max.botapi.client.MaxBotAPI;
+import ru.max.botapi.model.SimpleQueryResult;
 import ru.max.botapi.model.SubscriptionRequestBody;
 import ru.max.botapi.model.UpdateType;
 
@@ -96,8 +97,14 @@ public class MaxWebhookRegistrar
                 webhookUrl, updateTypes, properties.getSecret());
 
         try {
-            api.subscribe(body).execute();
-            LOG.info("Webhook registered with MAX API: url={}", webhookUrl);
+            // MAX can refuse with HTTP 200 and success=false, which is not an exception.
+            SimpleQueryResult result = api.subscribe(body).execute();
+            if (result.success()) {
+                LOG.info("Webhook registered with MAX API: url={}", webhookUrl);
+            } else {
+                LOG.error("MAX API rejected webhook registration: url={}, message={}",
+                        webhookUrl, result.message());
+            }
         } catch (Exception e) {
             LOG.error("Failed to register webhook with MAX API: url={}",
                     webhookUrl, e);
@@ -111,8 +118,13 @@ public class MaxWebhookRegistrar
         }
 
         try {
-            api.unsubscribe(webhookUrl).execute();
-            LOG.info("Webhook unregistered from MAX API: url={}", webhookUrl);
+            SimpleQueryResult result = api.unsubscribe(webhookUrl).execute();
+            if (result.success()) {
+                LOG.info("Webhook unregistered from MAX API: url={}", webhookUrl);
+            } else {
+                LOG.warn("MAX API rejected webhook unregistration: url={}, message={}",
+                        webhookUrl, result.message());
+            }
         } catch (Exception e) {
             LOG.warn("Failed to unregister webhook from MAX API: url={}",
                     webhookUrl, e);

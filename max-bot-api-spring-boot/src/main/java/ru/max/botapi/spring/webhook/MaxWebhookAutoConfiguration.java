@@ -16,6 +16,11 @@
 
 package ru.max.botapi.spring.webhook;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -60,6 +65,9 @@ import ru.max.botapi.spring.MaxBotProperties;
         MaxWebhookProperties.class})
 public class MaxWebhookAutoConfiguration {
 
+    /** Bean name of the executor used when {@code max.bot.webhook.async-dispatch} is enabled. */
+    public static final String DISPATCH_EXECUTOR = "maxWebhookDispatchExecutor";
+
     /**
      * Creates a {@link MaxBotAPI} from the configured bot token.
      *
@@ -95,14 +103,35 @@ public class MaxWebhookAutoConfiguration {
     }
 
     /**
+     * Creates the executor the webhook handler runs on once the response has been sent.
+     *
+     * <p>Only created when {@code max.bot.webhook.async-dispatch} is {@code true}. Each update
+     * gets its own virtual thread; closing the executor on shutdown waits for updates already
+     * being handled.</p>
+     *
+     * @return a new virtual-thread-per-task executor
+     */
+    @Bean(name = DISPATCH_EXECUTOR, destroyMethod = "close")
+    @ConditionalOnMissingBean(name = DISPATCH_EXECUTOR)
+    @ConditionalOnProperty(
+            prefix = "max.bot.webhook",
+            name = "async-dispatch",
+            havingValue = "true")
+    public ExecutorService maxWebhookDispatchExecutor() {
+        return Executors.newVirtualThreadPerTaskExecutor();
+    }
+
+    /**
      * Creates the webhook controller that handles incoming POST requests.
      *
      * <p>Only created when an {@link UpdateHandler} bean is present and
      * no custom {@code MaxWebhookController} bean exists.</p>
      *
-     * @param handler    the user-provided update handler
-     * @param serializer the JSON serializer
-     * @param properties the webhook configuration
+     * @param handler          the user-provided update handler
+     * @param serializer       the JSON serializer
+     * @param properties       the webhook configuration
+     * @param dispatchExecutor the executor the handler runs on after responding, if
+     *                         asynchronous dispatch is enabled
      * @return a new controller instance
      */
     @Bean
@@ -111,8 +140,10 @@ public class MaxWebhookAutoConfiguration {
     public MaxWebhookController maxWebhookController(
             UpdateHandler handler,
             MaxSerializer serializer,
-            MaxWebhookProperties properties) {
-        return new MaxWebhookController(handler, serializer, properties);
+            MaxWebhookProperties properties,
+            @Qualifier(DISPATCH_EXECUTOR) ObjectProvider<ExecutorService> dispatchExecutor) {
+        return new MaxWebhookController(handler, serializer, properties,
+                dispatchExecutor.getIfAvailable());
     }
 
     /**

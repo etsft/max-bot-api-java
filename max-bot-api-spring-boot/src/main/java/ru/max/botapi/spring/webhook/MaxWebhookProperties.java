@@ -42,6 +42,7 @@ import ru.max.botapi.model.UpdateType;
  *       url: "https://myapp.example.com/max-bot/webhook"
  *       auto-register: true
  *       auto-unregister: true
+ *       async-dispatch: false
  *       update-types:
  *         - MESSAGE_CREATED
  *         - MESSAGE_CALLBACK
@@ -86,6 +87,14 @@ public class MaxWebhookProperties {
      * Only effective when {@code autoRegister} is {@code true}.
      */
     private boolean autoUnregister = true;
+
+    /**
+     * Whether to answer MAX with HTTP 200 as soon as an update is received and run the
+     * {@code UpdateHandler} afterwards on a virtual thread. MAX treats a response slower than
+     * 30 seconds as a failed delivery and sends the update again, so enable this when handling
+     * can take that long. When {@code false}, the handler runs before the response is sent.
+     */
+    private boolean asyncDispatch = false;
 
     /**
      * List of update types to subscribe to.
@@ -199,6 +208,24 @@ public class MaxWebhookProperties {
      */
     public void setAutoUnregister(boolean autoUnregister) {
         this.autoUnregister = autoUnregister;
+    }
+
+    /**
+     * Returns whether updates are handed to the handler after the response is sent.
+     *
+     * @return {@code true} if asynchronous dispatch is enabled
+     */
+    public boolean isAsyncDispatch() {
+        return asyncDispatch;
+    }
+
+    /**
+     * Sets whether updates are handed to the handler after the response is sent.
+     *
+     * @param asyncDispatch {@code true} to enable
+     */
+    public void setAsyncDispatch(boolean asyncDispatch) {
+        this.asyncDispatch = asyncDispatch;
     }
 
     /**

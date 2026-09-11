@@ -23,6 +23,7 @@ import java.security.MessageDigest;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import javax.net.ssl.SSLContext;
@@ -38,6 +39,7 @@ import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.core.MaxSerializer;
 import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.model.Nullable;
+import ru.max.botapi.model.SimpleQueryResult;
 import ru.max.botapi.model.SubscriptionRequestBody;
 import ru.max.botapi.model.Update;
 import ru.max.botapi.model.UpdateType;
@@ -51,6 +53,12 @@ import ru.max.botapi.model.UpdateType;
  *
  * <p>Always responds with HTTP 200, even on handler exceptions, to prevent the MAX platform
  * from retrying event delivery.</p>
+ *
+ * <p>MAX expects that 200 within 30 seconds; a slower response counts as a failed delivery
+ * and the update is sent again. By default the handler runs before the response is sent, so
+ * a handler that can take that long should either hand its work off itself or be given a
+ * {@link Builder#dispatchExecutor(Executor) dispatch executor}, which answers first and runs
+ * the handler afterwards.</p>
  *
  * <p>Example — plain HTTP (development/testing):</p>
  * <pre>{@code
@@ -84,6 +92,7 @@ public class MaxWebhookServer implements AutoCloseable {
     private final @Nullable String secret;
     private final int port;
     private final String path;
+    private final @Nullable Executor dispatchExecutor;
 
     private volatile HttpServer server;
 
@@ -93,6 +102,7 @@ public class MaxWebhookServer implements AutoCloseable {
         this.secret = builder.secret;
         this.port = builder.port;
         this.path = builder.path;
+        this.dispatchExecutor = builder.dispatchExecutor;
     }
 
     /**
@@ -144,13 +154,19 @@ public class MaxWebhookServer implements AutoCloseable {
      * @param api         the {@link MaxBotAPI} instance to use for registration; must not be {@code null}
      * @param webhookUrl  the publicly reachable URL MAX should call; must not be {@code null}
      * @param updateTypes optional set of update types to subscribe to; {@code null} means all types
+     * @throws IllegalStateException if MAX answers but refuses the subscription
      */
     public void register(MaxBotAPI api, String webhookUrl, @Nullable Set<UpdateType> updateTypes) {
         Objects.requireNonNull(api, "api must not be null");
         Objects.requireNonNull(webhookUrl, "webhookUrl must not be null");
         List<UpdateType> typeList = updateTypes == null ? null : List.copyOf(updateTypes);
         SubscriptionRequestBody body = new SubscriptionRequestBody(webhookUrl, typeList, secret);
-        api.subscribe(body).execute();
+        // MAX can refuse with HTTP 200 and success=false, which is not an exception.
+        SimpleQueryResult result = api.subscribe(body).execute();
+        if (!result.success()) {
+            throw new IllegalStateException(
+                    "MAX API rejected webhook registration: " + result.message());
+        }
         LOG.info("Webhook registered: url={}", webhookUrl);
     }
 
@@ -159,11 +175,16 @@ public class MaxWebhookServer implements AutoCloseable {
      *
      * @param api        the {@link MaxBotAPI} instance to use; must not be {@code null}
      * @param webhookUrl the webhook URL to unregister; must not be {@code null}
+     * @throws IllegalStateException if MAX answers but refuses to remove the subscription
      */
     public void unregister(MaxBotAPI api, String webhookUrl) {
         Objects.requireNonNull(api, "api must not be null");
         Objects.requireNonNull(webhookUrl, "webhookUrl must not be null");
-        api.unsubscribe(webhookUrl).execute();
+        SimpleQueryResult result = api.unsubscribe(webhookUrl).execute();
+        if (!result.success()) {
+            throw new IllegalStateException(
+                    "MAX API rejected webhook unregistration: " + result.message());
+        }
         LOG.info("Webhook unregistered: url={}", webhookUrl);
     }
 
@@ -214,7 +235,11 @@ public class MaxWebhookServer implements AutoCloseable {
             byte[] bodyBytes = exchange.getRequestBody().readAllBytes();
             String body = new String(bodyBytes, StandardCharsets.UTF_8);
             Update update = serializer.deserialize(body, Update.class);
-            handler.onUpdate(update);
+            if (dispatchExecutor == null) {
+                handler.onUpdate(update);
+            } else {
+                dispatchExecutor.execute(() -> dispatch(update));
+            }
             exchange.sendResponseHeaders(200, -1);
         } catch (Exception e) {
             LOG.error("Error handling webhook request", e);
@@ -222,6 +247,14 @@ public class MaxWebhookServer implements AutoCloseable {
             exchange.sendResponseHeaders(200, -1);
         } finally {
             exchange.close();
+        }
+    }
+
+    private void dispatch(Update update) {
+        try {
+            handler.onUpdate(update);
+        } catch (Exception e) {
+            LOG.error("Error handling webhook update", e);
         }
     }
 
@@ -255,8 +288,31 @@ public class MaxWebhookServer implements AutoCloseable {
         private @Nullable String secret;
         private int port = DEFAULT_PORT;
         private String path = DEFAULT_PATH;
+        private @Nullable Executor dispatchExecutor;
 
         private Builder() {
+        }
+
+        /**
+         * Sets the executor the handler runs on after the response has been sent.
+         *
+         * <p>By default ({@code null}) the handler runs before the server answers, and the
+         * answer waits for it. MAX treats an answer slower than 30 seconds as a failed
+         * delivery and sends the update again; with an executor the server answers at once
+         * and the handler's duration no longer matters to MAX. The caller owns the executor
+         * and shuts it down; {@code Executors.newVirtualThreadPerTaskExecutor()} suits most
+         * handlers.</p>
+         *
+         * <p>Once answered, an update is not delivered again, so a handler that fails on it
+         * loses it either way; the exception is logged.</p>
+         *
+         * @param dispatchExecutor the executor, or {@code null} to run the handler before
+         *                         answering
+         * @return this builder
+         */
+        public Builder dispatchExecutor(@Nullable Executor dispatchExecutor) {
+            this.dispatchExecutor = dispatchExecutor;
+            return this;
         }
 
         /**

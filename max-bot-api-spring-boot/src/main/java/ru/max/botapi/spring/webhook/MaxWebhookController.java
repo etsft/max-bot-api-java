@@ -19,6 +19,7 @@ package ru.max.botapi.spring.webhook;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Objects;
+import java.util.concurrent.Executor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import ru.max.botapi.core.MaxSerializer;
 import ru.max.botapi.core.UpdateHandler;
+import ru.max.botapi.model.Nullable;
 import ru.max.botapi.model.Update;
 
 /**
@@ -48,6 +50,12 @@ import ru.max.botapi.model.Update;
  * <p>The controller always returns HTTP 200 for successfully received requests
  * (even when the handler throws an exception) to prevent the MAX platform
  * from retrying delivery.</p>
+ *
+ * <p>MAX expects that 200 within 30 seconds; a slower response counts as a failed delivery
+ * and the update is sent again. By default the handler runs before the response is sent, so
+ * a handler that can take that long should either hand its work off itself or run with a
+ * dispatch executor ({@code max.bot.webhook.async-dispatch=true}), which answers first and
+ * runs the handler afterwards.</p>
  */
 @RestController
 public class MaxWebhookController {
@@ -59,9 +67,10 @@ public class MaxWebhookController {
     private final UpdateHandler handler;
     private final MaxSerializer serializer;
     private final String secret;
+    private final @Nullable Executor dispatchExecutor;
 
     /**
-     * Creates a new webhook controller.
+     * Creates a new webhook controller that runs the handler before responding.
      *
      * @param handler    the update handler; must not be {@code null}
      * @param serializer the JSON serializer; must not be {@code null}
@@ -70,10 +79,27 @@ public class MaxWebhookController {
     public MaxWebhookController(UpdateHandler handler,
                                 MaxSerializer serializer,
                                 MaxWebhookProperties properties) {
+        this(handler, serializer, properties, null);
+    }
+
+    /**
+     * Creates a new webhook controller.
+     *
+     * @param handler          the update handler; must not be {@code null}
+     * @param serializer       the JSON serializer; must not be {@code null}
+     * @param properties       the webhook configuration properties; must not be {@code null}
+     * @param dispatchExecutor the executor the handler runs on after the response is sent;
+     *                         {@code null} runs the handler before responding
+     */
+    public MaxWebhookController(UpdateHandler handler,
+                                MaxSerializer serializer,
+                                MaxWebhookProperties properties,
+                                @Nullable Executor dispatchExecutor) {
         this.handler = Objects.requireNonNull(handler, "handler must not be null");
         this.serializer = Objects.requireNonNull(serializer, "serializer must not be null");
         Objects.requireNonNull(properties, "properties must not be null");
         this.secret = properties.getSecret();
+        this.dispatchExecutor = dispatchExecutor;
     }
 
     /**
@@ -100,12 +126,24 @@ public class MaxWebhookController {
 
         try {
             Update update = serializer.deserialize(body, Update.class);
-            handler.onUpdate(update);
+            if (dispatchExecutor == null) {
+                handler.onUpdate(update);
+            } else {
+                dispatchExecutor.execute(() -> dispatch(update));
+            }
         } catch (Exception e) {
             LOG.error("Error handling webhook update", e);
         }
 
         return ResponseEntity.ok().build();
+    }
+
+    private void dispatch(Update update) {
+        try {
+            handler.onUpdate(update);
+        } catch (Exception e) {
+            LOG.error("Error handling webhook update", e);
+        }
     }
 
     /**
