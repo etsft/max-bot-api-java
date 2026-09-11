@@ -75,6 +75,18 @@ With `MAX_IT_INTERACTIVE=true` the suite pauses and prints what to do:
   exact URL it subscribed; MAX posts to precisely that, so the proxy has to reach the local
   server on the same path.
 
+## Keyboard buttons
+
+`KeyboardButtonsLiveTest` covers the buttons whose shape is known only from the schema:
+`message` and `open_app`. It posts one message per button to `MAX_IT_CHAT_ID`, reads each back
+with `getMessageById`, prints the button as MAX stored it, and deletes the messages afterwards.
+
+The `open_app` buttons name the test bot itself, so nothing extra has to be configured: one by
+`web_app` alone, one by `web_app` together with `contact_id`. There is no case for `contact_id`
+on its own. The schema lists it as an alternative, but MAX refuses such a button with
+`Field 'webApp' cannot be null`, so the library no longer builds one. Any refusal fails the test
+with MAX's own error message.
+
 ## Destructive operations
 
 `MAX_IT_DESTRUCTIVE=true` enables `addMembers`/`removeMember`, `postAdmins`/`deleteAdmins`,

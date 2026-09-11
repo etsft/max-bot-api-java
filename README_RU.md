@@ -671,7 +671,7 @@ try {
 | Было | Стало |
 |---|---|
 | `CommentRemovedUpdate(timestamp, message)` | `CommentRemovedUpdate(timestamp, messageId, chatId, userId, postId)`: комментария больше нет, приходят только его идентификаторы |
-| `new OpenAppButton(text, url, payload)` | `OpenAppButton.ofWebApp(text, "bot_username")`, `OpenAppButton.ofContactId(text, botId)` или `new OpenAppButton(text, webApp, contactId, payload)` |
+| `new OpenAppButton(text, url, payload)` | `OpenAppButton.ofWebApp(text, "bot_username")` или `new OpenAppButton(text, webApp, contactId, payload)`; `webApp` обязателен — без него MAX отклоняет кнопку |
 | `new MessageButton(text, message)` | `new MessageButton(text)`: кнопка отправляет собственный текст |
 | `Message.body()` никогда не `null` | `null`, если сообщение только пересылает другое; проверяйте перед `body().text()` |
 | `ChatPatch.icon` — это `Image` | `PhotoAttachmentRequestPayload`: внешний URL, токен или загруженные `photos` |

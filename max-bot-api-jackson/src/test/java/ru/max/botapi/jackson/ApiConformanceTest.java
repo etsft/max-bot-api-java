@@ -54,6 +54,7 @@ import ru.max.botapi.model.UpdateType;
 import ru.max.botapi.model.User;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 /**
@@ -363,6 +364,15 @@ class ApiConformanceTest {
                 .contains("\"web_app\":\"some_bot\"")
                 .doesNotContain("url")
                 .doesNotContain("contact_id");
+    }
+
+    @Test
+    void openAppButton_requiresWebApp() {
+        // The schema offers contact_id as an alternative, but the live API refuses an
+        // open_app button without web_app: "Field 'webApp' cannot be null".
+        assertThatThrownBy(() -> new OpenAppButton("Open", null, 123L, null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("webApp");
     }
 
     @Test

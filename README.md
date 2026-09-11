@@ -670,7 +670,7 @@ try {
 | Before | After |
 |---|---|
 | `CommentRemovedUpdate(timestamp, message)` | `CommentRemovedUpdate(timestamp, messageId, chatId, userId, postId)`: the comment is gone, so only its identifiers arrive |
-| `new OpenAppButton(text, url, payload)` | `OpenAppButton.ofWebApp(text, "bot_username")`, `OpenAppButton.ofContactId(text, botId)` or `new OpenAppButton(text, webApp, contactId, payload)` |
+| `new OpenAppButton(text, url, payload)` | `OpenAppButton.ofWebApp(text, "bot_username")` or `new OpenAppButton(text, webApp, contactId, payload)`; `webApp` is required, MAX refuses the button without it |
 | `new MessageButton(text, message)` | `new MessageButton(text)`: the button sends its own text |
 | `Message.body()` is never `null` | `null` when the message only forwards another one; check it before `body().text()` |
 | `ChatPatch.icon` is an `Image` | a `PhotoAttachmentRequestPayload`: an external URL, a token, or uploaded `photos` |

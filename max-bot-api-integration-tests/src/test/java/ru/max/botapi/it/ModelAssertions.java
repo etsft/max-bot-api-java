@@ -107,7 +107,10 @@ public final class ModelAssertions {
      */
     public static void assertFullyMapped(Message message) {
         assertRecipientsFullyMapped();
-        assertFullyMapped(message.body());
+        // A message that only forwards another one has no body of its own.
+        if (message.body() != null) {
+            assertFullyMapped(message.body());
+        }
         LinkedMessage link = message.link();
         if (link != null) {
             assertFullyMapped(link.message());
