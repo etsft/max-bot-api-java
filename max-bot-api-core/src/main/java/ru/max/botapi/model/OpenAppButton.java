@@ -19,15 +19,22 @@ package ru.max.botapi.model;
 import java.util.Objects;
 
 /**
- * A button that opens a mini-application (web view) when pressed.
+ * A button that launches a bot's mini-application when pressed.
  *
- * @param text    display text
- * @param url     URL of the mini-application
- * @param payload optional payload passed to the mini-application
+ * <p>The bot whose mini-application opens is named either by {@code webApp} or by
+ * {@code contactId}; {@link #ofWebApp(String, String)} and {@link #ofContactId(String, long)}
+ * build the two forms.</p>
+ *
+ * @param text      display text
+ * @param webApp    public name (username) of the bot, or a link to it
+ * @param contactId ID of the bot
+ * @param payload   optional start parameter passed to the mini-application in its
+ *                  {@code initData}
  */
 public record OpenAppButton(
         String text,
-        String url,
+        @Nullable String webApp,
+        @Nullable Long contactId,
         @Nullable String payload
 ) implements Button {
 
@@ -41,10 +48,31 @@ public record OpenAppButton(
      * Creates an OpenAppButton.
      *
      * @param text must not be {@code null}
-     * @param url  must not be {@code null}
      */
     public OpenAppButton {
         Objects.requireNonNull(text, "text must not be null");
-        Objects.requireNonNull(url, "url must not be null");
+    }
+
+    /**
+     * Creates a button that opens the mini-application of the bot with the given public name.
+     *
+     * @param text   display text; must not be {@code null}
+     * @param webApp public name (username) of the bot, or a link to it; must not be {@code null}
+     * @return the button
+     */
+    public static OpenAppButton ofWebApp(String text, String webApp) {
+        Objects.requireNonNull(webApp, "webApp must not be null");
+        return new OpenAppButton(text, webApp, null, null);
+    }
+
+    /**
+     * Creates a button that opens the mini-application of the bot with the given ID.
+     *
+     * @param text      display text; must not be {@code null}
+     * @param contactId ID of the bot
+     * @return the button
+     */
+    public static OpenAppButton ofContactId(String text, long contactId) {
+        return new OpenAppButton(text, null, contactId, null);
     }
 }

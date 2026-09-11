@@ -50,7 +50,7 @@ class MessageTypesTest {
 
     @Test
     void markupElement_construction() {
-        var elem = new MarkupElement("bold", 0, 5);
+        var elem = new MarkupElement("bold", 0, 5, null, null, null);
         assertThat(elem.type()).isEqualTo("bold");
         assertThat(elem.from()).isZero();
         assertThat(elem.length()).isEqualTo(5);

@@ -60,7 +60,7 @@ class UpdateTest {
 
     @Test
     void messageRemovedUpdate() {
-        var upd = new MessageRemovedUpdate(400L, "mid1", 1L, 2L);
+        var upd = new MessageRemovedUpdate(400L, "mid1", 1L, 2L, null);
         assertThat(upd.updateType()).isEqualTo("message_removed");
         assertThat(upd.messageId()).isEqualTo("mid1");
     }
@@ -102,7 +102,7 @@ class UpdateTest {
 
     @Test
     void botStoppedUpdate() {
-        var upd = new BotStoppedUpdate(1000L, 1L, USER);
+        var upd = new BotStoppedUpdate(1000L, 1L, USER, null);
         assertThat(upd.updateType()).isEqualTo("bot_stopped");
     }
 
@@ -155,24 +155,24 @@ class UpdateTest {
                 new MessageCreatedUpdate(0, MSG, null),
                 new MessageCallbackUpdate(0, cb, null, null),
                 new MessageEditedUpdate(0, MSG),
-                new MessageRemovedUpdate(0, "m", 1, 1),
+                new MessageRemovedUpdate(0, "m", 1, 1, null),
                 new BotAddedUpdate(0, 1, USER, false),
                 new BotRemovedUpdate(0, 1, USER, false),
                 new UserAddedUpdate(0, 1, USER, null, false),
                 new UserRemovedUpdate(0, 1, USER, null, false),
                 new BotStartedUpdate(0, 1, USER, null, null),
-                new BotStoppedUpdate(0, 1, USER),
+                new BotStoppedUpdate(0, 1, USER, null),
                 new ChatTitleChangedUpdate(0, 1, USER, "t"),
                 new MessageConstructionRequestUpdate(0, USER, null, "s", null, null),
                 new MessageConstructedUpdate(0, USER, "s", cm),
                 new MessageChatCreatedUpdate(0, chat, "m", null),
-                new DialogClearedUpdate(0, 1L, USER),
-                new DialogMutedUpdate(0, 1L, USER),
-                new DialogUnmutedUpdate(0, 1L, USER),
-                new DialogRemovedUpdate(0, 1L, USER),
+                new DialogClearedUpdate(0, 1L, USER, null),
+                new DialogMutedUpdate(0, 1L, USER, null, null),
+                new DialogUnmutedUpdate(0, 1L, USER, null),
+                new DialogRemovedUpdate(0, 1L, USER, null),
                 new CommentCreatedUpdate(0, null),
                 new CommentEditedUpdate(0, null),
-                new CommentRemovedUpdate(0, null),
+                new CommentRemovedUpdate(0, "m", 1, 1, null),
                 new UnknownUpdate("x", 0, "{}")
         };
 

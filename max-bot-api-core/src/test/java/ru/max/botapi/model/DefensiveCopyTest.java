@@ -62,7 +62,7 @@ class DefensiveCopyTest {
 
     @Test
     void getSubscriptionsResult_defensiveCopy() {
-        var sub = new Subscription("http://example.com", null);
+        var sub = new Subscription("http://example.com", null, null);
         var mutable = new ArrayList<>(List.of(sub));
         var result = new GetSubscriptionsResult(mutable);
         mutable.clear();
@@ -187,7 +187,7 @@ class DefensiveCopyTest {
 
     @Test
     void messageBody_markup_defensiveCopy() {
-        var elem = new MarkupElement("bold", 0, 4);
+        var elem = new MarkupElement("bold", 0, 4, null, null, null);
         var mutable = new ArrayList<>(List.of(elem));
         var body = new MessageBody("m1", 1L, "text", null, mutable);
         mutable.clear();
@@ -223,7 +223,7 @@ class DefensiveCopyTest {
     @Test
     void subscription_updateTypes_defensiveCopy() {
         var mutable = new ArrayList<>(List.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_EDITED));
-        var sub = new Subscription("http://example.com", mutable);
+        var sub = new Subscription("http://example.com", null, mutable);
         mutable.clear();
         assertThat(sub.updateTypes()).hasSize(2);
         assertThatThrownBy(() -> sub.updateTypes().add(UpdateType.MESSAGE_EDITED))
@@ -232,7 +232,7 @@ class DefensiveCopyTest {
 
     @Test
     void subscription_updateTypes_null_preserved() {
-        var sub = new Subscription("http://example.com", null);
+        var sub = new Subscription("http://example.com", null, null);
         assertThat(sub.updateTypes()).isNull();
     }
 

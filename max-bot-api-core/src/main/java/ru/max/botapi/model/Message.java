@@ -25,7 +25,8 @@ import java.util.Objects;
  * @param recipient   the recipient chat/user
  * @param timestamp   message timestamp (epoch millis)
  * @param link        link to a forwarded/replied message
- * @param body        the message content
+ * @param body        the message content; {@code null} when the message does nothing but
+ *                    forward another one, whose content is then in {@link #link()}
  * @param stat        view statistics (null for non-channel messages)
  * @param url         public URL of the message (null for private chats)
  * @param constructor the bot that constructed this message; belongs to the
@@ -37,7 +38,7 @@ public record Message(
         MessageRecipient recipient,
         long timestamp,
         @Nullable LinkedMessage link,
-        MessageBody body,
+        @Nullable MessageBody body,
         @Nullable MessageStat stat,
         @Nullable String url,
         @Nullable User constructor
@@ -47,10 +48,8 @@ public record Message(
      * Creates a Message.
      *
      * @param recipient must not be {@code null}
-     * @param body      must not be {@code null}
      */
     public Message {
         Objects.requireNonNull(recipient, "recipient must not be null");
-        Objects.requireNonNull(body, "body must not be null");
     }
 }

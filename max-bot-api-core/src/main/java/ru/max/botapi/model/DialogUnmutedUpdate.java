@@ -19,18 +19,19 @@ package ru.max.botapi.model;
 /**
  * Update: the user unmuted notifications in their dialog with the bot.
  *
- * <p>The MAX documentation names this event but does not spell out its payload, so every
- * component beyond the timestamp is modelled as optional. Unknown JSON properties are
- * ignored, so a richer payload than this deserializes without error.</p>
+ * <p>Every component beyond the timestamp is modelled as optional, so a payload that omits
+ * one still deserializes. Unknown JSON properties are ignored.</p>
  *
- * @param timestamp event timestamp (epoch millis)
- * @param chatId    the dialog the event happened in
- * @param user      the user on the other side of the dialog
+ * @param timestamp  event timestamp (epoch millis)
+ * @param chatId     the dialog the event happened in
+ * @param user       the user on the other side of the dialog
+ * @param userLocale the user's current language, as an IETF BCP 47 tag
  */
 public record DialogUnmutedUpdate(
         long timestamp,
         @Nullable Long chatId,
-        @Nullable User user
+        @Nullable User user,
+        @Nullable String userLocale
 ) implements Update {
 
     /** {@inheritDoc} */

@@ -459,7 +459,7 @@ class JacksonMaxSerializerTest {
         void messageButton() {
             Button btn = serializer.deserialize(loadFixture("buttons/message.json"), Button.class);
             assertThat(btn).isInstanceOf(MessageButton.class);
-            assertThat(((MessageButton) btn).message()).isEqualTo("Hello!");
+            assertThat(((MessageButton) btn).text()).isEqualTo("Send Greeting");
         }
 
         @Test

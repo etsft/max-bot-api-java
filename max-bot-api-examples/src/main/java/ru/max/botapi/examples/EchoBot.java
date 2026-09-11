@@ -54,7 +54,9 @@ public final class EchoBot {
                 .api(api)
                 .handler(update -> {
                     if (update instanceof MessageCreatedUpdate msg) {
-                        String text = msg.message().body().text();
+                        // A message that only forwards another one has no body of its own.
+                        var body = msg.message().body();
+                        String text = body == null ? null : body.text();
                         Long chatId = msg.message().recipient().chatId();
                         // A channel post is published by the channel itself, so it carries no
                         // sender — Message.sender() is null there, not an error.

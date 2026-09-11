@@ -46,7 +46,6 @@ import ru.max.botapi.model.FileAttachment;
 import ru.max.botapi.model.FileUploadedInfo;
 import ru.max.botapi.model.GetPinnedMessageResult;
 import ru.max.botapi.model.GetSubscriptionsResult;
-import ru.max.botapi.model.Image;
 import ru.max.botapi.model.ImageUploadedInfo;
 import ru.max.botapi.model.InlineKeyboardAttachment;
 import ru.max.botapi.model.LocationAttachment;
@@ -234,7 +233,7 @@ class AdditionalSerializationTest {
 
         @Test
         void subscription_roundTrip() {
-            var sub = new Subscription("https://example.com/webhook",
+            var sub = new Subscription("https://example.com/webhook", null,
                     List.of(UpdateType.MESSAGE_CREATED, UpdateType.BOT_STARTED));
             String json = serializer.serialize(sub);
             Subscription deserialized = serializer.deserialize(json, Subscription.class);
@@ -245,7 +244,7 @@ class AdditionalSerializationTest {
 
         @Test
         void subscriptionsResult_roundTrip() {
-            var sub = new Subscription("https://example.com/wh", null);
+            var sub = new Subscription("https://example.com/wh", null, null);
             var result = new GetSubscriptionsResult(List.of(sub));
             String json = serializer.serialize(result);
             GetSubscriptionsResult deserialized = serializer.deserialize(json,
@@ -385,7 +384,9 @@ class AdditionalSerializationTest {
 
         @Test
         void chatPatch_roundTrip() {
-            var patch = new ChatPatch("Updated Title", null, new Image("http://icon.png"), "pin_123", true);
+            var patch = new ChatPatch("Updated Title", null,
+                    new ru.max.botapi.model.PhotoAttachmentRequestPayload(null, "http://icon.png", null),
+                    "pin_123", true);
             String json = serializer.serialize(patch);
             assertThatJson(json).node("title").isEqualTo("Updated Title");
             assertThatJson(json).node("notify").isEqualTo(true);
@@ -560,7 +561,7 @@ class AdditionalSerializationTest {
             var video = new VideoAttachment(
                     new VideoAttachment.VideoPayload("http://video.mp4", "vtok", null),
                     new VideoThumbnail("http://thumb.jpg"), 1920, 1080, 60);
-            var audio = new AudioAttachment(new MediaPayload("http://audio.mp3", "atok"));
+            var audio = new AudioAttachment(new MediaPayload("http://audio.mp3", "atok"), null);
             var file = new FileAttachment(new MediaPayload("http://doc.pdf", "ftok"),
                     "doc.pdf", 1024L);
             var location = new LocationAttachment(55.75, 37.62);
@@ -602,8 +603,8 @@ class AdditionalSerializationTest {
             var contact = new ru.max.botapi.model.RequestContactButton("Contact");
             var geo = new ru.max.botapi.model.RequestGeoLocationButton("Geo", true);
             var chat = new ru.max.botapi.model.ChatButton("Chat", "Title", "Desc", "sp", "uuid1");
-            var openApp = new ru.max.botapi.model.OpenAppButton("App", "https://app.example.com", "data");
-            var message = new ru.max.botapi.model.MessageButton("Msg", "Hello!");
+            var openApp = new ru.max.botapi.model.OpenAppButton("App", "some_bot", 123L, "data");
+            var message = new ru.max.botapi.model.MessageButton("Msg");
 
             ru.max.botapi.model.Button[] buttons = {callback, link, contact, geo, chat, openApp, message};
             String[] expectedTypes = {"callback", "link", "request_contact", "request_geo_location",

@@ -17,11 +17,15 @@
 package ru.max.botapi.jackson;
 
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import ru.max.botapi.model.AudioAttachment;
+import ru.max.botapi.model.Button;
 import ru.max.botapi.model.ChatMember;
+import ru.max.botapi.model.ChatPatch;
 import ru.max.botapi.model.ChatPermission;
 import ru.max.botapi.model.ClipboardButton;
 import ru.max.botapi.model.CommentCreatedUpdate;
@@ -34,13 +38,23 @@ import ru.max.botapi.model.DialogMutedUpdate;
 import ru.max.botapi.model.DialogRemovedUpdate;
 import ru.max.botapi.model.DialogUnmutedUpdate;
 import ru.max.botapi.model.GetSubscriptionsResult;
+import ru.max.botapi.model.MarkupElement;
+import ru.max.botapi.model.Message;
+import ru.max.botapi.model.MessageBody;
+import ru.max.botapi.model.MessageButton;
+import ru.max.botapi.model.MessageCreatedUpdate;
+import ru.max.botapi.model.MessageRemovedUpdate;
 import ru.max.botapi.model.NewCommentBody;
+import ru.max.botapi.model.OpenAppButton;
+import ru.max.botapi.model.PhotoAttachmentRequestPayload;
 import ru.max.botapi.model.Subscription;
 import ru.max.botapi.model.TextFormat;
 import ru.max.botapi.model.Update;
 import ru.max.botapi.model.UpdateType;
+import ru.max.botapi.model.User;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 /**
  * Regressions pinning the library to the shapes documented at {@code dev.max.ru/docs-api}.
@@ -173,20 +187,22 @@ class ApiConformanceTest {
     }
 
     @Test
-    void dialogUpdate_toleratesAnUndocumentedField() {
-        // The payload of these events is not published, so an unknown property must not
-        // push the update into the unknown-type fallback.
+    void dialogMuted_carriesMutedUntilAndUserLocale() {
         String json = """
                 {
                   "update_type": "dialog_muted",
                   "timestamp": 1700000000000,
                   "chat_id": 42,
-                  "muted_until": 1700000600000
+                  "user": {"user_id": 7, "first_name": "Ivan", "is_bot": false},
+                  "muted_until": 1700000600000,
+                  "user_locale": "ru"
                 }
                 """;
 
-        assertThat(serializer.deserialize(json, Update.class))
-                .isInstanceOf(DialogMutedUpdate.class);
+        var muted = (DialogMutedUpdate) serializer.deserialize(json, Update.class);
+
+        assertThat(muted.mutedUntil()).isEqualTo(1700000600000L);
+        assertThat(muted.userLocale()).isEqualTo("ru");
     }
 
     @Test
@@ -218,9 +234,143 @@ class ApiConformanceTest {
         assertThat(serializer.deserialize(
                 json.replace("comment_created", "comment_edited"), Update.class))
                 .isInstanceOf(CommentEditedUpdate.class);
-        assertThat(serializer.deserialize(
-                json.replace("comment_created", "comment_removed"), Update.class))
-                .isInstanceOf(CommentRemovedUpdate.class);
+    }
+
+    @Test
+    void commentRemoved_carriesTheIdentifiersOfTheRemovedComment() {
+        // The comment is gone, so this event has no message object — only identifiers.
+        String json = """
+                {
+                  "update_type": "comment_removed",
+                  "timestamp": 1700000000000,
+                  "message_id": "mid.comment",
+                  "chat_id": 42,
+                  "user_id": 7,
+                  "post_id": "mid.post"
+                }
+                """;
+
+        assertThat(serializer.deserialize(json, Update.class)).isEqualTo(
+                new CommentRemovedUpdate(1700000000000L, "mid.comment", 42L, 7L, "mid.post"));
+    }
+
+    @Test
+    void messageRemoved_carriesThePostId() {
+        var removed = (MessageRemovedUpdate) serializer.deserialize("""
+                {"update_type": "message_removed", "timestamp": 1, "message_id": "mid.c",
+                 "chat_id": 42, "user_id": 7, "post_id": "mid.post"}
+                """, Update.class);
+
+        assertThat(removed.postId()).isEqualTo("mid.post");
+    }
+
+    @Test
+    void forwardOnlyMessage_hasNoBody() {
+        String message = """
+                {
+                  "recipient": {"chat_id": 1, "chat_type": "chat"},
+                  "timestamp": 1,
+                  "link": {
+                    "type": "forward",
+                    "chat_id": 2,
+                    "message": {"mid": "mid.x", "seq": 1, "text": "forwarded"}
+                  },
+                  "body": null
+                }
+                """;
+
+        Message parsed = serializer.deserialize(message, Message.class);
+        assertThat(parsed.body()).isNull();
+        assertThat(parsed.link()).isNotNull();
+
+        Update update = serializer.deserialize("""
+                {"update_type": "message_created", "timestamp": 1, "message": %s}
+                """.formatted(message), Update.class);
+        assertThat(update).isInstanceOf(MessageCreatedUpdate.class);
+    }
+
+    @Test
+    void markup_keepsTheLinkTargetAndTheMentionedUser() {
+        MessageBody body = serializer.deserialize("""
+                {"mid": "m", "seq": 1, "text": "see @ivan",
+                 "markup": [
+                   {"type": "link", "from": 0, "length": 3, "url": "https://max.ru"},
+                   {"type": "user_mention", "from": 4, "length": 5, "user_link": "@ivan"},
+                   {"type": "user_mention", "from": 4, "length": 5, "user_id": 7}
+                 ]}
+                """, MessageBody.class);
+
+        assertThat(body.markup())
+                .extracting(MarkupElement::url, MarkupElement::userLink, MarkupElement::userId)
+                .containsExactly(
+                        tuple("https://max.ru", null, null),
+                        tuple(null, "@ivan", null),
+                        tuple(null, null, 7L));
+    }
+
+    @Test
+    void user_withoutLastActivityTime_leavesItUnset() {
+        // Privacy settings can hide it; zero would read as a real timestamp.
+        User user = serializer.deserialize("""
+                {"user_id": 7, "first_name": "Ivan", "username": null, "is_bot": false}
+                """, User.class);
+
+        assertThat(user.lastActivityTime()).isNull();
+    }
+
+    @Test
+    void subscription_carriesItsCreationTime() {
+        GetSubscriptionsResult result = serializer.deserialize("""
+                {"subscriptions": [{"url": "https://example.com/webhook",
+                                    "time": 1700000000000, "update_types": null}]}
+                """, GetSubscriptionsResult.class);
+
+        assertThat(result.subscriptions().getFirst().time()).isEqualTo(1700000000000L);
+    }
+
+    @Test
+    void audioAttachment_carriesItsTranscription() {
+        var audio = (AudioAttachment) serializer.deserialize("""
+                {"type": "audio", "payload": {"url": "https://a", "token": "t"},
+                 "transcription": "hello"}
+                """, ru.max.botapi.model.Attachment.class);
+
+        assertThat(audio.transcription()).isEqualTo("hello");
+    }
+
+    @Test
+    void chatPatch_setsTheIconFromATokenOrUploadedPhotos() {
+        String byToken = serializer.serialize(new ChatPatch(null, null,
+                new PhotoAttachmentRequestPayload("tok", null, null), null, null));
+        assertThat(byToken).isEqualTo("{\"icon\":{\"token\":\"tok\"}}");
+
+        String byPhotos = serializer.serialize(new ChatPatch(null, null,
+                new PhotoAttachmentRequestPayload(null, null,
+                        Map.of("p1", new PhotoAttachmentRequestPayload.TokenRef("tok"))),
+                null, null));
+        assertThat(byPhotos).isEqualTo("{\"icon\":{\"photos\":{\"p1\":{\"token\":\"tok\"}}}}");
+    }
+
+    @Test
+    void openAppButton_usesTheDocumentedFields() {
+        assertThat(serializer.deserialize("""
+                {"type": "open_app", "text": "Open", "web_app": "some_bot", "contact_id": 123}
+                """, Button.class))
+                .isEqualTo(new OpenAppButton("Open", "some_bot", 123L, null));
+
+        assertThat(serializer.serialize(OpenAppButton.ofWebApp("Open", "some_bot")))
+                .contains("\"type\":\"open_app\"")
+                .contains("\"web_app\":\"some_bot\"")
+                .doesNotContain("url")
+                .doesNotContain("contact_id");
+    }
+
+    @Test
+    void messageButton_sendsItsOwnText() {
+        assertThat(serializer.deserialize("""
+                {"type": "message", "text": "/start"}
+                """, Button.class))
+                .isEqualTo(new MessageButton("/start"));
     }
 
     @Test

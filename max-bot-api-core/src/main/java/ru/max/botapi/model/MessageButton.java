@@ -19,12 +19,14 @@ package ru.max.botapi.model;
 import java.util.Objects;
 
 /**
- * A button that sends a pre-defined text message to the bot when pressed.
+ * A button that, when pressed, sends its own text to the chat on the user's behalf.
  *
- * @param text    display text
- * @param message the message text to send
+ * <p>The label and the sent text are the same string; the API offers no way to send
+ * something other than what the button shows.</p>
+ *
+ * @param text the button text, sent to the chat when the button is pressed
  */
-public record MessageButton(String text, String message) implements Button {
+public record MessageButton(String text) implements Button {
 
     /** {@inheritDoc} */
     @Override
@@ -35,11 +37,9 @@ public record MessageButton(String text, String message) implements Button {
     /**
      * Creates a MessageButton.
      *
-     * @param text    must not be {@code null}
-     * @param message must not be {@code null}
+     * @param text must not be {@code null}
      */
     public MessageButton {
         Objects.requireNonNull(text, "text must not be null");
-        Objects.requireNonNull(message, "message must not be null");
     }
 }

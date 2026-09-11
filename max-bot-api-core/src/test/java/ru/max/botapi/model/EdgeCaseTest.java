@@ -147,7 +147,7 @@ class EdgeCaseTest {
 
     @Test
     void updateList_singleUpdateNoMarker() {
-        var upd = new BotStoppedUpdate(1700001000000L, 60001L, USER);
+        var upd = new BotStoppedUpdate(1700001000000L, 60001L, USER, null);
         var list = new UpdateList(List.of(upd), null);
         assertThat(list.updates()).hasSize(1);
         assertThat(list.marker()).isNull();
@@ -333,7 +333,7 @@ class EdgeCaseTest {
 
     @Test
     void updateList_defensiveCopy_inputListModification() {
-        var upd = new BotStoppedUpdate(1700001000000L, 60001L, USER);
+        var upd = new BotStoppedUpdate(1700001000000L, 60001L, USER, null);
         var mutableList = new ArrayList<Update>(List.of(upd));
         var updList = new UpdateList(mutableList, null);
         mutableList.add(upd); // modify original
@@ -380,7 +380,7 @@ class EdgeCaseTest {
     @Test
     void subscription_defensiveCopy_updateTypes() {
         var mutableList = new ArrayList<>(List.of(UpdateType.MESSAGE_CREATED));
-        var sub = new Subscription("https://example.com", mutableList);
+        var sub = new Subscription("https://example.com", null, mutableList);
         mutableList.add(UpdateType.BOT_ADDED); // modify original
         assertThat(sub.updateTypes()).hasSize(1); // record's list is unaffected
     }

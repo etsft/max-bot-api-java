@@ -38,7 +38,6 @@ import ru.max.botapi.model.ChatPatch;
 import ru.max.botapi.model.ChatPermission;
 import ru.max.botapi.model.GetPinnedMessageResult;
 import ru.max.botapi.model.GetSubscriptionsResult;
-import ru.max.botapi.model.Image;
 import ru.max.botapi.model.Message;
 import ru.max.botapi.model.MessageLinkType;
 import ru.max.botapi.model.MessageList;
@@ -521,7 +520,8 @@ class AdditionalIntegrationTest {
                                 """)));
 
         ChatPatch chatPatch = new ChatPatch("Updated Chat Title", null,
-                new Image("http://icon.png"), "pin_msg_001", true);
+                new ru.max.botapi.model.PhotoAttachmentRequestPayload(null, "http://icon.png", null),
+                "pin_msg_001", true);
         Chat chat = api.editChat(chatPatch, 456L).execute();
 
         assertThat(chat.chatId()).isEqualTo(456L);

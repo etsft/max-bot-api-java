@@ -31,7 +31,8 @@ package ru.max.botapi.model;
  * @param lastName        optional last name
  * @param username        optional username (handle)
  * @param isBot           {@code true} if this user is a bot
- * @param lastActivityTime timestamp of last activity (epoch millis)
+ * @param lastActivityTime timestamp of last activity (epoch millis); {@code null} when the
+ *                         user's privacy settings hide their online status
  * @param description     optional user/bot description
  * @param avatarUrl       optional avatar thumbnail URL
  * @param fullAvatarUrl   optional full-size avatar URL
@@ -43,7 +44,7 @@ public record UserWithPhoto(
         @Nullable String lastName,
         @Nullable String username,
         boolean isBot,
-        long lastActivityTime,
+        @Nullable Long lastActivityTime,
         @Nullable String description,
         @Nullable String avatarUrl,
         @Nullable String fullAvatarUrl

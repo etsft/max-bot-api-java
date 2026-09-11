@@ -1,1 +1,1 @@
-{"type":"open_app","text":"Open App","url":"https://app.example.com","payload":"init_data"}
+{"type":"open_app","text":"Open App","web_app":"some_bot","contact_id":123,"payload":"init_data"}

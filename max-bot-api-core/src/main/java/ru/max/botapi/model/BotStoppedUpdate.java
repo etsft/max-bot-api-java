@@ -21,11 +21,17 @@ import java.util.Objects;
 /**
  * Update: a user stopped the bot.
  *
- * @param timestamp event timestamp (epoch millis)
- * @param chatId    chat where the bot was stopped
- * @param user      the user who stopped the bot
+ * @param timestamp  event timestamp (epoch millis)
+ * @param chatId     chat where the bot was stopped
+ * @param user       the user who stopped the bot
+ * @param userLocale the user's current language, as an IETF BCP 47 tag
  */
-public record BotStoppedUpdate(long timestamp, long chatId, User user) implements Update {
+public record BotStoppedUpdate(
+        long timestamp,
+        long chatId,
+        User user,
+        @Nullable String userLocale
+) implements Update {
 
     /** {@inheritDoc} */
     @Override

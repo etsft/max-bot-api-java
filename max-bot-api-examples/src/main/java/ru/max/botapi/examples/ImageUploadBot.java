@@ -83,7 +83,8 @@ public final class ImageUploadBot {
                      .api(api)
                      .handler(update -> {
                          if (update instanceof MessageCreatedUpdate msg) {
-                             String text = msg.message().body().text();
+                             var body = msg.message().body();
+                             String text = body == null ? null : body.text();
                              if ("/upload".equals(text)) {
                                  handleUploadCommand(api, uploadApi, msg, imagePath);
                              }

@@ -34,7 +34,7 @@ class CommentTypesTest {
     @Test
     void commentMessageBody_copiesMarkup() {
         var markup = new java.util.ArrayList<MarkupElement>();
-        markup.add(new MarkupElement("strong", 0, 4));
+        markup.add(new MarkupElement("strong", 0, 4, null, null, null));
         var body = new CommentMessageBody("mid.c1", 1L, "Nice", markup);
 
         markup.clear();
@@ -191,13 +191,13 @@ class CommentTypesTest {
 
     @Test
     void dialogUpdates_reportTheirType() {
-        assertThat(new DialogClearedUpdate(1L, 42L, null).updateType())
+        assertThat(new DialogClearedUpdate(1L, 42L, null, null).updateType())
                 .isEqualTo("dialog_cleared");
-        assertThat(new DialogMutedUpdate(1L, 42L, null).updateType())
+        assertThat(new DialogMutedUpdate(1L, 42L, null, null, null).updateType())
                 .isEqualTo("dialog_muted");
-        assertThat(new DialogUnmutedUpdate(1L, 42L, null).updateType())
+        assertThat(new DialogUnmutedUpdate(1L, 42L, null, null).updateType())
                 .isEqualTo("dialog_unmuted");
-        assertThat(new DialogRemovedUpdate(1L, 42L, null).updateType())
+        assertThat(new DialogRemovedUpdate(1L, 42L, null, null).updateType())
                 .isEqualTo("dialog_removed");
     }
 
@@ -207,7 +207,7 @@ class CommentTypesTest {
                 .isEqualTo("comment_created");
         assertThat(new CommentEditedUpdate(1L, null).updateType())
                 .isEqualTo("comment_edited");
-        assertThat(new CommentRemovedUpdate(1L, null).updateType())
+        assertThat(new CommentRemovedUpdate(1L, "m", 1, 1, null).updateType())
                 .isEqualTo("comment_removed");
     }
 

@@ -29,7 +29,7 @@ class SubscriptionUploadCommonTest {
 
     @Test
     void subscription_construction() {
-        var sub = new Subscription("http://hook", List.of(UpdateType.MESSAGE_CREATED));
+        var sub = new Subscription("http://hook", null, List.of(UpdateType.MESSAGE_CREATED));
         assertThat(sub.url()).isEqualTo("http://hook");
         assertThat(sub.updateTypes()).containsExactly(UpdateType.MESSAGE_CREATED);
     }
@@ -43,7 +43,7 @@ class SubscriptionUploadCommonTest {
 
     @Test
     void getSubscriptionsResult_construction() {
-        var sub = new Subscription("http://hook", null);
+        var sub = new Subscription("http://hook", null, null);
         var result = new GetSubscriptionsResult(List.of(sub));
         assertThat(result.subscriptions()).hasSize(1);
     }

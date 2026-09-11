@@ -23,10 +23,12 @@ import java.util.Objects;
  * A webhook subscription.
  *
  * @param url         webhook callback URL
+ * @param time        when the subscription was created (epoch millis)
  * @param updateTypes list of update types to receive; {@code null} means all types
  */
 public record Subscription(
         String url,
+        @Nullable Long time,
         @Nullable List<UpdateType> updateTypes
 ) {
 

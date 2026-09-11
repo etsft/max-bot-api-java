@@ -21,9 +21,13 @@ import java.util.Objects;
 /**
  * Audio attachment.
  *
- * @param payload media payload with URL and token
+ * @param payload       media payload with URL and token
+ * @param transcription text transcription of the audio, when MAX has made one
  */
-public record AudioAttachment(MediaPayload payload) implements Attachment {
+public record AudioAttachment(
+        MediaPayload payload,
+        @Nullable String transcription
+) implements Attachment {
 
     /** {@inheritDoc} */
     @Override

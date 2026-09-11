@@ -25,12 +25,14 @@ import java.util.Objects;
  * @param messageId ID of the removed message
  * @param chatId    chat where the message was removed
  * @param userId    user who removed the message
+ * @param postId    ID of the channel post a removed comment belonged to; absent otherwise
  */
 public record MessageRemovedUpdate(
         long timestamp,
         String messageId,
         long chatId,
-        long userId
+        long userId,
+        @Nullable String postId
 ) implements Update {
 
     /** {@inheritDoc} */

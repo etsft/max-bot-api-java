@@ -16,28 +16,42 @@
 
 package ru.max.botapi.model;
 
+import java.util.Objects;
+
 /**
  * Update: a user or bot deleted a comment on a channel post.
  *
  * <p>A bot never receives this event for its own actions.</p>
  *
- * <p>The MAX documentation names this event and points at {@code message.recipient.post_id}
- * and {@code message.body.text}, but does not publish the full payload, so {@code message} is
- * modelled as optional. Unknown JSON properties are ignored, so a richer payload than this
- * deserializes without error.</p>
+ * <p>Unlike {@link CommentCreatedUpdate} and {@link CommentEditedUpdate}, this event carries
+ * no comment object: the comment is gone, and only its identifiers arrive.</p>
  *
  * @param timestamp event timestamp (epoch millis)
- * @param message   the comment the event is about; {@link MessageRecipient#postId()} identifies
- *                  the post it belongs to
+ * @param messageId ID of the removed comment
+ * @param chatId    chat the comment was removed from
+ * @param userId    user who removed the comment
+ * @param postId    ID of the channel post the comment belonged to
  */
 public record CommentRemovedUpdate(
         long timestamp,
-        @Nullable CommentMessage message
+        String messageId,
+        long chatId,
+        long userId,
+        @Nullable String postId
 ) implements Update {
 
     /** {@inheritDoc} */
     @Override
     public String updateType() {
         return "comment_removed";
+    }
+
+    /**
+     * Creates a CommentRemovedUpdate.
+     *
+     * @param messageId must not be {@code null}
+     */
+    public CommentRemovedUpdate {
+        Objects.requireNonNull(messageId, "messageId must not be null");
     }
 }

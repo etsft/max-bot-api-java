@@ -31,7 +31,8 @@ package ru.max.botapi.model;
  * @param lastName         optional last name
  * @param username         optional username (handle)
  * @param isBot            {@code true} if this user is a bot
- * @param lastActivityTime timestamp of last activity (epoch millis)
+ * @param lastActivityTime timestamp of last activity (epoch millis); {@code null} when the
+ *                         user's privacy settings hide their online status
  */
 public record User(
         long userId,
@@ -40,6 +41,6 @@ public record User(
         @Nullable String lastName,
         @Nullable String username,
         boolean isBot,
-        long lastActivityTime
+        @Nullable Long lastActivityTime
 ) {
 }

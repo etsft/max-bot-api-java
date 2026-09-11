@@ -46,7 +46,7 @@ class AttachmentTest {
 
     @Test
     void audioAttachment_construction() {
-        var att = new AudioAttachment(new MediaPayload("http://audio", "atok"));
+        var att = new AudioAttachment(new MediaPayload("http://audio", "atok"), null);
         assertThat(att.type()).isEqualTo("audio");
     }
 
@@ -113,7 +113,7 @@ class AttachmentTest {
                 new PhotoAttachment(new PhotoAttachment.PhotoPayload("u", "t", 1)),
                 new VideoAttachment(new VideoAttachment.VideoPayload("u", "t", null),
                         null, null, null, null),
-                new AudioAttachment(new MediaPayload("u", "t")),
+                new AudioAttachment(new MediaPayload("u", "t"), null),
                 new FileAttachment(new MediaPayload("u", "t"), "f", 0),
                 new StickerAttachment(new StickerAttachment.StickerPayload("u", "c"), 1, 1),
                 new ContactAttachment(new ContactAttachment.ContactPayload(null, null, null)),

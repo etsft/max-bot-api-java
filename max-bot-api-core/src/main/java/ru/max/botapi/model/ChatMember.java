@@ -34,7 +34,8 @@ import java.util.Objects;
  * @param lastName         optional last name component
  * @param username         optional username (handle)
  * @param isBot            {@code true} if this member is a bot
- * @param lastActivityTime timestamp of last activity (epoch millis)
+ * @param lastActivityTime timestamp of last activity (epoch millis); {@code null} when the
+ *                         member's privacy settings hide their online status
  * @param description      optional profile description
  * @param avatarUrl        optional avatar thumbnail URL
  * @param fullAvatarUrl    optional full-size avatar URL
@@ -55,7 +56,7 @@ public record ChatMember(
         @Nullable String lastName,
         @Nullable String username,
         boolean isBot,
-        long lastActivityTime,
+        @Nullable Long lastActivityTime,
         @Nullable String description,
         @Nullable String avatarUrl,
         @Nullable String fullAvatarUrl,

@@ -66,16 +66,16 @@ class ButtonTest {
 
     @Test
     void openAppButton_construction() {
-        var btn = new OpenAppButton("Open App", "http://app.com", "p");
+        var btn = new OpenAppButton("Open App", "some_bot", null, "p");
         assertThat(btn.type()).isEqualTo("open_app");
-        assertThat(btn.url()).isEqualTo("http://app.com");
+        assertThat(btn.webApp()).isEqualTo("some_bot");
     }
 
     @Test
     void messageButton_construction() {
-        var btn = new MessageButton("Say Hi", "Hello bot!");
+        var btn = new MessageButton("Say Hi");
         assertThat(btn.type()).isEqualTo("message");
-        assertThat(btn.message()).isEqualTo("Hello bot!");
+        assertThat(btn.text()).isEqualTo("Say Hi");
     }
 
     @Test
@@ -93,8 +93,8 @@ class ButtonTest {
                 new RequestContactButton("t"),
                 new RequestGeoLocationButton("t", null),
                 new ChatButton("t", "ct", null, null, null),
-                new OpenAppButton("t", "u", null),
-                new MessageButton("t", "m"),
+                new OpenAppButton("t", "u", null, null),
+                new MessageButton("t"),
                 new ClipboardButton("t", "PROMO"),
                 new UnknownButton("x", "t", "{}")
         };

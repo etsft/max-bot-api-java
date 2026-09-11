@@ -21,14 +21,25 @@ import java.util.Objects;
 /**
  * A markup/formatting element within a message body.
  *
- * @param type   the type of markup (e.g., "bold", "italic", "link")
- * @param from   starting character offset
- * @param length number of characters covered by this markup
+ * <p>Most markup types carry nothing beyond their range. Two carry a target as well:
+ * {@code link} sets {@code url}, and {@code user_mention} sets {@code userLink} for a user
+ * with a public name or {@code userId} for one without.</p>
+ *
+ * @param type     the type of markup (e.g., "strong", "emphasized", "link", "user_mention")
+ * @param from     starting character offset
+ * @param length   number of characters covered by this markup
+ * @param url      target of a {@code link}; absent for other types
+ * @param userLink {@code @username} of the user a {@code user_mention} refers to
+ * @param userId   ID of the user a {@code user_mention} refers to, when that user has no
+ *                 public name
  */
 public record MarkupElement(
         String type,
         int from,
-        int length
+        int length,
+        @Nullable String url,
+        @Nullable String userLink,
+        @Nullable Long userId
 ) {
 
     /**
