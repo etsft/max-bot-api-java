@@ -96,7 +96,9 @@ MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
     .api(api)
     .handler(update -> {
         if (update instanceof MessageCreatedUpdate msg) {
-            String text = msg.message().body().text();
+            // Сообщение, которое только пересылает другое, не имеет собственного body.
+            var body = msg.message().body();
+            String text = body == null ? null : body.text();
             Long chatId = msg.message().recipient().chatId();
             if (text != null && chatId != null) {
                 api.sendMessage(new NewMessageBody(text, null, null, null, null))
@@ -304,10 +306,10 @@ server.register(api, "https://example.com/webhook", null);
 
 ```java
 MaxWebhookServer server = MaxWebhookServer.builder()
-    .api(api)
     .handler(update -> {
         // обработать обновление
     })
+    .serializer(api.serializer())
     .port(8443)
     .secret("my-secret")
     .build();
@@ -316,6 +318,25 @@ server.start();
 ```
 
 Убедитесь, что TLS-сертификат, обслуживаемый на заданном порту, является доверенным для платформы MAX, либо используйте обратный прокси (например, nginx) для терминирования TLS.
+
+`register()` и `unregister()` выбрасывают `IllegalStateException`, если MAX отвечает `success: false`.
+
+#### Срок подтверждения доставки
+
+MAX ждёт HTTP 200 не дольше **30 секунд**. Более медленный ответ или любой другой код считается ошибкой доставки: MAX повторяет попытку до 10 раз с растущим интервалом (60 с, 150 с, 375 с, …) и через 8 часов без успешного ответа отписывает бота.
+
+По умолчанию обработчик выполняется до отправки ответа. Если обработка может длиться так долго, передайте серверу executor: тогда сервер отвечает сразу, а обработчик запускается после ответа.
+
+```java
+ExecutorService dispatch = Executors.newVirtualThreadPerTaskExecutor();
+
+MaxWebhookServer server = MaxWebhookServer.builder()
+    // ...
+    .dispatchExecutor(dispatch)
+    .build();
+```
+
+В обоих режимах сервер отвечает 200, даже если обработчик выбросил исключение, поэтому MAX не доставит повторно обновление, на котором обработчик упал. Если обновление нельзя потерять, пусть обработчик сохраняет его (в очередь, в таблицу) и обрабатывает уже оттуда.
 
 ### Интеграция со Spring Boot
 
@@ -341,6 +362,7 @@ max:
 - Проверяет заголовок `X-Max-Bot-Api-Secret` с использованием сравнения за константное время.
 - Подписывает webhook URL на платформе MAX при запуске приложения.
 - Отписывается при корректном завершении работы.
+- При `max.bot.webhook.async-dispatch: true` отвечает MAX до запуска обработчика, который затем выполняется в виртуальном потоке. См. [Срок подтверждения доставки](#срок-подтверждения-доставки).
 
 Определите бин `UpdateHandler` для обработки входящих обновлений:
 
@@ -365,6 +387,7 @@ UpdateHandler updateHandler() {
 | `max.bot.webhook.url` | — | Публичный URL для автоматической регистрации webhook. |
 | `max.bot.webhook.auto-register` | `true` | Регистрировать подписку webhook при запуске. |
 | `max.bot.webhook.auto-unregister` | `true` | Отписываться при завершении работы приложения. |
+| `max.bot.webhook.async-dispatch` | `false` | Сначала отвечать MAX, затем запускать `UpdateHandler` в виртуальном потоке. |
 | `max.bot.webhook.update-types` | — | Список констант `UpdateType` для подписки (пустой = все). См. [таблицу типов](#доступные-типы-обновлений). |
 
 #### Режим Long Polling
@@ -583,6 +606,10 @@ MaxClientConfig config = MaxClientConfig.builder()
 MaxClientConfig config = MaxClientConfig.defaults();
 ```
 
+### Ограничения частоты запросов
+
+Встроенный ограничитель держит клиент в целом в пределах `maxRequestsPerSecond` (по умолчанию 30) — это общий лимит платформы. Кроме того, MAX допускает не более **2 операций в секунду в одном диалоге, групповом чате или канале** для отправки сообщений (`POST /messages`), их редактирования (`PUT /messages`) и ответов на callback (`POST /answers`). Этот лимит по чату клиент не отслеживает, поэтому бот, который пишет в один чат пачками, должен сам ставить такие вызовы в очередь или делать паузы.
+
 ---
 
 ## Обработка ошибок
@@ -634,6 +661,27 @@ try {
     System.err.println("Ошибка транспорта: " + e.getMessage());
 }
 ```
+
+---
+
+## Переход на 0.4.0
+
+В 0.4.0 модели приведены в соответствие со схемой MAX API. Эти изменения ломают совместимость как на уровне исходного кода, так и бинарную:
+
+| Было | Стало |
+|---|---|
+| `CommentRemovedUpdate(timestamp, message)` | `CommentRemovedUpdate(timestamp, messageId, chatId, userId, postId)`: комментария больше нет, приходят только его идентификаторы |
+| `new OpenAppButton(text, url, payload)` | `OpenAppButton.ofWebApp(text, "bot_username")`, `OpenAppButton.ofContactId(text, botId)` или `new OpenAppButton(text, webApp, contactId, payload)` |
+| `new MessageButton(text, message)` | `new MessageButton(text)`: кнопка отправляет собственный текст |
+| `Message.body()` никогда не `null` | `null`, если сообщение только пересылает другое; проверяйте перед `body().text()` |
+| `ChatPatch.icon` — это `Image` | `PhotoAttachmentRequestPayload`: внешний URL, токен или загруженные `photos` |
+| `lastActivityTime()` — `long`, `0` при отсутствии | `Long`, `null`, если его скрывают настройки приватности (`User`, `UserWithPhoto`, `BotInfo`, `ChatMember`) |
+| `MarkupElement(type, from, length)` | добавлены `url`, `userLink` и `userId` |
+| `DialogClearedUpdate`, `DialogMutedUpdate`, `DialogUnmutedUpdate`, `DialogRemovedUpdate`, `BotStoppedUpdate` | добавлен `userLocale`; у `DialogMutedUpdate` ещё `mutedUntil` |
+| `MessageRemovedUpdate(timestamp, messageId, chatId, userId)` | добавлен `postId` |
+| `Subscription(url, updateTypes)` | `Subscription(url, time, updateTypes)` |
+| `AudioAttachment(payload)` | `AudioAttachment(payload, transcription)` |
+| `MaxWebhookServer.register()` / `unregister()` игнорируют `success: false` | выбрасывают `IllegalStateException` |
 
 ---
 

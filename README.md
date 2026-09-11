@@ -96,7 +96,9 @@ MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
     .api(api)
     .handler(update -> {
         if (update instanceof MessageCreatedUpdate msg) {
-            String text = msg.message().body().text();
+            // A message that only forwards another one has no body of its own.
+            var body = msg.message().body();
+            String text = body == null ? null : body.text();
             Long chatId = msg.message().recipient().chatId();
             if (text != null && chatId != null) {
                 api.sendMessage(new NewMessageBody(text, null, null, null, null))
@@ -304,10 +306,10 @@ See the [update types table](#available-update-types) above.
 
 ```java
 MaxWebhookServer server = MaxWebhookServer.builder()
-    .api(api)
     .handler(update -> {
         // handle update
     })
+    .serializer(api.serializer())
     .port(8443)
     .secret("my-secret")
     .build();
@@ -316,6 +318,25 @@ server.start();
 ```
 
 Ensure the TLS certificate served on the configured port is trusted by the MAX platform, or use a reverse proxy (e.g., nginx) to terminate TLS.
+
+`register()` and `unregister()` throw `IllegalStateException` when MAX answers with `success: false`.
+
+#### Delivery deadline
+
+MAX waits up to **30 seconds** for HTTP 200. A slower answer, or any other status, counts as a failed delivery: MAX retries up to 10 times at growing intervals (60 s, 150 s, 375 s, …) and unsubscribes the bot after 8 hours without a successful answer.
+
+By default the handler runs before the server answers. A handler that can take that long should get a dispatch executor: the server then answers at once and runs the handler afterwards.
+
+```java
+ExecutorService dispatch = Executors.newVirtualThreadPerTaskExecutor();
+
+MaxWebhookServer server = MaxWebhookServer.builder()
+    // ...
+    .dispatchExecutor(dispatch)
+    .build();
+```
+
+Either way the server answers 200 even when the handler throws, so MAX does not redeliver an update the handler failed on. If an update must not be lost, have the handler persist it (a queue, a table) and process it from there.
 
 ### Spring Boot Integration
 
@@ -341,6 +362,7 @@ The starter automatically:
 - Validates the `X-Max-Bot-Api-Secret` header using constant-time comparison.
 - Subscribes the webhook URL with the MAX platform on application startup.
 - Unsubscribes on graceful shutdown.
+- With `max.bot.webhook.async-dispatch: true`, answers MAX before running the handler, which then runs on a virtual thread. See [Delivery deadline](#delivery-deadline).
 
 Define an `UpdateHandler` bean to process incoming updates:
 
@@ -365,6 +387,7 @@ UpdateHandler updateHandler() {
 | `max.bot.webhook.url` | — | Public URL for webhook auto-registration. |
 | `max.bot.webhook.auto-register` | `true` | Register webhook subscription on startup. |
 | `max.bot.webhook.auto-unregister` | `true` | Unsubscribe on application shutdown. |
+| `max.bot.webhook.async-dispatch` | `false` | Answer MAX first, then run the `UpdateHandler` on a virtual thread. |
 | `max.bot.webhook.update-types` | — | List of `UpdateType` constants to subscribe to (empty = all). See [update types table](#available-update-types). |
 
 #### Long Polling Mode
@@ -582,6 +605,10 @@ For full control, pass a custom `SSLContext` with `.sslContext(...)`.
 MaxClientConfig config = MaxClientConfig.defaults();
 ```
 
+### Rate limits
+
+The built-in limiter caps the client as a whole at `maxRequestsPerSecond` (30 by default), the platform-wide limit. MAX also allows at most **2 operations per second in a single dialog, group chat or channel** for sending messages (`POST /messages`), editing them (`PUT /messages`) and answering callbacks (`POST /answers`). The client does not track that per-chat limit, so a bot that writes to one chat in bursts must queue or delay those calls itself.
+
 ---
 
 ## Error Handling
@@ -633,6 +660,27 @@ try {
     System.err.println("Transport error: " + e.getMessage());
 }
 ```
+
+---
+
+## Migrating to 0.4.0
+
+0.4.0 brings the models in line with the MAX API schema. These changes break source and binary compatibility:
+
+| Before | After |
+|---|---|
+| `CommentRemovedUpdate(timestamp, message)` | `CommentRemovedUpdate(timestamp, messageId, chatId, userId, postId)`: the comment is gone, so only its identifiers arrive |
+| `new OpenAppButton(text, url, payload)` | `OpenAppButton.ofWebApp(text, "bot_username")`, `OpenAppButton.ofContactId(text, botId)` or `new OpenAppButton(text, webApp, contactId, payload)` |
+| `new MessageButton(text, message)` | `new MessageButton(text)`: the button sends its own text |
+| `Message.body()` is never `null` | `null` when the message only forwards another one; check it before `body().text()` |
+| `ChatPatch.icon` is an `Image` | a `PhotoAttachmentRequestPayload`: an external URL, a token, or uploaded `photos` |
+| `lastActivityTime()` is a `long`, `0` when absent | a `Long`, `null` when privacy settings hide it (`User`, `UserWithPhoto`, `BotInfo`, `ChatMember`) |
+| `MarkupElement(type, from, length)` | adds `url`, `userLink` and `userId` |
+| `DialogClearedUpdate`, `DialogMutedUpdate`, `DialogUnmutedUpdate`, `DialogRemovedUpdate`, `BotStoppedUpdate` | add `userLocale`; `DialogMutedUpdate` also `mutedUntil` |
+| `MessageRemovedUpdate(timestamp, messageId, chatId, userId)` | adds `postId` |
+| `Subscription(url, updateTypes)` | `Subscription(url, time, updateTypes)` |
+| `AudioAttachment(payload)` | `AudioAttachment(payload, transcription)` |
+| `MaxWebhookServer.register()` / `unregister()` ignore `success: false` | they throw `IllegalStateException` |
 
 ---
 
