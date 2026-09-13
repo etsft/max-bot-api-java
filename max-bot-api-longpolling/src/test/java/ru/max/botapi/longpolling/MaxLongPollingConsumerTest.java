@@ -74,6 +74,15 @@ class MaxLongPollingConsumerTest {
     }
 
     @Test
+    void backoffDoublesUpToThirtySeconds() {
+        assertThat(MaxLongPollingConsumer.backoffMillis(1)).isEqualTo(1_000L);
+        assertThat(MaxLongPollingConsumer.backoffMillis(2)).isEqualTo(2_000L);
+        assertThat(MaxLongPollingConsumer.backoffMillis(5)).isEqualTo(16_000L);
+        assertThat(MaxLongPollingConsumer.backoffMillis(6)).isEqualTo(30_000L);
+        assertThat(MaxLongPollingConsumer.backoffMillis(1_000)).isEqualTo(30_000L);
+    }
+
+    @Test
     void pollsUpdatesAndDispatchesToHandler() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         List<Update> received = new CopyOnWriteArrayList<>();

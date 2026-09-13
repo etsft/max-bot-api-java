@@ -200,7 +200,7 @@ public class MaxLongPollingConsumer implements AutoCloseable {
      * @param errorStreak number of consecutive errors so far
      */
     private void sleepOnError(int errorStreak) {
-        long delayMs = Math.min(1000L * (1L << Math.min(errorStreak - 1, 4)), MAX_BACKOFF_MS);
+        long delayMs = backoffMillis(errorStreak);
         LOG.debug("Backing off for {}ms after {} consecutive error(s)", delayMs, errorStreak);
         try {
             Thread.sleep(delayMs);
@@ -208,6 +208,18 @@ public class MaxLongPollingConsumer implements AutoCloseable {
             Thread.currentThread().interrupt();
             running = false;
         }
+    }
+
+    /**
+     * Returns the backoff delay after the given number of consecutive errors.
+     * Delay: 1s → 2s → 4s → 8s → 16s → 30s (capped).
+     *
+     * @param errorStreak number of consecutive errors so far; at least 1
+     * @return the delay in milliseconds
+     */
+    static long backoffMillis(int errorStreak) {
+        // Shift by at most 5: 32s already exceeds the cap, and a larger shift would overflow.
+        return Math.min(1000L << Math.min(errorStreak - 1, 5), MAX_BACKOFF_MS);
     }
 
     /**
