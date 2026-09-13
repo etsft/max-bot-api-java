@@ -60,22 +60,21 @@ public final class KeyboardBot {
             System.exit(1);
         }
 
-        MaxBotAPI api = MaxBotAPI.create(token);
-
-        try (MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
-                .api(api)
-                .handler(update -> {
-                    try {
-                        switch (update) {
-                            case MessageCreatedUpdate msg -> handleMessage(api, msg);
-                            case MessageCallbackUpdate cb -> handleCallback(api, cb);
-                            default -> { /* ignore other update types */ }
-                        }
-                    } catch (Exception e) {
-                        System.err.println("Error: " + e.getMessage());
-                    }
-                })
-                .build()) {
+        try (MaxBotAPI api = MaxBotAPI.create(token);
+             MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
+                     .api(api)
+                     .handler(update -> {
+                         try {
+                             switch (update) {
+                                 case MessageCreatedUpdate msg -> handleMessage(api, msg);
+                                 case MessageCallbackUpdate cb -> handleCallback(api, cb);
+                                 default -> { /* ignore other update types */ }
+                             }
+                         } catch (Exception e) {
+                             System.err.println("Error: " + e.getMessage());
+                         }
+                     })
+                     .build()) {
 
             consumer.start();
             System.out.println("KeyboardBot is running. Press Ctrl+C to stop.");
@@ -119,9 +118,12 @@ public final class KeyboardBot {
 
     private static void handleCallback(MaxBotAPI api, MessageCallbackUpdate cb) {
         String callbackId = cb.callback().callbackId();
+        // A callback may arrive without a payload; switching on null would throw and leave the
+        // callback unanswered.
         String payload = cb.callback().payload();
 
         String text = switch (payload) {
+            case null -> "This button has no payload.";
             case "btn_hello" -> "You pressed Hello!";
             case "btn_world" -> "You pressed World!";
             case "btn_info" -> "This is the KeyboardBot example.";

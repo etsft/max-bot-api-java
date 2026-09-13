@@ -34,9 +34,9 @@ import ru.max.botapi.model.UploadType;
 /**
  * A bot that demonstrates image upload functionality.
  *
- * <p>When the user sends the command {@code /upload}, the bot uploads image to the MAX
- * platform, and sends it back to the chat.
- * This demonstrates the two-step upload flow:</p>
+ * <p>When the user sends the command {@code /upload}, the bot uploads the image named by
+ * {@code MAX_IMAGE_PATH} to the MAX platform, and sends it back to the chat.
+ * This demonstrates the upload flow:</p>
  * <ol>
  *   <li>Obtain an upload URL via {@code POST /uploads}</li>
  *   <li>Upload the image to that URL</li>
@@ -46,6 +46,7 @@ import ru.max.botapi.model.UploadType;
  * <p>Usage:</p>
  * <pre>
  * export MAX_BOT_TOKEN="your-bot-token"
+ * export MAX_IMAGE_PATH="/path/to/photo.jpg"
  * ./gradlew :max-bot-api-examples:run -PmainClass=ru.max.botapi.examples.ImageUploadBot
  * </pre>
  */
@@ -76,9 +77,8 @@ public final class ImageUploadBot {
             System.exit(1);
         }
 
-        MaxBotAPI api = MaxBotAPI.create(token);
-
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI();
+        try (MaxBotAPI api = MaxBotAPI.create(token);
+             MaxUploadAPI uploadApi = new MaxUploadAPI();
              MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
                      .api(api)
                      .handler(update -> {
@@ -93,7 +93,7 @@ public final class ImageUploadBot {
                      .build()) {
 
             consumer.start();
-            System.out.println("FileUploadBot is running. Send /upload to test. Press Ctrl+C to stop.");
+            System.out.println("ImageUploadBot is running. Send /upload to test. Press Ctrl+C to stop.");
 
             Thread.currentThread().join();
         } catch (InterruptedException e) {
@@ -110,17 +110,17 @@ public final class ImageUploadBot {
         try {
             Path image = Path.of(imagePath);
 
-            // Step 2: Get upload URL
+            // Step 1: Get upload URL
             UploadEndpoint endpoint = api.getUploadUrl(UploadType.IMAGE).execute();
 
-            // Step 3: Upload the image (
+            // Step 2: Upload the image; the response carries one token per photo size
             ImageUploadedInfo uploaded = uploadApi.uploadImage(endpoint, image,
-                    image.getName(image.getNameCount() - 1).toString());
+                    image.getFileName().toString());
 
-            // Step 4: Send message with uploaded image
+            // Step 3: Send message with uploaded image, passing the photos map verbatim
             ImageAttachmentRequest imageAttachment =
                     new ImageAttachmentRequest(new PhotoAttachmentRequestPayload(
-                            endpoint.token(), null, uploaded.photos()));
+                            null, null, uploaded.photos()));
 
             NewMessageBody body = new NewMessageBody(
                     "Here is your image:",
@@ -128,6 +128,7 @@ public final class ImageUploadBot {
                     null, null, null
             );
 
+            // Waits while MAX is still processing the upload (attachmentReadyTimeout)
             api.sendMessage(body).chatId(chatId).execute();
         } catch (Exception e) {
             System.err.println("Failed to upload image: " + e.getMessage());

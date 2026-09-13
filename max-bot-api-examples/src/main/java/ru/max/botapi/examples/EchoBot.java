@@ -48,33 +48,32 @@ public final class EchoBot {
             System.exit(1);
         }
 
-        MaxBotAPI api = MaxBotAPI.create(token);
-
-        try (MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
-                .api(api)
-                .handler(update -> {
-                    if (update instanceof MessageCreatedUpdate msg) {
-                        // A message that only forwards another one has no body of its own.
-                        var body = msg.message().body();
-                        String text = body == null ? null : body.text();
-                        Long chatId = msg.message().recipient().chatId();
-                        // A channel post is published by the channel itself, so it carries no
-                        // sender — Message.sender() is null there, not an error.
-                        User sender = msg.message().sender();
-                        if (text != null && !text.isBlank() && chatId != null) {
-                            try {
-                                String reply = "Chat %d, User %s: %s".formatted(
-                                        chatId, sender == null ? "-" : sender.userId(), text);
-                                api.sendMessage(new NewMessageBody(reply, null, null, null, null))
-                                        .chatId(chatId)
-                                        .execute();
-                            } catch (Exception e) {
-                                System.err.println("Failed to send echo: " + e.getMessage());
-                            }
-                        }
-                    }
-                })
-                .build()) {
+        try (MaxBotAPI api = MaxBotAPI.create(token);
+             MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
+                     .api(api)
+                     .handler(update -> {
+                         if (update instanceof MessageCreatedUpdate msg) {
+                             // A message that only forwards another one has no body of its own.
+                             var body = msg.message().body();
+                             String text = body == null ? null : body.text();
+                             Long chatId = msg.message().recipient().chatId();
+                             // A channel post is published by the channel itself, so it carries no
+                             // sender — Message.sender() is null there, not an error.
+                             User sender = msg.message().sender();
+                             if (text != null && !text.isBlank() && chatId != null) {
+                                 try {
+                                     String reply = "Chat %d, User %s: %s".formatted(
+                                             chatId, sender == null ? "-" : sender.userId(), text);
+                                     api.sendMessage(new NewMessageBody(reply, null, null, null, null))
+                                             .chatId(chatId)
+                                             .execute();
+                                 } catch (Exception e) {
+                                     System.err.println("Failed to send echo: " + e.getMessage());
+                                 }
+                             }
+                         }
+                     })
+                     .build()) {
 
             consumer.start();
             System.out.println("EchoBot is running. Press Ctrl+C to stop.");

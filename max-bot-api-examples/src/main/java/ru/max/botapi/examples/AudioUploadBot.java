@@ -34,9 +34,9 @@ import ru.max.botapi.model.UploadType;
 /**
  * A bot that demonstrates audio upload functionality.
  *
- * <p>When the user sends the command {@code /upload}, the bot uploads audio to the MAX
- * platform, and sends it back to the chat.
- * This demonstrates the two-step upload flow:</p>
+ * <p>When the user sends the command {@code /upload}, the bot uploads the audio named by
+ * {@code MAX_AUDIO_PATH} to the MAX platform, and sends it back to the chat.
+ * This demonstrates the upload flow:</p>
  * <ol>
  *   <li>Obtain an upload URL via {@code POST /uploads}</li>
  *   <li>Upload the audio to that URL</li>
@@ -46,6 +46,7 @@ import ru.max.botapi.model.UploadType;
  * <p>Usage:</p>
  * <pre>
  * export MAX_BOT_TOKEN="your-bot-token"
+ * export MAX_AUDIO_PATH="/path/to/track.mp3"
  * ./gradlew :max-bot-api-examples:run -PmainClass=ru.max.botapi.examples.AudioUploadBot
  * </pre>
  */
@@ -76,9 +77,8 @@ public final class AudioUploadBot {
             System.exit(1);
         }
 
-        MaxBotAPI api = MaxBotAPI.create(token);
-
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI();
+        try (MaxBotAPI api = MaxBotAPI.create(token);
+             MaxUploadAPI uploadApi = new MaxUploadAPI();
              MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
                      .api(api)
                      .handler(update -> {
@@ -93,7 +93,7 @@ public final class AudioUploadBot {
                      .build()) {
 
             consumer.start();
-            System.out.println("FileUploadBot is running. Send /upload to test. Press Ctrl+C to stop.");
+            System.out.println("AudioUploadBot is running. Send /upload to test. Press Ctrl+C to stop.");
 
             Thread.currentThread().join();
         } catch (InterruptedException e) {
@@ -110,16 +110,17 @@ public final class AudioUploadBot {
         try {
             Path audio = Path.of(audioPath);
 
-            // Step 2: Get upload URL
+            // Step 1: Get upload URL
             UploadEndpoint endpoint = api.getUploadUrl(UploadType.AUDIO).execute();
 
-            // Step 3: Upload the audio (
+            // Step 2: Upload the audio; the response has no token, uploadMedia carries the
+            // endpoint's token forward
             MediaUploadedInfo uploaded = uploadApi.uploadMedia(endpoint, audio,
-                    audio.getName(audio.getNameCount() - 1).toString());
+                    audio.getFileName().toString());
 
-            // Step 4: Send message with uploaded audio
+            // Step 3: Send message with uploaded audio
             AudioAttachmentRequest audioAttachment =
-                    new AudioAttachmentRequest(new MediaRequestPayload(endpoint.token()));
+                    new AudioAttachmentRequest(new MediaRequestPayload(uploaded.token()));
 
             NewMessageBody body = new NewMessageBody(
                     "Here is your audio:",
@@ -127,6 +128,7 @@ public final class AudioUploadBot {
                     null, null, null
             );
 
+            // Waits while MAX is still processing the upload (attachmentReadyTimeout)
             api.sendMessage(body).chatId(chatId).execute();
         } catch (Exception e) {
             System.err.println("Failed to upload audio: " + e.getMessage());

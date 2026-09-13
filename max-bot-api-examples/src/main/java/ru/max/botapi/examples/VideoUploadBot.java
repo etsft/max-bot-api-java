@@ -34,9 +34,9 @@ import ru.max.botapi.model.VideoAttachmentRequest;
 /**
  * A bot that demonstrates video upload functionality.
  *
- * <p>When the user sends the command {@code /upload}, the bot uploads video to the MAX
- * platform, and sends it back to the chat.
- * This demonstrates the two-step upload flow:</p>
+ * <p>When the user sends the command {@code /upload}, the bot uploads the video named by
+ * {@code MAX_VIDEO_PATH} to the MAX platform, and sends it back to the chat.
+ * This demonstrates the upload flow:</p>
  * <ol>
  *   <li>Obtain an upload URL via {@code POST /uploads}</li>
  *   <li>Upload the video to that URL</li>
@@ -46,6 +46,7 @@ import ru.max.botapi.model.VideoAttachmentRequest;
  * <p>Usage:</p>
  * <pre>
  * export MAX_BOT_TOKEN="your-bot-token"
+ * export MAX_VIDEO_PATH="/path/to/clip.mp4"
  * ./gradlew :max-bot-api-examples:run -PmainClass=ru.max.botapi.examples.VideoUploadBot
  * </pre>
  */
@@ -76,9 +77,8 @@ public final class VideoUploadBot {
             System.exit(1);
         }
 
-        MaxBotAPI api = MaxBotAPI.create(token);
-
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI();
+        try (MaxBotAPI api = MaxBotAPI.create(token);
+             MaxUploadAPI uploadApi = new MaxUploadAPI();
              MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
                      .api(api)
                      .handler(update -> {
@@ -93,7 +93,7 @@ public final class VideoUploadBot {
                      .build()) {
 
             consumer.start();
-            System.out.println("FileUploadBot is running. Send /upload to test. Press Ctrl+C to stop.");
+            System.out.println("VideoUploadBot is running. Send /upload to test. Press Ctrl+C to stop.");
 
             Thread.currentThread().join();
         } catch (InterruptedException e) {
@@ -110,16 +110,17 @@ public final class VideoUploadBot {
         try {
             Path video = Path.of(videoPath);
 
-            // Step 2: Get upload URL
+            // Step 1: Get upload URL
             UploadEndpoint endpoint = api.getUploadUrl(UploadType.VIDEO).execute();
 
-            // Step 3: Upload the video (
+            // Step 2: Upload the video; the response has no token, uploadMedia carries the
+            // endpoint's token forward
             MediaUploadedInfo uploaded = uploadApi.uploadMedia(endpoint, video,
-                    video.getName(video.getNameCount() - 1).toString());
+                    video.getFileName().toString());
 
-            // Step 4: Send message with uploaded video
+            // Step 3: Send message with uploaded video
             VideoAttachmentRequest videoAttachment =
-                    new VideoAttachmentRequest(new MediaRequestPayload(endpoint.token()));
+                    new VideoAttachmentRequest(new MediaRequestPayload(uploaded.token()));
 
             NewMessageBody body = new NewMessageBody(
                     "Here is your video:",
@@ -127,6 +128,7 @@ public final class VideoUploadBot {
                     null, null, null
             );
 
+            // Waits while MAX is still processing the upload (attachmentReadyTimeout)
             api.sendMessage(body).chatId(chatId).execute();
         } catch (Exception e) {
             System.err.println("Failed to upload video: " + e.getMessage());
