@@ -1,7 +1,6 @@
 # MAX Bot API Java Client
 
-[![Build Status](https://gitlab.etsft.ru/batarelkin/max-bot-api-java/badges/main/pipeline.svg)](https://gitlab.etsft.ru/batarelkin/max-bot-api-java/-/pipelines)
-[![Coverage](https://gitlab.etsft.ru/batarelkin/max-bot-api-java/badges/main/coverage.svg)](https://gitlab.etsft.ru/batarelkin/max-bot-api-java/-/jobs)
+[![Maven Central](https://img.shields.io/maven-central/v/ru.etsft.max/max-bot-api-client.svg)](https://central.sonatype.com/artifact/ru.etsft.max/max-bot-api-client)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://openjdk.org/projects/jdk/21/)
 
@@ -22,15 +21,15 @@
 - **Fluent query builders** для поддерживаемых методов API с поддержкой синхронного (`execute()`) и асинхронного (`enqueue()`) вызова.
 - **Прямая совместимость при десериализации** — неизвестные типы порождают резервные записи `Unknown*` вместо ошибок разбора.
 - **Встроенный ограничитель частоты запросов** (token bucket, 30 rps) и **политика повторных попыток** (экспоненциальный откат при HTTP 429/503).
-- **Потоковая загрузка файлов** — большие файлы передаются без буферизации в куче.
-- **485+ тестов**, покрытие строк по JaCoCo ≥ 85% / покрытие ветвей ≥ 80%.
+- **Потоковая загрузка файлов** — большие файлы передаются без буферизации в куче; сообщение со свежезагруженным вложением повторяется автоматически, пока MAX его не обработает.
+- **670+ модульных тестов**, покрытие строк по JaCoCo ≥ 85% / покрытие ветвей ≥ 80%, а также живой набор тестов против реального API.
 
 ---
 
 ## Требования
 
 - **JDK 21** или новее
-- **Gradle 8** или новее (либо Maven 3.9+)
+- Любая система сборки, работающая с артефактами Maven Central (Gradle, Maven, …)
 
 ---
 
@@ -42,6 +41,7 @@
 // build.gradle.kts
 dependencies {
     implementation("ru.etsft.max:max-bot-api-client:0.4.0")
+    // Сериализатор по умолчанию: MaxBotAPI.create(...) ищет его в classpath
     implementation("ru.etsft.max:max-bot-api-jackson:0.4.0")
     implementation("ru.etsft.max:max-bot-api-longpolling:0.4.0")
 
@@ -72,6 +72,14 @@ dependencies {
         <artifactId>max-bot-api-longpolling</artifactId>
         <version>0.4.0</version>
     </dependency>
+    <!-- Опционально: поддержка webhook -->
+    <!--
+    <dependency>
+        <groupId>ru.etsft.max</groupId>
+        <artifactId>max-bot-api-webhook</artifactId>
+        <version>0.4.0</version>
+    </dependency>
+    -->
     <!-- Опционально: автоконфигурация Spring Boot (webhook + long polling) -->
     <!--
     <dependency>
@@ -83,9 +91,18 @@ dependencies {
 </dependencies>
 ```
 
+`MaxBotAPI` и `MaxUploadAPI` держат HTTP-клиент и реализуют `AutoCloseable`: закрывайте их при остановке бота, например через try-with-resources.
+
 ---
 
 ## Примеры использования
+
+Полные запускаемые версии этих фрагментов лежат в [`max-bot-api-examples`](max-bot-api-examples/src/main/java/ru/max/botapi/examples). Запуск:
+
+```bash
+export MAX_BOT_TOKEN="your-bot-token"
+./gradlew :max-bot-api-examples:run -PmainClass=ru.max.botapi.examples.KeyboardBot
+```
 
 ### EchoBot (Long Polling)
 
@@ -146,6 +163,8 @@ switch (update) {
 }
 ```
 
+`callback().payload()` равен `null`, если у кнопки нет payload, — проверяйте это до `switch` по нему.
+
 ### Модерация комментариев в канале
 
 Комментарии к посту в канале — отдельная группа методов. Бот должен быть администратором канала:
@@ -170,6 +189,9 @@ api.deleteComment(postId, one.body().mid()).execute();
 
 Чтобы реагировать на комментарии, подпишитесь на `COMMENT_CREATED`, `COMMENT_EDITED` и
 `COMMENT_REMOVED`. Пост, к которому относится комментарий, — в `message.recipient().postId()`.
+Чтобы ответить на комментарий, передайте `new NewMessageLink(MessageLinkType.REPLY, comment.body().mid())`
+как `link` в `NewCommentBody`. Собственные комментарии бота тоже приходят как `comment_created`,
+поэтому отвечающий бот должен их пропускать — см. [`CommentsBot`](max-bot-api-examples/src/main/java/ru/max/botapi/examples/CommentsBot.java).
 
 ### Команды бота
 
@@ -187,20 +209,21 @@ api.editMyCommands(new BotCommandsPatch(List.of())).execute();
 Загрузка файла выполняется в два шага: сначала запрашивается URL для загрузки через API, затем файл передаётся потоком на этот URL. Форма ответа и тип результата зависят от `UploadType` — см. [Загрузка файлов](#загрузка-файлов) ниже.
 
 ```java
-MaxUploadAPI uploadApi = new MaxUploadAPI();
+try (MaxUploadAPI uploadApi = new MaxUploadAPI()) {
+    // Шаг 1: запросить endpoint для загрузки
+    UploadEndpoint endpoint = api.getUploadUrl(UploadType.FILE).execute();
 
-// Шаг 1: запросить endpoint для загрузки
-UploadEndpoint endpoint = api.getUploadUrl(UploadType.FILE).execute();
+    // Шаг 2: передать файл потоком (без буферизации в куче)
+    FileUploadedInfo info = uploadApi.uploadFile(endpoint, Path.of("file.txt"), "file.txt");
 
-// Шаг 2: передать файл потоком (без буферизации в куче)
-FileUploadedInfo info = uploadApi.uploadFile(endpoint, Path.of("file.txt"), "file.txt");
-
-// Шаг 3: прикрепить полученный токен к сообщению
-api.sendMessage(new NewMessageBody(
-    "File:",
-    List.of(new FileAttachmentRequest(new MediaRequestPayload(info.token()))),
-    null, null, null
-)).chatId(chatId).execute();
+    // Шаг 3: прикрепить полученный токен к сообщению. MAX обрабатывает загрузку
+    // асинхронно; execute() повторяет отправку, пока вложение не будет готово.
+    api.sendMessage(new NewMessageBody(
+        "File:",
+        List.of(new FileAttachmentRequest(new MediaRequestPayload(info.token()))),
+        null, null, null
+    )).chatId(chatId).execute();
+}
 ```
 
 ---
@@ -212,13 +235,13 @@ api.sendMessage(new NewMessageBody(
 | `max-bot-api-core` | Модельные records, sealed interfaces, SPI сериализатора. Нет внешних зависимостей (только JDK). |
 | `max-bot-api-client` | HTTP-транспорт (`java.net.http`), `MaxClient`, фасад `MaxBotAPI`, ограничитель частоты, политика повторных попыток. |
 | `max-bot-api-jackson` | Адаптер сериализатора Jackson 2.x с кастомными десериализаторами для полиморфных типов. |
-| `max-bot-api-gson` | Адаптер сериализатора Gson (опциональный, заглушка). |
+| `max-bot-api-gson` | Зарезервирован под адаптер сериализатора Gson; реализации пока нет. |
 | `max-bot-api-longpolling` | Потребитель long polling на базе виртуальных потоков с экспоненциальным откатом. |
-| `max-bot-api-webhook` | HTTPS-сервер webhook с проверкой секретного заголовка. |
+| `max-bot-api-webhook` | Встроенный HTTP/HTTPS-сервер webhook (JDK `HttpServer`) с проверкой секретного заголовка. |
 | `max-bot-api-test-support` | WireMock-заглушки, JSON-фикстуры и вспомогательные классы для интеграционных тестов. |
 | `max-bot-api-integration-tests` | Ручной набор тестов против боевого API с реальным токеном бота. Исключён из `build` и CI — см. [README модуля](max-bot-api-integration-tests/README.md). |
 | `max-bot-api-spring-boot` | Автоконфигурация Spring Boot для режимов webhook и long polling — контроллер, регистрация подписки, управление жизненным циклом. |
-| `max-bot-api-examples` | Запускаемые примеры: `EchoBot`, `KeyboardBot`, `FileUploadBot`. |
+| `max-bot-api-examples` | Запускаемые примеры: `EchoBot`, `KeyboardBot`, `FileUploadBot`, `ImageUploadBot`, `VideoUploadBot`, `AudioUploadBot`, `CommentsBot`, `WebhookBot`. |
 
 ---
 
@@ -238,6 +261,7 @@ MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
         }
     })
     .onError(e -> log.error("Ошибка опроса", e))  // опционально; по умолчанию — логирование на уровне WARN
+    .pollTimeout(30)                               // опционально; секунды, по умолчанию longPollTimeout
     .build();
 
 consumer.start();   // неблокирующий вызов; опрос выполняется в виртуальном потоке
@@ -245,7 +269,12 @@ consumer.start();   // неблокирующий вызов; опрос вып�
 consumer.stop();    // корректное завершение работы
 ```
 
-Потребитель вызывает `getUpdates` в цикле, отслеживая маркер, возвращённый каждым ответом, чтобы исключить повторную доставку событий. Ошибки (сетевые сбои, ошибки API, исключения в обработчике) передаются в коллбэк `.onError()`; если он не задан, ошибки логируются на уровне WARN. После каждой ошибки цикл продолжает работу с экспоненциальным откатом (1с → 2с → 4с → максимум 30с).
+Потребитель вызывает `getUpdates` в цикле, отслеживая маркер, возвращённый каждым ответом, чтобы исключить повторную доставку событий. Ошибки передаются в коллбэк `.onError()`; если он не задан, они логируются на уровне WARN. Цикл никогда не останавливается из-за ошибки:
+
+- Если не удался сам `getUpdates` (сетевой сбой, ошибка API), цикл повторяет запрос с экспоненциальным откатом: 1 с → 2 с → 4 с → 8 с → 16 с → 30 с (максимум). Успешный опрос сбрасывает откат.
+- Если исключение выбросил обработчик, потребитель без паузы переходит к следующему обновлению. Маркер всё равно продвигается, поэтому это обновление повторно не придёт.
+
+Обработчик выполняется в потоке опроса, и следующий опрос ждёт его завершения. Долгую работу передавайте в отдельный executor.
 
 Для получения только определённых типов событий используйте `.types()` с константами `UpdateType`:
 
@@ -291,18 +320,7 @@ consumer = MaxLongPollingConsumer.builder()
 
 ## Webhooks
 
-`MaxWebhookServer` ожидает HTTPS POST-запросы от платформы MAX и передаёт каждое входящее обновление обработчику. Перед обработкой выполняется проверка секретного заголовка.
-
-Для получения только определённых типов событий передайте множество `UpdateType` в метод `register()`:
-
-```java
-server.register(api, "https://example.com/webhook",
-    Set.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK));
-// или null, чтобы получать все типы обновлений
-server.register(api, "https://example.com/webhook", null);
-```
-
-См. [таблицу типов обновлений](#доступные-типы-обновлений) выше.
+`MaxWebhookServer` — встроенный сервер (JDK `HttpServer`), который принимает POST-запросы от платформы MAX и передаёт каждое обновление обработчику. Если задан секрет, запросы без совпадающего заголовка `X-Max-Bot-Api-Secret` отклоняются с кодом 401.
 
 ```java
 MaxWebhookServer server = MaxWebhookServer.builder()
@@ -310,16 +328,23 @@ MaxWebhookServer server = MaxWebhookServer.builder()
         // обработать обновление
     })
     .serializer(api.serializer())
-    .port(8443)
-    .secret("my-secret")
+    .secret("my-secret")   // register() также передаёт его в MAX
+    .port(8443)            // по умолчанию 8443
+    .path("/webhook")      // по умолчанию /webhook
     .build();
 
-server.start();
+server.start();            // обычный HTTP; для HTTPS — start(sslContext)
+
+// Подписка. Передайте множество констант UpdateType или null, чтобы получать все типы.
+server.register(api, "https://example.com/webhook",
+    Set.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK));
 ```
 
-Убедитесь, что TLS-сертификат, обслуживаемый на заданном порту, является доверенным для платформы MAX, либо используйте обратный прокси (например, nginx) для терминирования TLS.
+См. [таблицу типов обновлений](#доступные-типы-обновлений) выше.
 
-`register()` и `unregister()` выбрасывают `IllegalStateException`, если MAX отвечает `success: false`.
+MAX доставляет webhook только на HTTPS-адреса. Либо терминируйте TLS перед сервером обратным прокси (nginx, балансировщик) и вызывайте `start()`, либо передайте в `start(sslContext)` `SSLContext` с вашим сертификатом. `register()` отправляет в MAX настроенный секрет вместе с подпиской, поэтому MAX добавляет его в каждую доставку.
+
+`register()` и `unregister()` выбрасывают `IllegalStateException`, если MAX отвечает `success: false`. Полный пример бота, который подписывается при запуске и отписывается при остановке, — [`WebhookBot`](max-bot-api-examples/src/main/java/ru/max/botapi/examples/WebhookBot.java).
 
 #### Срок подтверждения доставки
 
@@ -341,6 +366,27 @@ MaxWebhookServer server = MaxWebhookServer.builder()
 ### Интеграция со Spring Boot
 
 Модуль `max-bot-api-spring-boot` обеспечивает настройку как webhook, так и long polling режимов без шаблонного кода благодаря автоконфигурации. Добавьте зависимость и выберите подходящий режим для вашего развёртывания.
+
+Стартер создаёт `MaxBotAPI` через `MaxBotAPI.create(token)`, которому нужен `max-bot-api-jackson` в classpath. Для режима webhook также нужен Spring MVC — стартер его не подтягивает:
+
+```kotlin
+dependencies {
+    implementation("ru.etsft.max:max-bot-api-spring-boot:0.4.0")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.4.0")
+    implementation("org.springframework.boot:spring-boot-starter-web") // только для режима webhook
+}
+```
+
+Автоматически созданный `MaxBotAPI` использует `MaxClientConfig` по умолчанию. Чтобы изменить настройки клиента (таймауты, `attachmentReadyTimeout`, …), объявите собственный бин `MaxBotAPI` — стартер будет использовать его:
+
+```java
+@Bean
+MaxBotAPI maxBotAPI(@Value("${max.bot.webhook.token}") String token) {
+    return MaxBotAPI.create(token, MaxClientConfig.builder()
+        .attachmentReadyTimeout(Duration.ofMinutes(2))
+        .build());
+}
+```
 
 #### Режим Webhook
 
@@ -485,10 +531,11 @@ MAX API требует двухэтапной процедуры загрузк�
 
 Для видео и аудио ответ на загрузку — это крошечный XML (`<retval>1</retval>`) без токена; токен вложения нужно брать из `UploadEndpoint`, возвращённого `POST /uploads`. `uploadMedia(...)` автоматически переносит этот токен в возвращаемый `MediaUploadedInfo`, чтобы вызывающему коду не приходилось передавать его вручную.
 
+`MaxUploadAPI` владеет собственным HTTP-клиентом: создайте один экземпляр, используйте его для всех загрузок и закройте при остановке. Во фрагментах ниже предполагается открытый `uploadApi`.
+
 #### Файл
 
 ```java
-MaxUploadAPI uploadApi = new MaxUploadAPI();
 UploadEndpoint endpoint = api.getUploadUrl(UploadType.FILE).execute();
 FileUploadedInfo info = uploadApi.uploadFile(endpoint, Path.of("/tmp/doc.pdf"), "doc.pdf");
 
@@ -535,8 +582,6 @@ MaxClientConfig config = MaxClientConfig.builder()
 ```
 
 Ожидание блокирует вызывающий поток. Если вложения отправляются из обработчика вебхука, это время входит в срок подтверждения доставки — используйте `enqueue()` или асинхронную обработку (см. [Срок подтверждения доставки](#срок-подтверждения-доставки)).
-
-Поддерживаемые значения `UploadType`: `IMAGE`, `VIDEO`, `AUDIO`, `FILE`.
 
 ---
 
@@ -623,9 +668,11 @@ MaxClientConfig config = MaxClientConfig.defaults();
 
 ```
 RuntimeException
-└── MaxClientException          — сбой транспорта/сети (ошибка I/O, таймаут)
-└── MaxApiException             — API вернул 4xx или 5xx
-    └── MaxRateLimitException   — API вернул 429 Too Many Requests
+├── MaxClientException                — сбой транспорта/сети (ошибка I/O, таймаут)
+└── MaxApiException                   — API вернул 4xx или 5xx
+    ├── MaxRateLimitException         — 429 Too Many Requests
+    ├── MaxMethodNotAllowedException  — 405 Method Not Allowed
+    └── AttachmentNotReadyException   — вложение всё ещё обрабатывается после attachmentReadyTimeout
 ```
 
 ### `MaxApiException`
@@ -690,7 +737,7 @@ try {
 
 ## Сборка из исходного кода
 
-Требуется JDK 21+ и Gradle 8+. Gradle wrapper включён в репозиторий.
+Требуется JDK 21+. Gradle wrapper включён в репозиторий, устанавливать Gradle не нужно.
 
 ```bash
 # Клонировать репозиторий
@@ -729,13 +776,13 @@ cd max-bot-api-java
 
 ## Участие в разработке
 
-1. Сделайте форк репозитория и создайте feature-ветку от `main`.
+1. Сделайте форк репозитория и создайте feature-ветку от `master`.
 2. Напишите тесты для любой новой функциональности. Пороги покрытия должны оставаться выполненными (≥ 85% строк, ≥ 80% ветвей).
-3. Убедитесь, что `./gradlew check` проходит (Checkstyle + SpotBugs), прежде чем отправлять merge request.
+3. Убедитесь, что `./gradlew check` проходит (Checkstyle + SpotBugs), прежде чем отправлять pull request.
 4. Сохраняйте минимальный публичный API. Новые модели должны использовать Java records; новые union-типы — sealed interfaces.
-5. Отправьте merge request с чётким описанием изменения и его обоснованием.
+5. Отправьте pull request с чётким описанием изменения и его обоснованием.
 
-Для сообщений об ошибках и запросов новых возможностей открывайте issue в [репозитории проекта](https://github.com/etsft/max-bot-api-java.git).
+Для сообщений об ошибках и запросов новых возможностей открывайте issue на [GitHub](https://github.com/etsft/max-bot-api-java/issues).
 
 ---
 

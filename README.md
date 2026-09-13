@@ -1,7 +1,6 @@
 # MAX Bot API Java Client
 
-[![Build Status](https://gitlab.etsft.ru/batarelkin/max-bot-api-java/badges/main/pipeline.svg)](https://gitlab.etsft.ru/batarelkin/max-bot-api-java/-/pipelines)
-[![Coverage](https://gitlab.etsft.ru/batarelkin/max-bot-api-java/badges/main/coverage.svg)](https://gitlab.etsft.ru/batarelkin/max-bot-api-java/-/jobs)
+[![Maven Central](https://img.shields.io/maven-central/v/ru.etsft.max/max-bot-api-client.svg)](https://central.sonatype.com/artifact/ru.etsft.max/max-bot-api-client)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://openjdk.org/projects/jdk/21/)
 
@@ -22,15 +21,15 @@ This library provides a complete, idiomatic Java 21 interface to supported MAX B
 - **Fluent query builders** for supported API methods, supporting both synchronous (`execute()`) and asynchronous (`enqueue()`) invocation.
 - **Forward-compatible deserialization** — unknown types produce `Unknown*` fallback records instead of parse errors.
 - **Built-in rate limiter** (30 rps token bucket) and **retry policy** (exponential backoff on HTTP 429/503).
-- **Streaming file upload** — no heap buffering for large files.
-- **485+ tests**, JaCoCo line coverage ≥ 85% / branch coverage ≥ 80%.
+- **Streaming file upload** — no heap buffering for large files; messages with a freshly uploaded attachment are resent automatically until MAX has processed it.
+- **670+ unit tests**, JaCoCo line coverage ≥ 85% / branch coverage ≥ 80%, plus a live suite against the real API.
 
 ---
 
 ## Requirements
 
 - **JDK 21** or later
-- **Gradle 8** or later (or Maven 3.9+)
+- Any build tool that resolves Maven Central artifacts (Gradle, Maven, …)
 
 ---
 
@@ -42,6 +41,7 @@ This library provides a complete, idiomatic Java 21 interface to supported MAX B
 // build.gradle.kts
 dependencies {
     implementation("ru.etsft.max:max-bot-api-client:0.4.0")
+    // The default serializer: MaxBotAPI.create(...) looks it up on the classpath
     implementation("ru.etsft.max:max-bot-api-jackson:0.4.0")
     implementation("ru.etsft.max:max-bot-api-longpolling:0.4.0")
 
@@ -72,6 +72,14 @@ dependencies {
         <artifactId>max-bot-api-longpolling</artifactId>
         <version>0.4.0</version>
     </dependency>
+    <!-- Optional: webhook support -->
+    <!--
+    <dependency>
+        <groupId>ru.etsft.max</groupId>
+        <artifactId>max-bot-api-webhook</artifactId>
+        <version>0.4.0</version>
+    </dependency>
+    -->
     <!-- Optional: Spring Boot auto-configuration (webhook + long polling) -->
     <!--
     <dependency>
@@ -83,9 +91,18 @@ dependencies {
 </dependencies>
 ```
 
+`MaxBotAPI` and `MaxUploadAPI` hold an HTTP client and implement `AutoCloseable`: close them when the bot shuts down, for example with try-with-resources.
+
 ---
 
 ## Usage Examples
+
+Complete, runnable versions of these snippets live in [`max-bot-api-examples`](max-bot-api-examples/src/main/java/ru/max/botapi/examples). Run one with:
+
+```bash
+export MAX_BOT_TOKEN="your-bot-token"
+./gradlew :max-bot-api-examples:run -PmainClass=ru.max.botapi.examples.KeyboardBot
+```
 
 ### EchoBot (Long Polling)
 
@@ -146,6 +163,8 @@ switch (update) {
 }
 ```
 
+`callback().payload()` is `null` when the button carries no payload — check it before switching on it.
+
 ### Moderating Channel Comments
 
 Comments on a channel post are a separate group of methods. The bot must be an administrator of
@@ -169,7 +188,10 @@ api.deleteComment(postId, one.body().mid()).execute();
 ```
 
 Subscribe to `COMMENT_CREATED`, `COMMENT_EDITED` and `COMMENT_REMOVED` to react to comments as
-they arrive. The post a comment belongs to is in `message.recipient().postId()`.
+they arrive. The post a comment belongs to is in `message.recipient().postId()`. To reply to a
+comment, pass `new NewMessageLink(MessageLinkType.REPLY, comment.body().mid())` as the `link` of
+`NewCommentBody`. The bot's own comments arrive as `comment_created` as well, so a bot that replies
+must skip them — see [`CommentsBot`](max-bot-api-examples/src/main/java/ru/max/botapi/examples/CommentsBot.java).
 
 ### Setting Bot Commands
 
@@ -187,20 +209,21 @@ api.editMyCommands(new BotCommandsPatch(List.of())).execute();
 File upload is a two-step process: first obtain an upload URL from the API, then stream the file to that URL. The upload response shape and the result type depend on the `UploadType` — see [File Upload](#file-upload) below for the full picture.
 
 ```java
-MaxUploadAPI uploadApi = new MaxUploadAPI();
+try (MaxUploadAPI uploadApi = new MaxUploadAPI()) {
+    // Step 1: request an upload endpoint
+    UploadEndpoint endpoint = api.getUploadUrl(UploadType.FILE).execute();
 
-// Step 1: request an upload endpoint
-UploadEndpoint endpoint = api.getUploadUrl(UploadType.FILE).execute();
+    // Step 2: stream the file (no heap buffering)
+    FileUploadedInfo info = uploadApi.uploadFile(endpoint, Path.of("file.txt"), "file.txt");
 
-// Step 2: stream the file (no heap buffering)
-FileUploadedInfo info = uploadApi.uploadFile(endpoint, Path.of("file.txt"), "file.txt");
-
-// Step 3: attach the uploaded token to a message
-api.sendMessage(new NewMessageBody(
-    "File:",
-    List.of(new FileAttachmentRequest(new MediaRequestPayload(info.token()))),
-    null, null, null
-)).chatId(chatId).execute();
+    // Step 3: attach the uploaded token to a message. MAX processes the upload
+    // asynchronously; execute() resends the message until it is ready.
+    api.sendMessage(new NewMessageBody(
+        "File:",
+        List.of(new FileAttachmentRequest(new MediaRequestPayload(info.token()))),
+        null, null, null
+    )).chatId(chatId).execute();
+}
 ```
 
 ---
@@ -212,13 +235,13 @@ api.sendMessage(new NewMessageBody(
 | `max-bot-api-core` | Model records, sealed interfaces, serializer SPI. Zero external dependencies (JDK only). |
 | `max-bot-api-client` | HTTP transport (`java.net.http`), `MaxClient`, `MaxBotAPI` facade, rate limiter, retry policy. |
 | `max-bot-api-jackson` | Jackson 2.x serializer adapter with custom deserializers for polymorphic types. |
-| `max-bot-api-gson` | Gson serializer adapter (optional, placeholder). |
+| `max-bot-api-gson` | Reserved for a Gson serializer adapter; contains no implementation yet. |
 | `max-bot-api-longpolling` | Long polling consumer backed by virtual threads, with exponential backoff. |
-| `max-bot-api-webhook` | HTTPS webhook server with secret-header validation. |
+| `max-bot-api-webhook` | Embedded HTTP/HTTPS webhook server (JDK `HttpServer`) with secret-header validation. |
 | `max-bot-api-test-support` | WireMock stubs, JSON fixtures, and test helpers for integration tests. |
 | `max-bot-api-integration-tests` | Hand-run suite against the live API with a real bot token. Excluded from `build` and CI — see the [module README](max-bot-api-integration-tests/README.md). |
 | `max-bot-api-spring-boot` | Spring Boot auto-configuration for both webhook and long-polling modes — controller, subscription registration, lifecycle management. |
-| `max-bot-api-examples` | Runnable examples: `EchoBot`, `KeyboardBot`, `FileUploadBot`. |
+| `max-bot-api-examples` | Runnable examples: `EchoBot`, `KeyboardBot`, `FileUploadBot`, `ImageUploadBot`, `VideoUploadBot`, `AudioUploadBot`, `CommentsBot`, `WebhookBot`. |
 
 ---
 
@@ -238,6 +261,7 @@ MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
         }
     })
     .onError(e -> log.error("Polling error", e))  // optional; defaults to WARN logging
+    .pollTimeout(30)                               // optional; seconds, defaults to longPollTimeout
     .build();
 
 consumer.start();   // non-blocking; polling runs on a virtual thread
@@ -245,7 +269,12 @@ consumer.start();   // non-blocking; polling runs on a virtual thread
 consumer.stop();    // graceful shutdown
 ```
 
-The consumer calls `getUpdates` in a loop, tracking the marker returned by each response to avoid re-delivering events. Errors (network failures, API errors, handler exceptions) are passed to the `.onError()` callback; when not set, they are logged at WARN level. The loop always continues after an error with exponential backoff (1s → 2s → 4s → max 30s).
+The consumer calls `getUpdates` in a loop, tracking the marker returned by each response to avoid re-delivering events. Errors are passed to the `.onError()` callback; when it is not set, they are logged at WARN level. The loop never stops on an error:
+
+- If `getUpdates` itself fails (network failure, API error), the loop retries with exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s (capped). A successful poll resets it.
+- If the handler throws, the consumer moves on to the next update without delay. The marker still advances, so the failed update is not delivered again.
+
+The handler runs on the polling thread, so the next poll waits for it. Hand long work off to another executor.
 
 To receive only specific event types, use `.types()` with one or more `UpdateType` constants:
 
@@ -291,18 +320,7 @@ deserializes.
 
 ## Webhooks
 
-`MaxWebhookServer` listens for HTTPS POST requests from the MAX platform and dispatches each incoming update to a handler. It validates the secret header before processing.
-
-To receive only specific event types, pass a set of `UpdateType` constants to `register()`:
-
-```java
-server.register(api, "https://example.com/webhook",
-    Set.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK));
-// or pass null to receive all update types
-server.register(api, "https://example.com/webhook", null);
-```
-
-See the [update types table](#available-update-types) above.
+`MaxWebhookServer` is an embedded server (the JDK's `HttpServer`) that receives POST requests from the MAX platform and dispatches each update to a handler. When a secret is configured, requests without the matching `X-Max-Bot-Api-Secret` header are rejected with 401.
 
 ```java
 MaxWebhookServer server = MaxWebhookServer.builder()
@@ -310,16 +328,23 @@ MaxWebhookServer server = MaxWebhookServer.builder()
         // handle update
     })
     .serializer(api.serializer())
-    .port(8443)
-    .secret("my-secret")
+    .secret("my-secret")   // also sent to MAX by register()
+    .port(8443)            // default 8443
+    .path("/webhook")      // default /webhook
     .build();
 
-server.start();
+server.start();            // plain HTTP; use start(sslContext) for HTTPS
+
+// Subscribe. Pass a set of UpdateType constants, or null to receive every type.
+server.register(api, "https://example.com/webhook",
+    Set.of(UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK));
 ```
 
-Ensure the TLS certificate served on the configured port is trusted by the MAX platform, or use a reverse proxy (e.g., nginx) to terminate TLS.
+See the [update types table](#available-update-types) above.
 
-`register()` and `unregister()` throw `IllegalStateException` when MAX answers with `success: false`.
+MAX delivers webhooks only to HTTPS URLs. Either terminate TLS in front of the server with a reverse proxy (nginx, a load balancer) and call `start()`, or pass an `SSLContext` loaded with your certificate to `start(sslContext)`. `register()` sends the configured secret to MAX with the subscription, so MAX includes it in every delivery.
+
+`register()` and `unregister()` throw `IllegalStateException` when MAX answers with `success: false`. A complete bot that subscribes on startup and unsubscribes on shutdown is in [`WebhookBot`](max-bot-api-examples/src/main/java/ru/max/botapi/examples/WebhookBot.java).
 
 #### Delivery deadline
 
@@ -341,6 +366,27 @@ Either way the server answers 200 even when the handler throws, so MAX does not 
 ### Spring Boot Integration
 
 The `max-bot-api-spring-boot` module provides zero-boilerplate setup for both webhook and long-polling modes via auto-configuration. Add the dependency and choose the mode that fits your deployment.
+
+The starter builds `MaxBotAPI` with `MaxBotAPI.create(token)`, which needs `max-bot-api-jackson` on the classpath. Webhook mode also needs Spring MVC, which the starter does not bring in:
+
+```kotlin
+dependencies {
+    implementation("ru.etsft.max:max-bot-api-spring-boot:0.4.0")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.4.0")
+    implementation("org.springframework.boot:spring-boot-starter-web") // webhook mode only
+}
+```
+
+The auto-configured `MaxBotAPI` uses the default `MaxClientConfig`. To change client settings (timeouts, `attachmentReadyTimeout`, …), declare your own `MaxBotAPI` bean; the starter then uses it instead:
+
+```java
+@Bean
+MaxBotAPI maxBotAPI(@Value("${max.bot.webhook.token}") String token) {
+    return MaxBotAPI.create(token, MaxClientConfig.builder()
+        .attachmentReadyTimeout(Duration.ofMinutes(2))
+        .build());
+}
+```
 
 #### Webhook Mode
 
@@ -485,10 +531,11 @@ The MAX platform returns three different response shapes depending on the upload
 
 For video and audio the upload response is a tiny XML body (`<retval>1</retval>`) and carries no token; the attachment token must be taken from the `UploadEndpoint` returned by `POST /uploads`. `uploadMedia(...)` carries that token forward into the returned `MediaUploadedInfo` so callers don't have to thread it through manually.
 
+`MaxUploadAPI` owns its own HTTP client: create one, reuse it for all uploads, and close it on shutdown. The snippets below assume an open `uploadApi`.
+
 #### File
 
 ```java
-MaxUploadAPI uploadApi = new MaxUploadAPI();
 UploadEndpoint endpoint = api.getUploadUrl(UploadType.FILE).execute();
 FileUploadedInfo info = uploadApi.uploadFile(endpoint, Path.of("/tmp/doc.pdf"), "doc.pdf");
 
@@ -535,8 +582,6 @@ MaxClientConfig config = MaxClientConfig.builder()
 ```
 
 The wait blocks the calling thread. When you send attachments from a webhook handler, it counts against the webhook delivery deadline — use `enqueue()` or async dispatch (see [Delivery deadline](#delivery-deadline)).
-
-Supported `UploadType` values: `IMAGE`, `VIDEO`, `AUDIO`, `FILE`.
 
 ---
 
@@ -622,9 +667,11 @@ All exceptions are unchecked and extend `RuntimeException`.
 
 ```
 RuntimeException
-└── MaxClientException          — transport/network failure (I/O error, timeout)
-└── MaxApiException             — API returned 4xx or 5xx
-    └── MaxRateLimitException   — API returned 429 Too Many Requests
+├── MaxClientException                — transport/network failure (I/O error, timeout)
+└── MaxApiException                   — API returned 4xx or 5xx
+    ├── MaxRateLimitException         — 429 Too Many Requests
+    ├── MaxMethodNotAllowedException  — 405 Method Not Allowed
+    └── AttachmentNotReadyException   — attachment still processing after attachmentReadyTimeout
 ```
 
 ### `MaxApiException`
@@ -689,7 +736,7 @@ try {
 
 ## Building from Source
 
-Requires JDK 21+ and Gradle 8+. The Gradle wrapper is included.
+Requires JDK 21+. The Gradle wrapper is included, so no local Gradle installation is needed.
 
 ```bash
 # Clone the repository
@@ -728,13 +775,13 @@ Build output and coverage reports are placed under each module's `build/` direct
 
 ## Contributing
 
-1. Fork the repository and create a feature branch from `main`.
+1. Fork the repository and create a feature branch from `master`.
 2. Write tests for any new functionality. Coverage gates must continue to pass (≥ 85% line, ≥ 80% branch).
-3. Ensure `./gradlew check` passes (Checkstyle + SpotBugs) before submitting a merge request.
+3. Ensure `./gradlew check` passes (Checkstyle + SpotBugs) before submitting a pull request.
 4. Keep public API surface minimal. New models should use Java records; new union types should use sealed interfaces.
-5. Submit a merge request with a clear description of the change and its rationale.
+5. Submit a pull request with a clear description of the change and its rationale.
 
-For bug reports and feature requests, open an issue on the [project repository](https://github.com/etsft/max-bot-api-java.git).
+For bug reports and feature requests, open an issue on [GitHub](https://github.com/etsft/max-bot-api-java/issues).
 
 ---
 
@@ -762,3 +809,5 @@ limitations under the License.
 
 **References:**
 - [MAX Bot API documentation](https://dev.max.ru/docs-api) (Russian)
+- [Reference TypeScript client](https://github.com/max-messenger/max-bot-api-client-ts)
+- [Reference Java 8 client](https://github.com/max-messenger/max-bot-api-client-java)
