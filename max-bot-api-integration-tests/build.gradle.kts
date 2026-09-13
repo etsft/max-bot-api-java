@@ -6,8 +6,8 @@ dependencies {
     testImplementation(project(":max-bot-api-webhook"))
 
     // Launcher for the `liveTest` task below; version comes from the JUnit BOM in the root build.
-    testRuntimeOnly("org.junit.platform:junit-platform-console")
-    testRuntimeOnly("org.slf4j:slf4j-simple:2.0.17")
+    testRuntimeOnly(libs.junit.platform.console)
+    testRuntimeOnly(libs.slf4j.simple)
 }
 
 // The suite talks to the real MAX API with a real bot token: never run it from `build` or CI.

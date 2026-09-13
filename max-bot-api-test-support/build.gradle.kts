@@ -4,5 +4,5 @@ plugins {
 
 dependencies {
     implementation(project(":max-bot-api-core"))
-    implementation("org.wiremock:wiremock-standalone:3.13.1")
+    implementation(libs.wiremock.standalone)
 }

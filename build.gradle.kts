@@ -2,8 +2,14 @@ plugins {
     java
     checkstyle
     id("jacoco-report-aggregation")
-    id("com.github.spotbugs") version "6.4.8" apply false
+    alias(libs.plugins.spotbugs) apply false
 }
+
+// Inside `subprojects {}` the bare name `libs` resolves against the subproject, which has
+// no catalog extension of its own — that shadows a script-body `val libs` and fails at
+// configuration time. Hoisting under a distinct name keeps the root catalog reachable there.
+// See gradle/libs.versions.toml
+val catalog = the<org.gradle.accessors.dm.LibrariesForLibs>()
 
 allprojects {
     group = property("group")!!
@@ -42,10 +48,10 @@ subprojects {
     }
 
     dependencies {
-        testImplementation(platform("org.junit:junit-bom:5.14.3"))
-        testImplementation("org.junit.jupiter:junit-jupiter")
-        testImplementation("org.assertj:assertj-core:3.27.7")
-        testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+        testImplementation(platform(catalog.junit.bom))
+        testImplementation(catalog.junit.jupiter)
+        testImplementation(catalog.assertj.core)
+        testRuntimeOnly(catalog.junit.platform.launcher)
     }
 
     tasks.test {
@@ -53,7 +59,7 @@ subprojects {
     }
 
     jacoco {
-        toolVersion = "0.8.15"
+        toolVersion = catalog.versions.jacoco.get()
     }
 
     tasks.jacocoTestReport {
@@ -83,7 +89,7 @@ subprojects {
     }
 
     checkstyle {
-        toolVersion = "10.20.1"
+        toolVersion = catalog.versions.checkstyle.get()
         configFile = rootProject.file("config/checkstyle/checkstyle.xml")
         isIgnoreFailures = false
         maxWarnings = 0

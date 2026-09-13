@@ -1,0 +1,40 @@
+[versions]
+junit = "5.14.3"
+assertj = "3.27.7"
+slf4j = "2.0.17"
+wiremock = "3.13.1"
+jackson = "2.21.1"
+jsonUnit = "4.1.1"
+springBoot = "3.5.12"
+
+# Tool versions: read as libs.versions.<x>.get() in the matching toolVersion
+jacoco = "0.8.15"
+checkstyle = "10.20.1"
+
+# Plugin version
+spotbugs = "6.4.8"
+
+[libraries]
+# Versionless JUnit artifacts resolve through junit-bom, declared as a platform.
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+junit-platform-console = { module = "org.junit.platform:junit-platform-console" }
+
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
+wiremock-standalone = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+json-unit-assertj = { module = "net.javacrumbs.json-unit:json-unit-assertj", version.ref = "jsonUnit" }
+
+# Explicit versions rather than the spring-boot-dependencies BOM. The BOM also constrains
+# transitives: it raised net.bytebuddy:byte-buddy-agent from 1.15.11 to 1.17.8 on the test
+# classpath, and this catalog migration must not change any resolved version.
+spring-boot-autoconfigure = { module = "org.springframework.boot:spring-boot-autoconfigure", version.ref = "springBoot" }
+spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor", version.ref = "springBoot" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test", version.ref = "springBoot" }
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web", version.ref = "springBoot" }
+
+[plugins]
+spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugs" }

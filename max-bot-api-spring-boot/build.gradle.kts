@@ -10,19 +10,19 @@ tasks.withType<JavaCompile> {
 }
 
 dependencies {
-    compileOnly("org.springframework.boot:spring-boot-starter-web:3.5.12")
-    compileOnly("org.springframework.boot:spring-boot-autoconfigure:3.5.12")
+    compileOnly(libs.spring.boot.starter.web)
+    compileOnly(libs.spring.boot.autoconfigure)
 
     api(project(":max-bot-api-core"))
     api(project(":max-bot-api-client"))
     api(project(":max-bot-api-webhook"))
     api(project(":max-bot-api-longpolling"))
-    implementation("org.slf4j:slf4j-api:2.0.17")
+    implementation(libs.slf4j.api)
 
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor:3.5.12")
+    annotationProcessor(libs.spring.boot.configuration.processor)
 
-    testImplementation("org.springframework.boot:spring-boot-starter-test:3.5.12")
-    testImplementation("org.springframework.boot:spring-boot-starter-web:3.5.12")
+    testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.spring.boot.starter.web)
     testImplementation(project(":max-bot-api-jackson"))
-    testRuntimeOnly("org.slf4j:slf4j-simple:2.0.17")
+    testRuntimeOnly(libs.slf4j.simple)
 }
