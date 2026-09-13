@@ -16,6 +16,8 @@
 
 package ru.max.botapi.it;
 
+import java.time.Duration;
+
 import ru.max.botapi.client.JdkHttpMaxTransportClient;
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.MaxClient;
@@ -38,6 +40,9 @@ public record LiveApi(MaxBotAPI api, JdkHttpMaxTransportClient transport) implem
     /** Retries cost 1s + 2s + 4s each; a hand-run suite should surface the error instead. */
     private static final int MAX_RETRIES = 1;
 
+    /** Uploaded video can take a while to process; the client resends the message until then. */
+    private static final Duration ATTACHMENT_READY_TIMEOUT = Duration.ofSeconds(60);
+
     /**
      * Builds a client for the configured token.
      *
@@ -54,7 +59,9 @@ public record LiveApi(MaxBotAPI api, JdkHttpMaxTransportClient transport) implem
      * @return the live API handle
      */
     public static LiveApi create(String token) {
-        MaxClientConfig.Builder builder = MaxClientConfig.builder().maxRetries(MAX_RETRIES);
+        MaxClientConfig.Builder builder = MaxClientConfig.builder()
+                .maxRetries(MAX_RETRIES)
+                .attachmentReadyTimeout(ATTACHMENT_READY_TIMEOUT);
         String baseUrl = IntegrationConfig.baseUrlOrNull();
         if (baseUrl != null) {
             builder.baseUrl(baseUrl);

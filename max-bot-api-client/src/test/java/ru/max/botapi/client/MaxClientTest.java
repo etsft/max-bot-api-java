@@ -36,6 +36,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class MaxClientTest {
 
     private static final String USER_JSON = "{\"name\":\"Test\",\"user_id\":1}";
+    private static final String NOT_READY_BODY = "{\"code\":\"attachment.not.ready\","
+            + "\"message\":\"Key: errors.process.attachment.file.not.processed\"}";
 
     /** Simple stub serializer for testing. */
     private final MaxSerializer stubSerializer = new MaxSerializer() {
@@ -349,7 +351,8 @@ class MaxClientTest {
     void throwsAttachmentNotReadyExceptionOn409WithAttachmentNotReadyCode() {
         String errorBody = "{\"code\":\"attachment_not_ready\",\"message\":\"Attachment not ready\"}";
         MaxClient client = new MaxClient(stubTransport(409, errorBody), stubSerializer,
-                MaxClientConfig.builder().enableRateLimiting(false).build());
+                MaxClientConfig.builder().enableRateLimiting(false)
+                        .attachmentReadyTimeout(Duration.ZERO).build());
         assertThatThrownBy(() -> client.execute(simpleRequest(), String.class))
                 .isInstanceOf(AttachmentNotReadyException.class)
                 .satisfies(ex -> {
@@ -365,7 +368,8 @@ class MaxClientTest {
         String errorBody = "{\"code\":\"attachment.not.ready\","
                 + "\"message\":\"Key: errors.process.attachment.file.not.processed\"}";
         MaxClient client = new MaxClient(stubTransport(400, errorBody), stubSerializer,
-                MaxClientConfig.builder().enableRateLimiting(false).build());
+                MaxClientConfig.builder().enableRateLimiting(false)
+                        .attachmentReadyTimeout(Duration.ZERO).build());
         assertThatThrownBy(() -> client.execute(simpleRequest(), String.class))
                 .isInstanceOf(AttachmentNotReadyException.class)
                 .satisfies(ex -> {
@@ -379,9 +383,107 @@ class MaxClientTest {
     void throwsAttachmentNotReadyExceptionOn400WithNotProcessedMessageOnly() {
         String errorBody = "{\"message\":\"Key: errors.process.attachment.video.not.processed\"}";
         MaxClient client = new MaxClient(stubTransport(400, errorBody), stubSerializer,
-                MaxClientConfig.builder().enableRateLimiting(false).build());
+                MaxClientConfig.builder().enableRateLimiting(false)
+                        .attachmentReadyTimeout(Duration.ZERO).build());
         assertThatThrownBy(() -> client.execute(simpleRequest(), String.class))
                 .isInstanceOf(AttachmentNotReadyException.class);
+    }
+
+    @Test
+    void resendsWhileAttachmentNotReadyThenSucceeds() {
+        AtomicInteger callCount = new AtomicInteger();
+        MaxTransportClient transport = scriptedTransport(callCount,
+                new MaxResponse(400, NOT_READY_BODY, Map.of()),
+                new MaxResponse(400, NOT_READY_BODY, Map.of()),
+                new MaxResponse(200, USER_JSON, Map.of()));
+        MaxClient client = new MaxClient(transport, stubSerializer,
+                MaxClientConfig.builder().enableRateLimiting(false).build(),
+                new RetryPolicy(3, Duration.ZERO));
+        String result = client.execute(simpleRequest(), String.class);
+        assertThat(result).isEqualTo(USER_JSON);
+        assertThat(callCount.get()).isEqualTo(3);
+    }
+
+    @Test
+    void resendsWhenOnlyNotProcessedMessageKeyIsPresent() {
+        AtomicInteger callCount = new AtomicInteger();
+        MaxTransportClient transport = scriptedTransport(callCount,
+                new MaxResponse(400,
+                        "{\"message\":\"Key: errors.process.attachment.video.not.processed\"}",
+                        Map.of()),
+                new MaxResponse(200, USER_JSON, Map.of()));
+        MaxClient client = new MaxClient(transport, stubSerializer,
+                MaxClientConfig.builder().enableRateLimiting(false).build(),
+                new RetryPolicy(3, Duration.ZERO));
+        assertThat(client.execute(simpleRequest(), String.class)).isEqualTo(USER_JSON);
+        assertThat(callCount.get()).isEqualTo(2);
+    }
+
+    @Test
+    void throwsAttachmentNotReadyAfterTimeoutElapses() {
+        AtomicInteger callCount = new AtomicInteger();
+        MaxTransportClient transport = scriptedTransport(callCount,
+                new MaxResponse(400, NOT_READY_BODY, Map.of()));
+        MaxClient client = new MaxClient(transport, stubSerializer,
+                MaxClientConfig.builder().enableRateLimiting(false)
+                        .attachmentReadyTimeout(Duration.ofMillis(100)).build(),
+                new RetryPolicy(3, Duration.ofMillis(20)));
+        assertThatThrownBy(() -> client.execute(simpleRequest(), String.class))
+                .isInstanceOf(AttachmentNotReadyException.class);
+        assertThat(callCount.get()).isGreaterThan(1);
+    }
+
+    @Test
+    void doesNotResendWhenAttachmentReadyTimeoutIsZero() {
+        AtomicInteger callCount = new AtomicInteger();
+        MaxTransportClient transport = scriptedTransport(callCount,
+                new MaxResponse(400, NOT_READY_BODY, Map.of()),
+                new MaxResponse(200, USER_JSON, Map.of()));
+        MaxClient client = new MaxClient(transport, stubSerializer,
+                MaxClientConfig.builder().enableRateLimiting(false)
+                        .attachmentReadyTimeout(Duration.ZERO).build(),
+                new RetryPolicy(3, Duration.ZERO));
+        assertThatThrownBy(() -> client.execute(simpleRequest(), String.class))
+                .isInstanceOf(AttachmentNotReadyException.class);
+        assertThat(callCount.get()).isEqualTo(1);
+    }
+
+    @Test
+    void doesNotResendOtherClientErrors() {
+        AtomicInteger callCount = new AtomicInteger();
+        MaxTransportClient transport = scriptedTransport(callCount,
+                new MaxResponse(400, "{\"code\":\"chat.not.found\",\"message\":\"Chat not found\"}",
+                        Map.of()),
+                new MaxResponse(200, USER_JSON, Map.of()));
+        MaxClient client = new MaxClient(transport, stubSerializer,
+                MaxClientConfig.builder().enableRateLimiting(false).build(),
+                new RetryPolicy(3, Duration.ZERO));
+        assertThatThrownBy(() -> client.execute(simpleRequest(), String.class))
+                .isInstanceOf(MaxApiException.class)
+                .isNotInstanceOf(AttachmentNotReadyException.class);
+        assertThat(callCount.get()).isEqualTo(1);
+    }
+
+    /**
+     * Returns the given responses in order, repeating the last one once they run out.
+     */
+    private MaxTransportClient scriptedTransport(AtomicInteger callCount, MaxResponse... responses) {
+        return new MaxTransportClient() {
+            @Override
+            public MaxResponse execute(MaxRequest request) {
+                int index = callCount.getAndIncrement();
+                return responses[Math.min(index, responses.length - 1)];
+            }
+
+            @Override
+            public CompletableFuture<MaxResponse> executeAsync(MaxRequest request) {
+                return CompletableFuture.completedFuture(execute(request));
+            }
+
+            @Override
+            public void close() {
+            }
+        };
     }
 
     @Test

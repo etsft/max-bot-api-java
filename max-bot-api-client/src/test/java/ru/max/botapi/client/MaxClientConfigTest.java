@@ -69,6 +69,33 @@ class MaxClientConfigTest {
         assertThat(config.enableRateLimiting()).isTrue();
         assertThat(config.maxRequestsPerSecond()).isEqualTo(30);
         assertThat(config.sslContext()).isSameAs(MaxClientConfig.defaultSslContext());
+        assertThat(config.attachmentReadyTimeout()).isEqualTo(Duration.ofSeconds(30));
+    }
+
+    @Test
+    void builderSetsAttachmentReadyTimeout() {
+        MaxClientConfig config = MaxClientConfig.builder()
+                .attachmentReadyTimeout(Duration.ZERO)
+                .build();
+        assertThat(config.attachmentReadyTimeout()).isZero();
+    }
+
+    @Test
+    void negativeAttachmentReadyTimeoutIsRejected() {
+        assertThatThrownBy(() -> MaxClientConfig.builder()
+                .attachmentReadyTimeout(Duration.ofSeconds(-1))
+                .build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("attachmentReadyTimeout");
+    }
+
+    @Test
+    void legacyConstructorUsesDefaultAttachmentReadyTimeout() {
+        MaxClientConfig config = new MaxClientConfig("https://custom.api.ru",
+                Duration.ofSeconds(5), Duration.ofSeconds(60), Duration.ofSeconds(30),
+                3, true, 30, null);
+        assertThat(config.attachmentReadyTimeout())
+                .isEqualTo(MaxClientConfig.DEFAULT_ATTACHMENT_READY_TIMEOUT);
     }
 
     @Test

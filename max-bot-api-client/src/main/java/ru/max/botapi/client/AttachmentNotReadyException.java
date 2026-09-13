@@ -19,7 +19,12 @@ package ru.max.botapi.client;
 import ru.max.botapi.model.Nullable;
 
 /**
- * Exception thrown when an attachment is not yet ready for retrieval.
+ * Exception thrown when MAX has not finished processing an uploaded attachment.
+ *
+ * <p>The client resends the request itself for up to
+ * {@link MaxClientConfig#attachmentReadyTimeout()}, so this surfaces only once that time has
+ * elapsed or when the resend is disabled. The upload token stays valid: retry the send, not
+ * the upload.</p>
  */
 public class AttachmentNotReadyException extends MaxApiException {
 

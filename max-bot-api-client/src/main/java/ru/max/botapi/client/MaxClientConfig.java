@@ -48,6 +48,8 @@ import ru.max.botapi.model.Nullable;
  * @param enableRateLimiting   whether to enable client-side rate limiting
  * @param maxRequestsPerSecond maximum requests per second when rate limiting is enabled
  * @param sslContext           SSL context for HTTPS requests, or {@code null} for the JVM default
+ * @param attachmentReadyTimeout how long a request is resent while MAX reports an uploaded
+ *                             attachment as not processed yet; {@link Duration#ZERO} disables it
  */
 public record MaxClientConfig(
         String baseUrl,
@@ -57,8 +59,12 @@ public record MaxClientConfig(
         int maxRetries,
         boolean enableRateLimiting,
         int maxRequestsPerSecond,
-        @Nullable SSLContext sslContext
+        @Nullable SSLContext sslContext,
+        Duration attachmentReadyTimeout
 ) {
+
+    /** Default for {@link #attachmentReadyTimeout()}. */
+    public static final Duration DEFAULT_ATTACHMENT_READY_TIMEOUT = Duration.ofSeconds(30);
 
     private static final String[] BUNDLED_TRUSTED_CERTIFICATE_RESOURCES = {
             "/ru/max/botapi/client/certificates/russian_trusted_root_ca_pem.crt",
@@ -72,19 +78,45 @@ public record MaxClientConfig(
      * @param connectTimeout  must not be {@code null}
      * @param requestTimeout  must not be {@code null}
      * @param longPollTimeout must not be {@code null}; must be less than {@code requestTimeout}
-     * @throws IllegalArgumentException if {@code longPollTimeout >= requestTimeout}
+     * @param attachmentReadyTimeout must not be {@code null} or negative
+     * @throws IllegalArgumentException if {@code longPollTimeout >= requestTimeout} or
+     *                                  {@code attachmentReadyTimeout} is negative
      */
     public MaxClientConfig {
         Objects.requireNonNull(baseUrl, "baseUrl must not be null");
         Objects.requireNonNull(connectTimeout, "connectTimeout must not be null");
         Objects.requireNonNull(requestTimeout, "requestTimeout must not be null");
         Objects.requireNonNull(longPollTimeout, "longPollTimeout must not be null");
+        Objects.requireNonNull(attachmentReadyTimeout, "attachmentReadyTimeout must not be null");
         if (longPollTimeout.compareTo(requestTimeout) >= 0) {
             throw new IllegalArgumentException(
                     "longPollTimeout (" + longPollTimeout.toSeconds() + "s) must be less than "
                     + "requestTimeout (" + requestTimeout.toSeconds() + "s); otherwise the HTTP "
                     + "request will time out before the server can respond");
         }
+        if (attachmentReadyTimeout.isNegative()) {
+            throw new IllegalArgumentException("attachmentReadyTimeout must not be negative");
+        }
+    }
+
+    /**
+     * Creates a MaxClientConfig with the default {@link #attachmentReadyTimeout()}.
+     *
+     * @param baseUrl              API base URL
+     * @param connectTimeout       HTTP connection timeout
+     * @param requestTimeout       HTTP request timeout
+     * @param longPollTimeout      timeout for long-polling requests
+     * @param maxRetries           maximum number of retries for retryable errors
+     * @param enableRateLimiting   whether to enable client-side rate limiting
+     * @param maxRequestsPerSecond maximum requests per second when rate limiting is enabled
+     * @param sslContext           SSL context for HTTPS requests, or {@code null} for the JVM default
+     */
+    public MaxClientConfig(String baseUrl, Duration connectTimeout, Duration requestTimeout,
+            Duration longPollTimeout, int maxRetries, boolean enableRateLimiting,
+            int maxRequestsPerSecond, @Nullable SSLContext sslContext) {
+        this(baseUrl, connectTimeout, requestTimeout, longPollTimeout, maxRetries,
+                enableRateLimiting, maxRequestsPerSecond, sslContext,
+                DEFAULT_ATTACHMENT_READY_TIMEOUT);
     }
 
     /**
@@ -133,6 +165,7 @@ public record MaxClientConfig(
         private boolean customSslContext;
         private boolean useBundledTrustedCertificates = true;
         private Path[] trustedCertificateFiles = new Path[0];
+        private Duration attachmentReadyTimeout = DEFAULT_ATTACHMENT_READY_TIMEOUT;
 
         Builder() {
         }
@@ -215,6 +248,23 @@ public record MaxClientConfig(
         }
 
         /**
+         * Sets how long a request is resent while MAX reports an attachment as not ready.
+         *
+         * <p>MAX processes uploaded media asynchronously; until it has finished, sending a
+         * message with the upload token fails with {@code attachment.not.ready}. The client
+         * resends the unchanged request with a short backoff until it succeeds or this timeout
+         * elapses, and only then throws {@link AttachmentNotReadyException}. Resending is safe:
+         * the rejected message was not created. {@link Duration#ZERO} disables the resend.</p>
+         *
+         * @param attachmentReadyTimeout the timeout; must not be negative
+         * @return this builder
+         */
+        public Builder attachmentReadyTimeout(Duration attachmentReadyTimeout) {
+            this.attachmentReadyTimeout = Objects.requireNonNull(attachmentReadyTimeout);
+            return this;
+        }
+
+        /**
          * Sets a custom SSL context for HTTPS requests.
          *
          * @param sslContext the SSL context to use
@@ -268,7 +318,8 @@ public record MaxClientConfig(
                     : resolveSslContext(useBundledTrustedCertificates, trustedCertificateFiles);
             return new MaxClientConfig(
                     baseUrl, connectTimeout, requestTimeout, longPollTimeout,
-                    maxRetries, enableRateLimiting, maxRequestsPerSecond, resolvedSslContext
+                    maxRetries, enableRateLimiting, maxRequestsPerSecond, resolvedSslContext,
+                    attachmentReadyTimeout
             );
         }
     }

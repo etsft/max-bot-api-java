@@ -24,12 +24,16 @@ import java.util.Objects;
  *
  * <p>Retries are performed for HTTP 429 (Too Many Requests) and 503 (Service Unavailable).
  * Backoff follows an exponential pattern: 1s, 2s, 4s, etc.</p>
+ *
+ * <p>It also paces resends while an uploaded attachment is not processed yet, see
+ * {@link #attachmentRetryDelay(int)}.</p>
  */
 public class RetryPolicy {
 
     private static final Duration DEFAULT_BASE_DELAY = Duration.ofSeconds(1);
     private static final int HTTP_TOO_MANY_REQUESTS = 429;
     private static final int HTTP_SERVICE_UNAVAILABLE = 503;
+    private static final int ATTACHMENT_DELAY_CAP_FACTOR = 3;
 
     private final int maxRetries;
     private final Duration baseDelay;
@@ -73,6 +77,22 @@ public class RetryPolicy {
     public Duration getDelay(int attempt) {
         long multiplier = 1L << attempt;
         return baseDelay.multipliedBy(multiplier);
+    }
+
+    /**
+     * Returns the delay before resending a request rejected with {@code attachment.not.ready}.
+     *
+     * <p>Starts at half the base delay and doubles, capped at three base delays
+     * (0.5s, 1s, 2s, 3s, 3s... with the default 1-second base): processing usually takes
+     * about a second, but large media can take much longer.</p>
+     *
+     * @param attempt the current attempt number (0-based)
+     * @return the delay before the next resend
+     */
+    public Duration attachmentRetryDelay(int attempt) {
+        Duration cap = baseDelay.multipliedBy(ATTACHMENT_DELAY_CAP_FACTOR);
+        Duration delay = baseDelay.dividedBy(2).multipliedBy(1L << Math.min(attempt, 3));
+        return delay.compareTo(cap) > 0 ? cap : delay;
     }
 
     /**

@@ -17,8 +17,6 @@
 package ru.max.botapi.it;
 
 import java.nio.file.Path;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -30,7 +28,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
-import ru.max.botapi.client.AttachmentNotReadyException;
 import ru.max.botapi.client.MaxUploadAPI;
 import ru.max.botapi.model.AttachmentRequest;
 import ru.max.botapi.model.AudioAttachmentRequest;
@@ -58,16 +55,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * straight to the endpoint URL — so it is constructed and closed here.</p>
  *
  * <p>A freshly uploaded attachment is not immediately usable: the API answers HTTP 400
- * {@code attachment.not.ready} until it has processed the media, which the library surfaces as
- * {@link AttachmentNotReadyException}. Retrying that is part of the contract being tested.</p>
+ * {@code attachment.not.ready} until it has processed the media. The client resends the message
+ * itself for up to {@code attachmentReadyTimeout}, so every send here is a single call; waiting
+ * that out is part of the contract being tested.</p>
  */
 @Order(4)
 @DisplayName("Live: uploads and attachments")
 class AttachmentLiveTest extends LiveTestBase {
-
-    private static final Duration ATTACHMENT_READY_TIMEOUT = Duration.ofSeconds(60);
-
-    private static final long ATTACHMENT_RETRY_DELAY_MS = 2_000L;
 
     private final MaxUploadAPI uploads = new MaxUploadAPI(new RecordingSerializer());
 
@@ -173,42 +167,21 @@ class AttachmentLiveTest extends LiveTestBase {
     }
 
     /**
-     * Sends a message carrying the attachment, waiting out {@code attachment.not.ready}.
+     * Sends a message carrying the attachment; the client waits out {@code attachment.not.ready}.
      */
     private void send(AttachmentRequest attachment, String label) {
         NewMessageBody body = new NewMessageBody(
                 "Live suite: " + label, List.of(attachment), null, false, null);
 
-        Instant deadline = Instant.now().plus(ATTACHMENT_READY_TIMEOUT);
-        AttachmentNotReadyException lastFailure = null;
-        while (Instant.now().isBefore(deadline)) {
-            try {
-                SendMessageResult result = api().sendMessage(body)
-                        .chatId(IntegrationConfig.chatId())
-                        .execute();
-                Message message = result.message();
-                ModelAssertions.assertFullyMapped(message);
-                assertThat(message.body().attachments())
-                        .withFailMessage("The %s attachment did not come back on the message", label)
-                        .isNotNull();
-                sentMessageIds.add(message.body().mid());
-                return;
-            } catch (AttachmentNotReadyException e) {
-                lastFailure = e;
-                sleep();
-            }
-        }
-        throw new AssertionError("The " + label + " attachment was still not ready after "
-                + ATTACHMENT_READY_TIMEOUT.toSeconds() + "s", lastFailure);
-    }
-
-    private static void sleep() {
-        try {
-            Thread.sleep(ATTACHMENT_RETRY_DELAY_MS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while waiting for the attachment", e);
-        }
+        SendMessageResult result = api().sendMessage(body)
+                .chatId(IntegrationConfig.chatId())
+                .execute();
+        Message message = result.message();
+        ModelAssertions.assertFullyMapped(message);
+        assertThat(message.body().attachments())
+                .withFailMessage("The %s attachment did not come back on the message", label)
+                .isNotNull();
+        sentMessageIds.add(message.body().mid());
     }
 
     /**

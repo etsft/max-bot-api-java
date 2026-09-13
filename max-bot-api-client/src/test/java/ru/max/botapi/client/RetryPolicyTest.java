@@ -72,6 +72,15 @@ class RetryPolicyTest {
     }
 
     @Test
+    void attachmentRetryDelayDoublesUpToCap() {
+        assertThat(policy.attachmentRetryDelay(0)).isEqualTo(Duration.ofMillis(500));
+        assertThat(policy.attachmentRetryDelay(1)).isEqualTo(Duration.ofSeconds(1));
+        assertThat(policy.attachmentRetryDelay(2)).isEqualTo(Duration.ofSeconds(2));
+        assertThat(policy.attachmentRetryDelay(3)).isEqualTo(Duration.ofSeconds(3));
+        assertThat(policy.attachmentRetryDelay(100)).isEqualTo(Duration.ofSeconds(3));
+    }
+
+    @Test
     void maxRetriesConfigured() {
         assertThat(policy.maxRetries()).isEqualTo(3);
     }

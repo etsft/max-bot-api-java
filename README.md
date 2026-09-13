@@ -524,15 +524,17 @@ api.sendMessage(new NewMessageBody("Video:", List.of(att), null, null, null))
     .chatId(chatId).execute();
 ```
 
-The MAX server may need a few seconds to finish processing the uploaded media. Until it has, `sendMessage` answers HTTP 400 with the code `attachment.not.ready`, which the library raises as `AttachmentNotReadyException` — a subclass of `MaxApiException`. Catch it and retry the message send with a short backoff; the upload token stays valid, so there is no need to upload again.
+The MAX server processes uploaded media asynchronously, which can take from about a second to much longer for large videos. Until it has finished, `sendMessage` answers HTTP 400 with the code `attachment.not.ready`. The client handles this itself: it resends the same request with a short backoff (0.5s, 1s, 2s, then every 3s) for up to `attachmentReadyTimeout` (30 seconds by default). Resending is safe — the rejected message was not created, and the upload token stays valid.
+
+Only if the attachment is still not ready after that does the call throw `AttachmentNotReadyException` (a subclass of `MaxApiException`). Raise the timeout for large media, or set it to `Duration.ZERO` to handle the exception yourself:
 
 ```java
-try {
-    api.sendMessage(body).chatId(chatId).execute();
-} catch (AttachmentNotReadyException e) {
-    Thread.sleep(2_000);   // then retry the same body
-}
+MaxClientConfig config = MaxClientConfig.builder()
+    .attachmentReadyTimeout(Duration.ofMinutes(2))
+    .build();
 ```
+
+The wait blocks the calling thread. When you send attachments from a webhook handler, it counts against the webhook delivery deadline — use `enqueue()` or async dispatch (see [Delivery deadline](#delivery-deadline)).
 
 Supported `UploadType` values: `IMAGE`, `VIDEO`, `AUDIO`, `FILE`.
 
@@ -553,6 +555,7 @@ Supported `UploadType` values: `IMAGE`, `VIDEO`, `AUDIO`, `FILE`.
 | `maxRetries` | 3                             |
 | `enableRateLimiting` | `true`                        |
 | `maxRequestsPerSecond` | 30                            |
+| `attachmentReadyTimeout` | 30 seconds                  |
 | `sslContext` | JVM trust store + bundled MAX trusted certificates |
 
 ### Custom configuration

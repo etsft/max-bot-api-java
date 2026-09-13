@@ -64,6 +64,7 @@ public class MaxClient {
     private final MaxTransportClient transport;
     private final MaxSerializer serializer;
     private final RetryPolicy retryPolicy;
+    private final Duration attachmentReadyTimeout;
     private final @Nullable RateLimiter rateLimiter;
 
     /**
@@ -78,6 +79,7 @@ public class MaxClient {
         this.serializer = Objects.requireNonNull(serializer, "serializer must not be null");
         Objects.requireNonNull(config, "config must not be null");
         this.retryPolicy = new RetryPolicy(config.maxRetries());
+        this.attachmentReadyTimeout = config.attachmentReadyTimeout();
         this.rateLimiter = config.enableRateLimiting()
                 ? new RateLimiter(config.maxRequestsPerSecond())
                 : null;
@@ -97,6 +99,7 @@ public class MaxClient {
         this.serializer = Objects.requireNonNull(serializer, "serializer must not be null");
         Objects.requireNonNull(config, "config must not be null");
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy must not be null");
+        this.attachmentReadyTimeout = config.attachmentReadyTimeout();
         this.rateLimiter = config.enableRateLimiting()
                 ? new RateLimiter(config.maxRequestsPerSecond())
                 : null;
@@ -175,7 +178,37 @@ public class MaxClient {
         return body == null ? null : serializer.serialize(body);
     }
 
+    /**
+     * Sends the request, resending it while MAX reports an attachment as not processed yet.
+     *
+     * <p>A rejected message was not created, so resending the identical request cannot post it
+     * twice. Resends stop once the next one would start after {@code attachmentReadyTimeout};
+     * the last {@link AttachmentNotReadyException} is then thrown.</p>
+     */
     private MaxResponse executeWithRetry(MaxRequest request) {
+        long deadline = System.nanoTime() + attachmentReadyTimeout.toNanos();
+        int attempt = 0;
+        while (true) {
+            MaxResponse response = executeWithTransientRetry(request);
+            if (response.statusCode() < HTTP_BAD_REQUEST) {
+                return response;
+            }
+            MaxApiException exception = mapException(response);
+            if (!(exception instanceof AttachmentNotReadyException)) {
+                throw exception;
+            }
+            Duration delay = retryPolicy.attachmentRetryDelay(attempt);
+            if (attachmentReadyTimeout.isZero() || System.nanoTime() + delay.toNanos() > deadline) {
+                throw exception;
+            }
+            LOG.debug("Attachment not ready, resending request to {} after {}ms (attempt {})",
+                    request.path(), delay.toMillis(), attempt + 1);
+            sleep(delay);
+            attempt++;
+        }
+    }
+
+    private MaxResponse executeWithTransientRetry(MaxRequest request) {
         acquireRateLimit();
         MaxResponse response = transport.execute(request);
         int attempt = 0;
@@ -188,9 +221,6 @@ public class MaxClient {
             acquireRateLimit();
             response = transport.execute(request);
             attempt++;
-        }
-        if (response.statusCode() >= 400) {
-            throw mapException(response);
         }
         return response;
     }

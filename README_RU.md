@@ -524,15 +524,17 @@ api.sendMessage(new NewMessageBody("Video:", List.of(att), null, null, null))
     .chatId(chatId).execute();
 ```
 
-Серверу MAX может потребоваться несколько секунд, чтобы завершить обработку загруженного медиа. До этого `sendMessage` отвечает HTTP 400 с кодом `attachment.not.ready`, который библиотека выбрасывает как `AttachmentNotReadyException` — наследник `MaxApiException`. Поймайте его и повторите отправку с небольшим откатом: токен загрузки остаётся действительным, повторная загрузка не нужна.
+Сервер MAX обрабатывает загруженное медиа асинхронно: это занимает от секунды до заметно большего времени для крупных видео. Пока обработка не завершена, `sendMessage` отвечает HTTP 400 с кодом `attachment.not.ready`. Клиент справляется с этим сам: повторяет тот же запрос с небольшим откатом (0,5 с, 1 с, 2 с, далее каждые 3 с) в пределах `attachmentReadyTimeout` (по умолчанию 30 секунд). Повтор безопасен — отклонённое сообщение не создаётся, а токен загрузки остаётся действительным.
+
+Только если вложение так и не стало готовым, вызов выбрасывает `AttachmentNotReadyException` (наследник `MaxApiException`). Для крупных файлов увеличьте тайм-аут, а чтобы обрабатывать исключение самостоятельно, задайте `Duration.ZERO`:
 
 ```java
-try {
-    api.sendMessage(body).chatId(chatId).execute();
-} catch (AttachmentNotReadyException e) {
-    Thread.sleep(2_000);   // затем повторите ту же отправку
-}
+MaxClientConfig config = MaxClientConfig.builder()
+    .attachmentReadyTimeout(Duration.ofMinutes(2))
+    .build();
 ```
+
+Ожидание блокирует вызывающий поток. Если вложения отправляются из обработчика вебхука, это время входит в срок подтверждения доставки — используйте `enqueue()` или асинхронную обработку (см. [Срок подтверждения доставки](#срок-подтверждения-доставки)).
 
 Поддерживаемые значения `UploadType`: `IMAGE`, `VIDEO`, `AUDIO`, `FILE`.
 
@@ -553,6 +555,7 @@ try {
 | `maxRetries` | 3                             |
 | `enableRateLimiting` | `true`                        |
 | `maxRequestsPerSecond` | 30                            |
+| `attachmentReadyTimeout` | 30 секунд                   |
 | `sslContext` | JVM trust store + встроенные доверенные сертификаты MAX |
 
 ### Пользовательская конфигурация
