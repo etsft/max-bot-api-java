@@ -233,7 +233,10 @@ class MaxLongPollingConsumerTest {
         assertThat(received.get(0)).isInstanceOf(UnknownUpdate.class);
         assertThat(received.get(0).updateType()).isEqualTo("message_created");
         assertThat(received.get(1)).isInstanceOf(BotStartedUpdate.class);
-        verify(moreThanOrExactly(2), getRequestedFor(urlPathEqualTo("/updates"))
+        // The latch fires while the second poll's batch is handled, and the second poll is the
+        // first one that carries the marker. Only that one request is guaranteed to have been
+        // made by now: a third may or may not reach the server before stop() takes effect.
+        verify(moreThanOrExactly(1), getRequestedFor(urlPathEqualTo("/updates"))
                 .withQueryParam("marker", containing("4242")));
     }
 
