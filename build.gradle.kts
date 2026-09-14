@@ -200,8 +200,11 @@ subprojects {
         }
 
         configure<SigningExtension> {
-            // Only sign when "signing.keyId" is provided (release builds)
+            // Signing is mandatory whenever a key is provided (release builds),
+            // so a broken key configuration fails the build instead of
+            // silently producing an unsigned bundle
             isRequired = project.hasProperty("signing.keyId")
+                    || project.hasProperty("signingInMemoryKey")
 
             // Support in-memory keys for CI (set via environment variables)
             val signingKey: String? =
@@ -238,6 +241,21 @@ dependencies {
     jacocoAggregation(project(":max-bot-api-webhook"))
     jacocoAggregation(project(":max-bot-api-longpolling"))
     jacocoAggregation(project(":max-bot-api-spring-boot"))
+}
+
+// Maven Central bundle: the staging repository of all published modules
+// zipped with the Maven layout at the archive root (ru/etsft/max/...)
+tasks.register<Zip>("centralBundle") {
+    group = "publishing"
+    description = "Builds the Maven Central Portal upload bundle."
+    dependsOn(
+        subprojects.filter { it.name in publishedModules }.map {
+            "${it.path}:publishMavenJavaPublicationToStagingRepository"
+        }
+    )
+    from(layout.buildDirectory.dir("staging-deploy"))
+    archiveFileName.set("max-bot-api-java-${project.version}-bundle.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("central-bundle"))
 }
 
 tasks.named<JacocoReport>("testCodeCoverageReport") {

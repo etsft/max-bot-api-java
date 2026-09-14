@@ -92,13 +92,37 @@ publish:
   stage: publish
   image: gradle:9.7.1-jdk21
   rules:
-    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/'
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/'
+      when: manual
   needs:
     - build:jdk21
     - checkstyle
     - spotbugs
     - jacoco
-  script:
-    - gradle publish --stacktrace
+  resource_group: maven-central
   environment:
     name: maven-central
+  cache: []
+  script:
+    - |
+      PROJECT_VERSION=$(sed -n 's/^version=//p' gradle.properties)
+      if [ "${CI_COMMIT_TAG#v}" != "$PROJECT_VERSION" ]; then
+        echo "Tag $CI_COMMIT_TAG does not match version $PROJECT_VERSION in gradle.properties"
+        exit 1
+      fi
+      if [ -z "${SIGNING_KEY_B64:-}" ]; then
+        echo "SIGNING_KEY_B64 is not set (is the tag protected?)"
+        exit 1
+      fi
+      export ORG_GRADLE_PROJECT_signingInMemoryKey="$(printf '%s' "$SIGNING_KEY_B64" | base64 -d)"
+    - gradle clean centralBundle --stacktrace
+    - |
+      if ! find build/staging-deploy -name '*.jar.asc' | grep -q .; then
+        echo "Artifacts are not signed"
+        exit 1
+      fi
+    - sh scripts/central-upload.sh "build/central-bundle/max-bot-api-java-${CI_COMMIT_TAG#v}-bundle.zip"
+  artifacts:
+    paths:
+      - build/central-bundle/
+    expire_in: 30 days
