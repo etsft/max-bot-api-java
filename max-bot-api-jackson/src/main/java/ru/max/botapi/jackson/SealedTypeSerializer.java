@@ -16,15 +16,15 @@
 
 package ru.max.botapi.jackson;
 
-import java.io.IOException;
 import java.lang.reflect.RecordComponent;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.DatabindException;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ser.std.StdSerializer;
 
 /**
  * Generic serializer for sealed type hierarchies that need a {@code type} discriminator
@@ -37,12 +37,9 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
  */
 final class SealedTypeSerializer<T> extends StdSerializer<T> {
 
-    private static final long serialVersionUID = 1L;
-
     private static final ConcurrentHashMap<Class<?>, RecordComponent[]> COMPONENT_CACHE
             = new ConcurrentHashMap<>();
 
-    @SuppressWarnings("serial") // Function lambda is not serializable, but Jackson serializers don't need it
     private final Function<T, String> typeExtractor;
 
     SealedTypeSerializer(Class<T> clazz, Function<T, String> typeExtractor) {
@@ -51,9 +48,9 @@ final class SealedTypeSerializer<T> extends StdSerializer<T> {
     }
 
     @Override
-    public void serialize(T value, JsonGenerator gen, SerializerProvider provider) throws IOException {
+    public void serialize(T value, JsonGenerator gen, SerializationContext ctxt) {
         gen.writeStartObject();
-        gen.writeStringField("type", typeExtractor.apply(value));
+        gen.writeStringProperty("type", typeExtractor.apply(value));
 
         RecordComponent[] components = COMPONENT_CACHE.computeIfAbsent(
                 value.getClass(), Class::getRecordComponents);
@@ -66,11 +63,11 @@ final class SealedTypeSerializer<T> extends StdSerializer<T> {
                 try {
                     Object fieldValue = component.getAccessor().invoke(value);
                     if (fieldValue != null) {
-                        gen.writeFieldName(fieldName);
-                        provider.defaultSerializeValue(fieldValue, gen);
+                        gen.writeName(fieldName);
+                        ctxt.writeValue(gen, fieldValue);
                     }
                 } catch (ReflectiveOperationException e) {
-                    throw new IOException("Failed to access record component: "
+                    throw DatabindException.from(gen, "Failed to access record component: "
                             + component.getName(), e);
                 }
             }

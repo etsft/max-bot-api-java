@@ -234,7 +234,7 @@ try (MaxUploadAPI uploadApi = new MaxUploadAPI()) {
 |---|---|
 | `max-bot-api-core` | Model records, sealed interfaces, serializer SPI. Zero external dependencies (JDK only). |
 | `max-bot-api-client` | HTTP transport (`java.net.http`), `MaxClient`, `MaxBotAPI` facade, rate limiter, retry policy. |
-| `max-bot-api-jackson` | Jackson 2.x serializer adapter with custom deserializers for polymorphic types. |
+| `max-bot-api-jackson` | Jackson 3.x serializer adapter with custom deserializers for polymorphic types. |
 | `max-bot-api-gson` | Reserved for a Gson serializer adapter; contains no implementation yet. |
 | `max-bot-api-longpolling` | Long polling consumer backed by virtual threads, with exponential backoff. |
 | `max-bot-api-webhook` | Embedded HTTP/HTTPS webhook server (JDK `HttpServer`) with secret-header validation. |
@@ -367,13 +367,13 @@ Either way the server answers 200 even when the handler throws, so MAX does not 
 
 The `max-bot-api-spring-boot` module provides zero-boilerplate setup for both webhook and long-polling modes via auto-configuration. Add the dependency and choose the mode that fits your deployment.
 
-The starter builds `MaxBotAPI` with `MaxBotAPI.create(token)`, which needs `max-bot-api-jackson` on the classpath. Webhook mode also needs Spring MVC, which the starter does not bring in:
+The starter targets Spring Boot 4.x. It builds `MaxBotAPI` with `MaxBotAPI.create(token)`, which needs `max-bot-api-jackson` on the classpath. Webhook mode also needs Spring MVC, which the starter does not bring in:
 
 ```kotlin
 dependencies {
     implementation("ru.etsft.max:max-bot-api-spring-boot:0.4.1")
     implementation("ru.etsft.max:max-bot-api-jackson:0.4.1")
-    implementation("org.springframework.boot:spring-boot-starter-web") // webhook mode only
+    implementation("org.springframework.boot:spring-boot-starter-webmvc") // webhook mode only
 }
 ```
 

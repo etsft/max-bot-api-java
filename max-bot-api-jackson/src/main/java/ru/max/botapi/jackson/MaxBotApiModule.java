@@ -16,7 +16,7 @@
 
 package ru.max.botapi.jackson;
 
-import com.fasterxml.jackson.databind.module.SimpleModule;
+import tools.jackson.databind.module.SimpleModule;
 
 import ru.max.botapi.model.Attachment;
 import ru.max.botapi.model.AttachmentRequest;
@@ -68,10 +68,10 @@ public class MaxBotApiModule extends SimpleModule {
     public void setupModule(SetupContext context) {
         super.setupModule(context);
 
-        context.setMixInAnnotations(NewMessageBody.class, NotifyFieldMixIn.class);
-        context.setMixInAnnotations(PinMessageBody.class, NotifyFieldMixIn.class);
-        context.setMixInAnnotations(ChatPatch.class, NotifyFieldMixIn.class);
-        context.setMixInAnnotations(FileUploadedInfo.class, FileUploadedInfoMixIn.class);
-        context.setMixInAnnotations(VideoUrls.class, VideoUrlsMixIn.class);
+        context.setMixIn(NewMessageBody.class, NotifyFieldMixIn.class);
+        context.setMixIn(PinMessageBody.class, NotifyFieldMixIn.class);
+        context.setMixIn(ChatPatch.class, NotifyFieldMixIn.class);
+        context.setMixIn(FileUploadedInfo.class, FileUploadedInfoMixIn.class);
+        context.setMixIn(VideoUrls.class, VideoUrlsMixIn.class);
     }
 }

@@ -10,7 +10,7 @@ tasks.withType<JavaCompile> {
 }
 
 dependencies {
-    compileOnly(libs.spring.boot.starter.web)
+    compileOnly(libs.spring.boot.starter.webmvc)
     compileOnly(libs.spring.boot.autoconfigure)
 
     api(project(":max-bot-api-core"))
@@ -22,7 +22,7 @@ dependencies {
     annotationProcessor(libs.spring.boot.configuration.processor)
 
     testImplementation(libs.spring.boot.starter.test)
-    testImplementation(libs.spring.boot.starter.web)
+    testImplementation(libs.spring.boot.starter.webmvc)
     testImplementation(project(":max-bot-api-jackson"))
     testRuntimeOnly(libs.slf4j.simple)
 }

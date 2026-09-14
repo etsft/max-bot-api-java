@@ -23,14 +23,15 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 import ru.max.botapi.client.MaxApiException;
 import ru.max.botapi.longpolling.MaxLongPollingConsumer;
@@ -76,7 +77,7 @@ class CommentsLiveTest extends LiveTestBase {
     private static final Set<String> COMMENT_REMOVED_FIELDS = Set.of(
             "update_type", "timestamp", "message_id", "chat_id", "user_id", "post_id");
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = JsonMapper.builder().build();
 
     private String commentId;
 
@@ -313,14 +314,14 @@ class CommentsLiveTest extends LiveTestBase {
         JsonNode root;
         try {
             root = MAPPER.readTree(batch);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new AssertionError("the batch comment_removed arrived in is not JSON:\n" + batch, e);
         }
         for (JsonNode node : root.path("updates")) {
-            if ("comment_removed".equals(node.path("update_type").asText())
-                    && target.equals(node.path("message_id").asText())) {
+            if ("comment_removed".equals(node.path("update_type").asString())
+                    && target.equals(node.path("message_id").asString())) {
                 Set<String> extra = new TreeSet<>();
-                node.fieldNames().forEachRemaining(name -> {
+                node.propertyNames().forEach(name -> {
                     if (!COMMENT_REMOVED_FIELDS.contains(name)) {
                         extra.add(name);
                     }

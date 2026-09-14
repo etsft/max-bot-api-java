@@ -16,12 +16,10 @@
 
 package ru.max.botapi.jackson;
 
-import java.io.IOException;
-
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.deser.std.StdDeserializer;
 
 import ru.max.botapi.model.Attachment;
 import ru.max.botapi.model.AudioAttachment;
@@ -48,16 +46,14 @@ import ru.max.botapi.model.VideoAttachment;
  */
 final class AttachmentDeserializer extends StdDeserializer<Attachment> {
 
-    private static final long serialVersionUID = 1L;
-
     AttachmentDeserializer() {
         super(Attachment.class);
     }
 
     @Override
-    public Attachment deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-        JsonNode node = p.getCodec().readTree(p);
-        String type = node.has("type") ? node.get("type").asText() : "unknown";
+    public Attachment deserialize(JsonParser p, DeserializationContext ctxt) {
+        JsonNode node = ctxt.readTree(p);
+        String type = node.has("type") ? node.get("type").asString() : "unknown";
         return switch (type) {
             case "image" -> parseOrUnknown(ctxt, node, PhotoAttachment.class, type);
             case "video" -> parseOrUnknown(ctxt, node, VideoAttachment.class, type);

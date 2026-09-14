@@ -16,14 +16,13 @@
 
 package ru.max.botapi.jackson;
 
-import java.io.IOException;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
-import com.fasterxml.jackson.databind.json.JsonMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.json.JsonMapper;
 
 import ru.max.botapi.core.MaxSerializer;
 import ru.max.botapi.core.TypeReference;
@@ -46,12 +45,13 @@ public class JacksonMaxSerializer implements MaxSerializer {
     /**
      * Creates a new JacksonMaxSerializer with default configuration.
      */
-    @SuppressWarnings("deprecation") // serializationInclusion deprecated in Jackson 2.21
     public JacksonMaxSerializer() {
         this.mapper = JsonMapper.builder()
                 .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
-                .serializationInclusion(JsonInclude.Include.NON_NULL)
+                .changeDefaultPropertyInclusion(incl -> incl.withValueInclusion(JsonInclude.Include.NON_NULL))
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                // Jackson 3 turned this on by default; keep reading null into a primitive as its default
+                .disable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
                 .addModule(new MaxBotApiModule())
                 .addModule(new EnumLowercaseModule())
                 .build();
@@ -75,7 +75,7 @@ public class JacksonMaxSerializer implements MaxSerializer {
     public <T> String serialize(T object) {
         try {
             return mapper.writeValueAsString(object);
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             throw new IllegalArgumentException("Failed to serialize object", e);
         }
     }
@@ -85,7 +85,7 @@ public class JacksonMaxSerializer implements MaxSerializer {
     public <T> T deserialize(String json, Class<T> type) {
         try {
             return mapper.readValue(json, type);
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             throw new IllegalArgumentException("Failed to deserialize JSON", e);
         }
     }
@@ -96,7 +96,7 @@ public class JacksonMaxSerializer implements MaxSerializer {
         try {
             JavaType javaType = mapper.getTypeFactory().constructType(type.getType());
             return mapper.readValue(json, javaType);
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             throw new IllegalArgumentException("Failed to deserialize JSON", e);
         }
     }

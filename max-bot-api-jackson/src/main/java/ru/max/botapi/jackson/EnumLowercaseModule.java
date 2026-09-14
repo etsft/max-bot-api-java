@@ -16,21 +16,22 @@
 
 package ru.max.botapi.jackson;
 
-import java.io.IOException;
 import java.util.Locale;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.BeanDescription;
-import com.fasterxml.jackson.databind.DeserializationConfig;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializationConfig;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.deser.Deserializers;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.ser.Serializers;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.BeanDescription;
+import tools.jackson.databind.DeserializationConfig;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.SerializationConfig;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.deser.Deserializers;
+import tools.jackson.databind.module.SimpleModule;
+import tools.jackson.databind.ser.Serializers;
 
 /**
  * Jackson module that serializes all enums as lowercase snake_case
@@ -54,10 +55,11 @@ final class EnumLowercaseModule extends SimpleModule {
     private static final class EnumSerializers extends Serializers.Base {
         @Override
         @SuppressWarnings({"unchecked", "rawtypes"})
-        public JsonSerializer<?> findSerializer(
+        public ValueSerializer<?> findEnumSerializer(
                 SerializationConfig config,
-                com.fasterxml.jackson.databind.JavaType type,
-                BeanDescription beanDesc
+                JavaType type,
+                BeanDescription.Supplier beanDescRef,
+                JsonFormat.Value formatOverrides
         ) {
             if (type.isEnumType()) {
                 return new LowercaseEnumSerializer((Class<Enum<?>>) type.getRawClass());
@@ -69,19 +71,24 @@ final class EnumLowercaseModule extends SimpleModule {
     private static final class EnumDeserializers extends Deserializers.Base {
         @Override
         @SuppressWarnings({"unchecked", "rawtypes"})
-        public JsonDeserializer<?> findEnumDeserializer(
-                Class<?> type,
+        public ValueDeserializer<?> findEnumDeserializer(
+                JavaType type,
                 DeserializationConfig config,
-                BeanDescription beanDesc
+                BeanDescription.Supplier beanDescRef
         ) {
-            if (type.isEnum()) {
-                return new CaseInsensitiveEnumDeserializer((Class<Enum<?>>) type);
+            if (type.isEnumType()) {
+                return new CaseInsensitiveEnumDeserializer((Class<Enum<?>>) type.getRawClass());
             }
             return null;
         }
+
+        @Override
+        public boolean hasDeserializerFor(DeserializationConfig config, Class<?> valueType) {
+            return valueType.isEnum();
+        }
     }
 
-    private static final class LowercaseEnumSerializer extends JsonSerializer<Enum<?>> {
+    private static final class LowercaseEnumSerializer extends ValueSerializer<Enum<?>> {
 
         private final Class<Enum<?>> enumType;
 
@@ -90,8 +97,7 @@ final class EnumLowercaseModule extends SimpleModule {
         }
 
         @Override
-        public void serialize(Enum<?> value, JsonGenerator gen, SerializerProvider serializers)
-                throws IOException {
+        public void serialize(Enum<?> value, JsonGenerator gen, SerializationContext ctxt) {
             gen.writeString(value.name().toLowerCase(Locale.ROOT));
         }
 
@@ -102,7 +108,7 @@ final class EnumLowercaseModule extends SimpleModule {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static final class CaseInsensitiveEnumDeserializer extends JsonDeserializer<Enum<?>> {
+    private static final class CaseInsensitiveEnumDeserializer extends ValueDeserializer<Enum<?>> {
 
         private final Class<? extends Enum> enumType;
 
@@ -111,8 +117,8 @@ final class EnumLowercaseModule extends SimpleModule {
         }
 
         @Override
-        public Enum<?> deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-            String text = p.getText();
+        public Enum<?> deserialize(JsonParser p, DeserializationContext ctxt) {
+            String text = p.getString();
             if (text == null || text.isBlank()) {
                 return (Enum<?>) ctxt.handleUnexpectedToken(enumType, p);
             }

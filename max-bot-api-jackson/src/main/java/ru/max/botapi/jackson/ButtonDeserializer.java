@@ -16,12 +16,10 @@
 
 package ru.max.botapi.jackson;
 
-import java.io.IOException;
-
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.deser.std.StdDeserializer;
 
 import ru.max.botapi.model.Button;
 import ru.max.botapi.model.CallbackButton;
@@ -46,17 +44,15 @@ import ru.max.botapi.model.UnknownButton;
  */
 final class ButtonDeserializer extends StdDeserializer<Button> {
 
-    private static final long serialVersionUID = 1L;
-
     ButtonDeserializer() {
         super(Button.class);
     }
 
     @Override
     @SuppressWarnings("deprecation") // still dispatches the legacy types the API may send
-    public Button deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-        JsonNode node = p.getCodec().readTree(p);
-        String type = node.has("type") ? node.get("type").asText() : "unknown";
+    public Button deserialize(JsonParser p, DeserializationContext ctxt) {
+        JsonNode node = ctxt.readTree(p);
+        String type = node.has("type") ? node.get("type").asString() : "unknown";
         return switch (type) {
             case "callback" -> parseOrUnknown(ctxt, node, CallbackButton.class, type);
             case "link" -> parseOrUnknown(ctxt, node, LinkButton.class, type);
@@ -92,7 +88,7 @@ final class ButtonDeserializer extends StdDeserializer<Button> {
      * @return the fallback button
      */
     private static UnknownButton unknown(JsonNode node, String type) {
-        String text = node.has("text") ? node.get("text").asText() : "";
+        String text = node.has("text") ? node.get("text").asString() : "";
         return new UnknownButton(type, text, node.toString());
     }
 }

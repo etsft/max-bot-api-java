@@ -16,12 +16,10 @@
 
 package ru.max.botapi.jackson;
 
-import java.io.IOException;
-
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.deser.std.StdDeserializer;
 
 import ru.max.botapi.model.BotAddedUpdate;
 import ru.max.botapi.model.BotRemovedUpdate;
@@ -64,21 +62,19 @@ import ru.max.botapi.model.UserRemovedUpdate;
  */
 final class UpdateDeserializer extends StdDeserializer<Update> {
 
-    private static final long serialVersionUID = 1L;
-
     UpdateDeserializer() {
         super(Update.class);
     }
 
     @Override
     @SuppressWarnings("deprecation") // still dispatches the legacy types the API may send
-    public Update deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-        JsonNode node = p.getCodec().readTree(p);
+    public Update deserialize(JsonParser p, DeserializationContext ctxt) {
+        JsonNode node = ctxt.readTree(p);
         if (!node.isObject()) {
             return ctxt.reportInputMismatch(Update.class,
                     "Expected a JSON object for an update, got %s", node.getNodeType());
         }
-        String updateType = node.has("update_type") ? node.get("update_type").asText() : "unknown";
+        String updateType = node.has("update_type") ? node.get("update_type").asString() : "unknown";
         return switch (updateType) {
             case "message_created" -> parseOrUnknown(ctxt, node, MessageCreatedUpdate.class, updateType);
             case "message_callback" -> parseOrUnknown(ctxt, node, MessageCallbackUpdate.class, updateType);

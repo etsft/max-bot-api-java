@@ -16,16 +16,15 @@
 
 package ru.max.botapi.jackson;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.deser.std.StdDeserializer;
 
 import ru.max.botapi.model.Update;
 import ru.max.botapi.model.UpdateList;
@@ -45,8 +44,6 @@ import ru.max.botapi.model.UpdateList;
  */
 final class UpdateListDeserializer extends StdDeserializer<UpdateList> {
 
-    private static final long serialVersionUID = 1L;
-
     private static final Logger LOG = LoggerFactory.getLogger(UpdateListDeserializer.class);
 
     UpdateListDeserializer() {
@@ -54,8 +51,8 @@ final class UpdateListDeserializer extends StdDeserializer<UpdateList> {
     }
 
     @Override
-    public UpdateList deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-        JsonNode node = p.getCodec().readTree(p);
+    public UpdateList deserialize(JsonParser p, DeserializationContext ctxt) {
+        JsonNode node = ctxt.readTree(p);
 
         JsonNode markerNode = node.get("marker");
         Long marker = markerNode != null && markerNode.isNumber() ? markerNode.asLong() : null;
@@ -66,7 +63,7 @@ final class UpdateListDeserializer extends StdDeserializer<UpdateList> {
             for (JsonNode element : updatesNode) {
                 try {
                     updates.add(ctxt.readTreeAsValue(element, Update.class));
-                } catch (IOException | RuntimeException e) {
+                } catch (RuntimeException e) {
                     LOG.warn("Skipping an update that could not be deserialized. Raw JSON: {}",
                             LenientReads.truncate(element), e);
                 }

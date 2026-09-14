@@ -16,15 +16,15 @@
 
 package ru.max.botapi.it;
 
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 import ru.max.botapi.model.Attachment;
 import ru.max.botapi.model.Button;
@@ -181,7 +181,7 @@ public final class ModelAssertions {
     private static final Set<String> KNOWN_RECIPIENT_FIELDS =
             Set.of("chat_id", "chat_type", "user_id", "post_id");
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = JsonMapper.builder().build();
 
     /**
      * Asserts that every {@code recipient} object in the payload just deserialized consists
@@ -195,7 +195,7 @@ public final class ModelAssertions {
         JsonNode root;
         try {
             root = MAPPER.readTree(raw);
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+        } catch (JacksonException e) {
             return; // Not JSON: nothing to inspect, and the payload is reported elsewhere.
         }
 
@@ -215,13 +215,10 @@ public final class ModelAssertions {
         if (!node.isObject()) {
             return;
         }
-        for (Iterator<Map.Entry<String, JsonNode>> it = node.fields(); it.hasNext();) {
-            Map.Entry<String, JsonNode> field = it.next();
+        for (Map.Entry<String, JsonNode> field : node.properties()) {
             JsonNode value = field.getValue();
             if ("recipient".equals(field.getKey()) && value.isObject()) {
-                List<String> names = new ArrayList<>();
-                value.fieldNames().forEachRemaining(names::add);
-                names.stream()
+                value.propertyNames().stream()
                         .filter(name -> !KNOWN_RECIPIENT_FIELDS.contains(name))
                         .forEach(unknown::add);
             }

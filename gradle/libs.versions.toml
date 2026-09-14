@@ -1,11 +1,11 @@
 [versions]
-junit = "5.14.3"
+junit = "6.0.3"
 assertj = "3.27.7"
-slf4j = "2.0.17"
-wiremock = "3.13.1"
-jackson = "2.21.1"
-jsonUnit = "4.1.1"
-springBoot = "3.5.12"
+slf4j = "2.0.19"
+wiremock = "3.13.2"
+jackson = "3.1.5"
+jsonUnit = "6.2.0"
+springBoot = "4.1.1"
 
 # Tool versions: read as libs.versions.<x>.get() in the matching toolVersion
 jacoco = "0.8.15"
@@ -25,7 +25,7 @@ assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 wiremock-standalone = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
-jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-databind = { module = "tools.jackson.core:jackson-databind", version.ref = "jackson" }
 json-unit-assertj = { module = "net.javacrumbs.json-unit:json-unit-assertj", version.ref = "jsonUnit" }
 
 # Explicit versions rather than the spring-boot-dependencies BOM. The BOM also constrains
@@ -34,7 +34,7 @@ json-unit-assertj = { module = "net.javacrumbs.json-unit:json-unit-assertj", ver
 spring-boot-autoconfigure = { module = "org.springframework.boot:spring-boot-autoconfigure", version.ref = "springBoot" }
 spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor", version.ref = "springBoot" }
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test", version.ref = "springBoot" }
-spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web", version.ref = "springBoot" }
+spring-boot-starter-webmvc = { module = "org.springframework.boot:spring-boot-starter-webmvc", version.ref = "springBoot" }
 
 [plugins]
 spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugs" }

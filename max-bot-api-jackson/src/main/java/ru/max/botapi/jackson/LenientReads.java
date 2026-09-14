@@ -16,13 +16,12 @@
 
 package ru.max.botapi.jackson;
 
-import java.io.IOException;
 import java.util.function.Supplier;
 
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
 
 /**
  * Helpers for lenient deserialization of the sealed model hierarchies.
@@ -58,7 +57,7 @@ final class LenientReads {
             String discriminator, Supplier<? extends T> fallback) {
         try {
             return ctxt.readTreeAsValue(node, type);
-        } catch (IOException | RuntimeException e) {
+        } catch (RuntimeException e) {
             LOG.warn("Failed to deserialize '{}' as {}, falling back to the unknown-type "
                             + "representation. Raw JSON: {}",
                     discriminator, type.getSimpleName(), truncate(node), e);
