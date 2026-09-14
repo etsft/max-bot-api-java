@@ -40,16 +40,16 @@ This library provides a complete, idiomatic Java 21 interface to supported MAX B
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("ru.etsft.max:max-bot-api-client:0.4.1")
+    implementation("ru.etsft.max:max-bot-api-client:0.5.0")
     // The default serializer: MaxBotAPI.create(...) looks it up on the classpath
-    implementation("ru.etsft.max:max-bot-api-jackson:0.4.1")
-    implementation("ru.etsft.max:max-bot-api-longpolling:0.4.1")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.5.0")
+    implementation("ru.etsft.max:max-bot-api-longpolling:0.5.0")
 
     // Optional: webhook support
-    // implementation("ru.etsft.max:max-bot-api-webhook:0.4.1")
+    // implementation("ru.etsft.max:max-bot-api-webhook:0.5.0")
 
     // Optional: Spring Boot auto-configuration (webhook + long polling)
-    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.4.1")
+    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.5.0")
 }
 ```
 
@@ -60,24 +60,24 @@ dependencies {
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-client</artifactId>
-        <version>0.4.1</version>
+        <version>0.5.0</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-jackson</artifactId>
-        <version>0.4.1</version>
+        <version>0.5.0</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-longpolling</artifactId>
-        <version>0.4.1</version>
+        <version>0.5.0</version>
     </dependency>
     <!-- Optional: webhook support -->
     <!--
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-webhook</artifactId>
-        <version>0.4.1</version>
+        <version>0.5.0</version>
     </dependency>
     -->
     <!-- Optional: Spring Boot auto-configuration (webhook + long polling) -->
@@ -85,7 +85,7 @@ dependencies {
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-spring-boot</artifactId>
-        <version>0.4.1</version>
+        <version>0.5.0</version>
     </dependency>
     -->
 </dependencies>
@@ -371,8 +371,8 @@ The starter targets Spring Boot 4.x. It builds `MaxBotAPI` with `MaxBotAPI.creat
 
 ```kotlin
 dependencies {
-    implementation("ru.etsft.max:max-bot-api-spring-boot:0.4.1")
-    implementation("ru.etsft.max:max-bot-api-jackson:0.4.1")
+    implementation("ru.etsft.max:max-bot-api-spring-boot:0.5.0")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.5.0")
     implementation("org.springframework.boot:spring-boot-starter-webmvc") // webhook mode only
 }
 ```
