@@ -34,18 +34,18 @@ cache:
 
 build:jdk21:
   <<: *build_template
-  image: gradle:9.4.1-jdk21
+  image: gradle:9.7.1-jdk21
 
 build:jdk25:
   <<: *build_template
-  image: gradle:9.4.1-jdk25
+  image: gradle:9.7.1-jdk25
 
 # ---------------------------------------------------------------------------
 # Quality gates (run on JDK 21 after build)
 # ---------------------------------------------------------------------------
 checkstyle:
   stage: quality
-  image: gradle:9.4.1-jdk21
+  image: gradle:9.7.1-jdk21
   needs:
     - build:jdk21
   script:
@@ -58,7 +58,7 @@ checkstyle:
 
 spotbugs:
   stage: quality
-  image: gradle:9.4.1-jdk21
+  image: gradle:9.7.1-jdk21
   needs:
     - build:jdk21
   script:
@@ -71,7 +71,7 @@ spotbugs:
 
 jacoco:
   stage: quality
-  image: gradle:9.4.1-jdk21
+  image: gradle:9.7.1-jdk21
   needs:
     - build:jdk21
   script:
@@ -90,7 +90,7 @@ jacoco:
 # ---------------------------------------------------------------------------
 publish:
   stage: publish
-  image: gradle:9.4.1-jdk21
+  image: gradle:9.7.1-jdk21
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/'
   needs:
