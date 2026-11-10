@@ -154,9 +154,16 @@ class SerializerParityTest {
                 // doubles
                 Arguments.of(location.formatted("\"NaN\""), AttachmentRequest.class),
                 Arguments.of(location.formatted("\"Infinity\""), AttachmentRequest.class),
-                Arguments.of(location.formatted("\" -Infinity \""), AttachmentRequest.class),
                 Arguments.of(location.formatted("1e400"), AttachmentRequest.class),
-                Arguments.of(location.formatted("\"0x1p3\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"-Infinity\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"+Infinity\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"INF\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"-INF\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"1e+5\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"+.5\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"-5.\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\" 1e2 \""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"0001.5\""), AttachmentRequest.class),
                 Arguments.of(location.formatted("\"1.25\""), AttachmentRequest.class),
                 Arguments.of(location.formatted("\"\""), AttachmentRequest.class),
                 // discriminators and fallback fields
@@ -177,6 +184,7 @@ class SerializerParityTest {
     }
 
     static Stream<Arguments> edgeCases() {
+        String location = "{\"type\":\"location\",\"latitude\":%s,\"longitude\":0}";
         return Stream.of(
                 // documents
                 Arguments.of("null", User.class),
@@ -247,6 +255,21 @@ class SerializerParityTest {
                 Arguments.of("{\"user_ids\":[null]}", UserIdsList.class),
                 Arguments.of("{\"chat_id\":1,\"type\":\"chat\",\"status\":\"active\","
                         + "\"participants\":{\"a\":\"\"}}", Chat.class),
+                Arguments.of(location.formatted("\" -Infinity \""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\" NaN \""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"0x1p3\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"1d\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"1_000\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"inf\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"NAN\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"+NaN\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"\\u00a01.5\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"1.5e\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("\".\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("1."), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"" + "1".repeat(1001) + "\""), AttachmentRequest.class),
+                Arguments.of(location.formatted("1".repeat(1001)), AttachmentRequest.class),
+                Arguments.of(location.formatted("\"" + "1".repeat(1000) + "\""), AttachmentRequest.class),
                 Arguments.of("{\"update_type\":\"warp\",\"timestamp\":true}", Update.class),
                 Arguments.of("{\"update_type\":\"warp\",\"timestamp\":{}}", Update.class),
                 // update batches

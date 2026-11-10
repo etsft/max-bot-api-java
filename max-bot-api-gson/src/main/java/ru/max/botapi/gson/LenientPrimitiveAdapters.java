@@ -17,7 +17,9 @@
 package ru.max.botapi.gson;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.function.LongFunction;
+import java.util.regex.Pattern;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
@@ -36,14 +38,19 @@ import com.google.gson.stream.JsonWriter;
  *       {@code null} for boxed types</li>
  *   <li>integers: a fractional number is truncated toward zero and integer text is parsed;
  *       a value outside the type's range fails</li>
- *   <li>doubles: numeric text, including {@code "NaN"} and {@code "Infinity"}, is parsed and a
- *       number too large for a double reads as infinity; NaN and the infinities are written
- *       as strings</li>
+ *   <li>doubles: plain decimal text is parsed, and {@code "NaN"}, {@code "Infinity"} and
+ *       {@code "INF"} (with an optional sign) are read when they match exactly; hex and suffixed
+ *       forms such as {@code "0x1p3"} or {@code "1d"} fail, as do numbers longer than 1000
+ *       characters. A number too large for a double reads as infinity; NaN and the infinities
+ *       are written as strings</li>
  *   <li>booleans: an integer reads as {@code value != 0}; the text {@code true} or
  *       {@code false} is accepted in lower, capitalized or upper case</li>
  * </ul>
  */
 final class LenientPrimitiveAdapters {
+
+    /** Jackson's default {@code StreamReadConstraints.maxNumberLength}. */
+    private static final int MAX_NUMBER_LENGTH = 1000;
 
     private LenientPrimitiveAdapters() {
     }
@@ -154,6 +161,19 @@ final class LenientPrimitiveAdapters {
     /** Reads and writes {@code double} values, with NaN and the infinities as strings. */
     private static final class DoubleAdapter extends TypeAdapter<Double> {
 
+        /** The texts Jackson reads as NaN or an infinity; matched exactly, without trimming. */
+        private static final Map<String, Double> SPECIAL_VALUES = Map.of(
+                "NaN", Double.NaN,
+                "Infinity", Double.POSITIVE_INFINITY,
+                "+Infinity", Double.POSITIVE_INFINITY,
+                "-Infinity", Double.NEGATIVE_INFINITY,
+                "INF", Double.POSITIVE_INFINITY,
+                "+INF", Double.POSITIVE_INFINITY,
+                "-INF", Double.NEGATIVE_INFINITY);
+
+        /** Plain decimal notation; rejects the hex and suffixed forms that {@code parseDouble} allows. */
+        private static final Pattern DECIMAL = Pattern.compile("[+-]?(\\d+\\.?\\d*|\\.\\d+)([eE][+-]?\\d+)?");
+
         private final Double blank;
 
         DoubleAdapter(Double blank) {
@@ -180,18 +200,15 @@ final class LenientPrimitiveAdapters {
                     return blank;
                 }
                 case NUMBER -> {
-                    return Double.parseDouble(in.nextString());
+                    String number = in.nextString();
+                    if (number.length() > MAX_NUMBER_LENGTH) {
+                        throw mismatch("a number of at most " + MAX_NUMBER_LENGTH + " characters",
+                                "a longer one", in);
+                    }
+                    return Double.parseDouble(number);
                 }
                 case STRING -> {
-                    String text = in.nextString().strip();
-                    if (text.isEmpty()) {
-                        return blank;
-                    }
-                    try {
-                        return Double.parseDouble(text);
-                    } catch (NumberFormatException e) {
-                        throw mismatch("a number", "\"" + text + "\"", in);
-                    }
+                    return readText(in.nextString(), in);
                 }
                 default -> {
                     String found = in.peek().toString();
@@ -199,6 +216,32 @@ final class LenientPrimitiveAdapters {
                     throw mismatch("a number", found, in);
                 }
             }
+        }
+
+        /**
+         * Reads numeric text into a {@code double} the way Jackson 3.3 does.
+         *
+         * <p>{@code NaN} and the infinities must match exactly. Other text is trimmed of ASCII
+         * whitespace ({@link String#trim()}, as Jackson does), blank text is the default value, and
+         * the rest must be plain decimal notation of at most {@value #MAX_NUMBER_LENGTH} characters.</p>
+         */
+        private Double readText(String raw, JsonReader in) {
+            Double special = SPECIAL_VALUES.get(raw);
+            if (special != null) {
+                return special;
+            }
+            String text = raw.trim();
+            if (text.isEmpty()) {
+                return blank;
+            }
+            if (text.length() > MAX_NUMBER_LENGTH || !DECIMAL.matcher(text).matches()) {
+                throw mismatch("a number", "\"" + truncate(text) + "\"", in);
+            }
+            return Double.parseDouble(text);
+        }
+
+        private static String truncate(String text) {
+            return text.length() <= 64 ? text : text.substring(0, 64) + "...";
         }
     }
 

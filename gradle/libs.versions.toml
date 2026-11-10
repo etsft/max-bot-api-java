@@ -1,19 +1,19 @@
 [versions]
-junit = "6.0.3"
+junit = "6.1.3"
 assertj = "3.27.7"
-slf4j = "2.0.19"
+slf4j = "2.0.20"
 wiremock = "3.13.2"
-jackson = "3.1.5"
-jsonUnit = "6.2.0"
-gson = "2.14.0"
-springBoot = "4.1.1"
+jackson = "3.3.0"
+jsonUnit = "6.4.0"
+gson = "2.15.0"
+springBoot = "4.1.2"
 
 # Tool versions: read as libs.versions.<x>.get() in the matching toolVersion
-jacoco = "0.8.15"
-checkstyle = "14.1.0"
+jacoco = "0.8.16"
+checkstyle = "14.4.0"
 
 # Plugin version
-spotbugs = "6.5.11"
+spotbugs = "6.5.13"
 
 [libraries]
 # Versionless JUnit artifacts resolve through junit-bom, declared as a platform.
