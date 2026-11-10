@@ -95,6 +95,8 @@ dependencies {
 
 `MaxBotAPI.create(...)` и `new MaxUploadAPI()` выбирают сериализатор из classpath: `max-bot-api-jackson`, если он есть, иначе `max-bot-api-gson`. Оба адаптера дают одинаковый формат JSON. Чтобы выбрать явно, передайте его в `new MaxUploadAPI(serializer)` или `new MaxClient(transport, serializer, config)`.
 
+Адаптеры находятся через `java.util.ServiceLoader`. Свой адаптер можно подключить, реализовав `ru.max.botapi.core.MaxSerializerProvider` и указав его в `META-INF/services/ru.max.botapi.core.MaxSerializerProvider`; побеждает провайдер с наибольшим `priority()` (у Jackson 100, у Gson 50).
+
 `MaxBotAPI` и `MaxUploadAPI` держат HTTP-клиент и реализуют `AutoCloseable`: закрывайте их при остановке бота, например через try-with-resources.
 
 ---
@@ -770,6 +772,10 @@ cd max-bot-api-java
 ```bash
 ./gradlew :max-bot-api-integration-tests:liveTest --console=plain
 ```
+
+Модульные тесты `max-bot-api-client`, `max-bot-api-longpolling` и `max-bot-api-webhook`
+во время `check` выполняются дважды: на Jackson (`test`) и на Gson (`testGson`). Live-набор по
+умолчанию идёт на Jackson; добавьте `-Pit.serializer=gson`, чтобы запустить его на Gson.
 
 Список переменных окружения и описание побочных эффектов — в
 [max-bot-api-integration-tests/README.md](max-bot-api-integration-tests/README.md).

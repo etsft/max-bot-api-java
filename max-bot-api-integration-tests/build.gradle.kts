@@ -2,6 +2,8 @@ dependencies {
     testImplementation(project(":max-bot-api-core"))
     testImplementation(project(":max-bot-api-client"))
     testImplementation(project(":max-bot-api-jackson"))
+    testImplementation(project(":max-bot-api-gson"))
+    testImplementation(project(":max-bot-api-test-support"))
     testImplementation(project(":max-bot-api-longpolling"))
     testImplementation(project(":max-bot-api-webhook"))
 
@@ -37,6 +39,12 @@ tasks.register<JavaExec>("liveTest") {
 
     standardInput = System.`in`
     outputs.upToDateWhen { false }
+
+    // Which serializer adapter the suite runs on (default: jackson):
+    //   ./gradlew :max-bot-api-integration-tests:liveTest -Pit.serializer=gson
+    (project.findProperty("it.serializer") as String?)?.let { name ->
+        systemProperty("max.test.serializer", name)
+    }
 
     // How long an interactive prompt waits, without editing the environment:
     //   ./gradlew :max-bot-api-integration-tests:liveTest -Pit.promptTimeout=60

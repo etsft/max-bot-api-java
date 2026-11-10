@@ -26,11 +26,11 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import ru.max.botapi.jackson.JacksonMaxSerializer;
 import ru.max.botapi.model.FileUploadedInfo;
 import ru.max.botapi.model.ImageUploadedInfo;
 import ru.max.botapi.model.MediaUploadedInfo;
 import ru.max.botapi.model.UploadEndpoint;
+import ru.max.botapi.testsupport.TestSerializers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
@@ -55,7 +55,7 @@ class MaxUploadAPITest {
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"fileId\": 3343344796, \"token\": \"file-tok\"}")));
 
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI(new JacksonMaxSerializer())) {
+        try (MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create())) {
             UploadEndpoint endpoint = new UploadEndpoint(
                     wmInfo.getHttpBaseUrl() + "/upload", null);
             FileUploadedInfo info = uploadApi.uploadFile(
@@ -78,7 +78,7 @@ class MaxUploadAPITest {
         Path testFile = tempDir.resolve("test.txt");
         Files.writeString(testFile, "streaming");
 
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI(new JacksonMaxSerializer())) {
+        try (MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create())) {
             UploadEndpoint endpoint = new UploadEndpoint(
                     wmInfo.getHttpBaseUrl() + "/upload", null);
             FileUploadedInfo info = uploadApi.uploadFile(endpoint, testFile, "test.txt");
@@ -100,7 +100,7 @@ class MaxUploadAPITest {
         Files.writeString(testFile, "data");
         File file = testFile.toFile();
 
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI(new JacksonMaxSerializer())) {
+        try (MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create())) {
             UploadEndpoint endpoint = new UploadEndpoint(
                     wmInfo.getHttpBaseUrl() + "/upload", null);
             FileUploadedInfo info = uploadApi.uploadFile(endpoint, file);
@@ -119,7 +119,7 @@ class MaxUploadAPITest {
                         .withHeader("Content-Type", "application/json")
                         .withBody(body)));
 
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI(new JacksonMaxSerializer())) {
+        try (MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create())) {
             UploadEndpoint endpoint = new UploadEndpoint(
                     wmInfo.getHttpBaseUrl() + "/upload", null);
             ImageUploadedInfo info = uploadApi.uploadImage(
@@ -141,7 +141,7 @@ class MaxUploadAPITest {
                         .withHeader("Content-Type", "application/json")
                         .withBody(body)));
 
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI(new JacksonMaxSerializer())) {
+        try (MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create())) {
             UploadEndpoint endpoint = new UploadEndpoint(
                     wmInfo.getHttpBaseUrl() + "/upload", null);
             ImageUploadedInfo info = uploadApi.uploadImage(
@@ -164,7 +164,7 @@ class MaxUploadAPITest {
                         .withBody("<?xml version=\"1.0\" encoding=\"UTF-8\" "
                                 + "standalone=\"no\"?><retval>1</retval>")));
 
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI(new JacksonMaxSerializer())) {
+        try (MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create())) {
             UploadEndpoint endpoint = new UploadEndpoint(
                     wmInfo.getHttpBaseUrl() + "/upload", "video-tok-from-endpoint");
             MediaUploadedInfo info = uploadApi.uploadMedia(
@@ -177,7 +177,7 @@ class MaxUploadAPITest {
 
     @Test
     void uploadMedia_throwsWhenEndpointTokenIsNull(WireMockRuntimeInfo wmInfo) {
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI(new JacksonMaxSerializer())) {
+        try (MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create())) {
             UploadEndpoint endpoint = new UploadEndpoint(
                     wmInfo.getHttpBaseUrl() + "/upload", null);
 
@@ -200,7 +200,7 @@ class MaxUploadAPITest {
         Path testFile = tempDir.resolve("audio.mp3");
         Files.writeString(testFile, "x");
 
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI(new JacksonMaxSerializer())) {
+        try (MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create())) {
             UploadEndpoint endpoint = new UploadEndpoint(
                     wmInfo.getHttpBaseUrl() + "/upload", "audio-tok");
             MediaUploadedInfo info = uploadApi.uploadMedia(endpoint, testFile, "audio.mp3");
@@ -221,7 +221,7 @@ class MaxUploadAPITest {
         Path testFile = tempDir.resolve("vid.mp4");
         Files.writeString(testFile, "x");
 
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI(new JacksonMaxSerializer())) {
+        try (MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create())) {
             UploadEndpoint endpoint = new UploadEndpoint(
                     wmInfo.getHttpBaseUrl() + "/upload", "vid-tok");
             MediaUploadedInfo info = uploadApi.uploadMedia(endpoint, testFile.toFile());
@@ -236,7 +236,7 @@ class MaxUploadAPITest {
                         .withStatus(200)
                         .withBody("<wrong-element>oops</wrong-element>")));
 
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI(new JacksonMaxSerializer())) {
+        try (MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create())) {
             UploadEndpoint endpoint = new UploadEndpoint(
                     wmInfo.getHttpBaseUrl() + "/upload", "tok");
             assertThatThrownBy(() -> uploadApi.uploadMedia(
@@ -255,7 +255,7 @@ class MaxUploadAPITest {
                         .withStatus(500)
                         .withBody("Internal Server Error")));
 
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI(new JacksonMaxSerializer())) {
+        try (MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create())) {
             UploadEndpoint endpoint = new UploadEndpoint(
                     wmInfo.getHttpBaseUrl() + "/upload", null);
             assertThatThrownBy(() -> uploadApi.uploadFile(
@@ -267,14 +267,14 @@ class MaxUploadAPITest {
 
     @Test
     void constructsWithExplicitSerializer() {
-        try (MaxUploadAPI uploadApi = new MaxUploadAPI(new JacksonMaxSerializer())) {
+        try (MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create())) {
             assertThat(uploadApi).isNotNull();
         }
     }
 
     @Test
     void closeIsIdempotentAndDoesNotThrow() {
-        MaxUploadAPI uploadApi = new MaxUploadAPI(new JacksonMaxSerializer());
+        MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create());
         uploadApi.close();
         // Calling close() a second time should not throw
         uploadApi.close();

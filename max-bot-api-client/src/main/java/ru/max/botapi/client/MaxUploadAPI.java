@@ -92,12 +92,13 @@ public class MaxUploadAPI implements AutoCloseable {
     private final MaxSerializer serializer;
 
     /**
-     * Creates a {@code MaxUploadAPI} using a serializer loaded via reflection.
+     * Creates a {@code MaxUploadAPI} using the serializer of the highest-priority
+     * {@link ru.max.botapi.core.MaxSerializerProvider} on the classpath.
      *
      * <p>Requires {@code max-bot-api-jackson} or {@code max-bot-api-gson} on the classpath;
      * Jackson is preferred when both are present.</p>
      *
-     * @throws MaxClientException if no serializer is on the classpath or it cannot be instantiated
+     * @throws MaxClientException if no serializer is on the classpath or it cannot be created
      */
     public MaxUploadAPI() {
         this(DefaultSerializers.load());

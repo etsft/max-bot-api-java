@@ -32,11 +32,12 @@ import ru.max.botapi.client.JdkHttpMaxTransportClient;
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.MaxClient;
 import ru.max.botapi.client.MaxClientConfig;
-import ru.max.botapi.jackson.JacksonMaxSerializer;
+import ru.max.botapi.core.MaxSerializer;
 import ru.max.botapi.model.BotStartedUpdate;
 import ru.max.botapi.model.UnknownUpdate;
 import ru.max.botapi.model.Update;
 import ru.max.botapi.model.UpdateType;
+import ru.max.botapi.testsupport.TestSerializers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
@@ -67,7 +68,7 @@ class MaxLongPollingConsumerTest {
                 .enableRateLimiting(false)
                 .maxRetries(0)
                 .build();
-        JacksonMaxSerializer serializer = new JacksonMaxSerializer();
+        MaxSerializer serializer = TestSerializers.create();
         JdkHttpMaxTransportClient transport = new JdkHttpMaxTransportClient(TOKEN, config);
         MaxClient client = new MaxClient(transport, serializer, config);
         api = new MaxBotAPI(client);

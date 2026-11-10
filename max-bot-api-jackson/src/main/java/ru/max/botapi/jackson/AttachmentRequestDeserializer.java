@@ -22,16 +22,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.deser.std.StdDeserializer;
 
 import ru.max.botapi.model.AttachmentRequest;
-import ru.max.botapi.model.AudioAttachmentRequest;
-import ru.max.botapi.model.ContactAttachmentRequest;
-import ru.max.botapi.model.FileAttachmentRequest;
-import ru.max.botapi.model.ImageAttachmentRequest;
-import ru.max.botapi.model.InlineKeyboardAttachmentRequest;
-import ru.max.botapi.model.LocationAttachmentRequest;
-import ru.max.botapi.model.ShareAttachmentRequest;
-import ru.max.botapi.model.StickerAttachmentRequest;
+import ru.max.botapi.model.ModelTypes;
 import ru.max.botapi.model.UnknownAttachmentRequest;
-import ru.max.botapi.model.VideoAttachmentRequest;
 
 /**
  * Custom Jackson deserializer for the {@link AttachmentRequest} sealed hierarchy.
@@ -49,17 +41,9 @@ final class AttachmentRequestDeserializer extends StdDeserializer<AttachmentRequ
     public AttachmentRequest deserialize(JsonParser p, DeserializationContext ctxt) {
         JsonNode node = ctxt.readTree(p);
         String type = LenientReads.discriminator(node, "type");
-        return switch (type) {
-            case "image" -> ctxt.readTreeAsValue(node, ImageAttachmentRequest.class);
-            case "video" -> ctxt.readTreeAsValue(node, VideoAttachmentRequest.class);
-            case "audio" -> ctxt.readTreeAsValue(node, AudioAttachmentRequest.class);
-            case "file" -> ctxt.readTreeAsValue(node, FileAttachmentRequest.class);
-            case "sticker" -> ctxt.readTreeAsValue(node, StickerAttachmentRequest.class);
-            case "contact" -> ctxt.readTreeAsValue(node, ContactAttachmentRequest.class);
-            case "inline_keyboard" -> ctxt.readTreeAsValue(node, InlineKeyboardAttachmentRequest.class);
-            case "share" -> ctxt.readTreeAsValue(node, ShareAttachmentRequest.class);
-            case "location" -> ctxt.readTreeAsValue(node, LocationAttachmentRequest.class);
-            default -> new UnknownAttachmentRequest(type, node.toString());
-        };
+        Class<? extends AttachmentRequest> requestType = ModelTypes.attachmentRequests().get(type);
+        return requestType == null
+                ? new UnknownAttachmentRequest(type, node.toString())
+                : ctxt.readTreeAsValue(node, requestType);
     }
 }

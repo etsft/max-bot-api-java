@@ -127,13 +127,13 @@ public class MaxBotAPI implements AutoCloseable {
     /**
      * Creates a {@code MaxBotAPI} with default configuration.
      *
-     * <p>Internally creates a {@link JdkHttpMaxTransportClient} and loads the serializer via
-     * reflection: {@code JacksonMaxSerializer} if {@code max-bot-api-jackson} is on the classpath,
-     * otherwise {@code GsonMaxSerializer} from {@code max-bot-api-gson}.</p>
+     * <p>Internally creates a {@link JdkHttpMaxTransportClient} and the serializer of the
+     * highest-priority {@link ru.max.botapi.core.MaxSerializerProvider} on the classpath:
+     * {@code max-bot-api-jackson} if present, otherwise {@code max-bot-api-gson}.</p>
      *
      * @param accessToken the bot access token; must not be {@code null}
      * @return a new MaxBotAPI instance
-     * @throws MaxClientException if no serializer is on the classpath or it cannot be instantiated
+     * @throws MaxClientException if no serializer is on the classpath or it cannot be created
      */
     public static MaxBotAPI create(String accessToken) {
         return create(accessToken, MaxClientConfig.defaults());
@@ -142,14 +142,14 @@ public class MaxBotAPI implements AutoCloseable {
     /**
      * Creates a {@code MaxBotAPI} with the given configuration.
      *
-     * <p>Internally creates a {@link JdkHttpMaxTransportClient} and loads the serializer via
-     * reflection: {@code JacksonMaxSerializer} if {@code max-bot-api-jackson} is on the classpath,
-     * otherwise {@code GsonMaxSerializer} from {@code max-bot-api-gson}.</p>
+     * <p>Internally creates a {@link JdkHttpMaxTransportClient} and the serializer of the
+     * highest-priority {@link ru.max.botapi.core.MaxSerializerProvider} on the classpath:
+     * {@code max-bot-api-jackson} if present, otherwise {@code max-bot-api-gson}.</p>
      *
      * @param accessToken the bot access token; must not be {@code null}
      * @param config      the client configuration; must not be {@code null}
      * @return a new MaxBotAPI instance
-     * @throws MaxClientException if no serializer is on the classpath or it cannot be instantiated
+     * @throws MaxClientException if no serializer is on the classpath or it cannot be created
      */
     public static MaxBotAPI create(String accessToken, MaxClientConfig config) {
         Objects.requireNonNull(accessToken, "accessToken must not be null");

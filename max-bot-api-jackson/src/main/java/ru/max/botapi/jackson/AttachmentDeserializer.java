@@ -22,16 +22,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.deser.std.StdDeserializer;
 
 import ru.max.botapi.model.Attachment;
-import ru.max.botapi.model.AudioAttachment;
-import ru.max.botapi.model.ContactAttachment;
-import ru.max.botapi.model.FileAttachment;
-import ru.max.botapi.model.InlineKeyboardAttachment;
-import ru.max.botapi.model.LocationAttachment;
-import ru.max.botapi.model.PhotoAttachment;
-import ru.max.botapi.model.ShareAttachment;
-import ru.max.botapi.model.StickerAttachment;
+import ru.max.botapi.model.ModelTypes;
 import ru.max.botapi.model.UnknownAttachment;
-import ru.max.botapi.model.VideoAttachment;
 
 /**
  * Custom Jackson deserializer for the {@link Attachment} sealed hierarchy.
@@ -54,18 +46,10 @@ final class AttachmentDeserializer extends StdDeserializer<Attachment> {
     public Attachment deserialize(JsonParser p, DeserializationContext ctxt) {
         JsonNode node = ctxt.readTree(p);
         String type = LenientReads.discriminator(node, "type");
-        return switch (type) {
-            case "image" -> parseOrUnknown(ctxt, node, PhotoAttachment.class, type);
-            case "video" -> parseOrUnknown(ctxt, node, VideoAttachment.class, type);
-            case "audio" -> parseOrUnknown(ctxt, node, AudioAttachment.class, type);
-            case "file" -> parseOrUnknown(ctxt, node, FileAttachment.class, type);
-            case "sticker" -> parseOrUnknown(ctxt, node, StickerAttachment.class, type);
-            case "contact" -> parseOrUnknown(ctxt, node, ContactAttachment.class, type);
-            case "inline_keyboard" -> parseOrUnknown(ctxt, node, InlineKeyboardAttachment.class, type);
-            case "share" -> parseOrUnknown(ctxt, node, ShareAttachment.class, type);
-            case "location" -> parseOrUnknown(ctxt, node, LocationAttachment.class, type);
-            default -> new UnknownAttachment(type, node.toString());
-        };
+        Class<? extends Attachment> attachmentType = ModelTypes.attachments().get(type);
+        return attachmentType == null
+                ? new UnknownAttachment(type, node.toString())
+                : parseOrUnknown(ctxt, node, attachmentType, type);
     }
 
     /**

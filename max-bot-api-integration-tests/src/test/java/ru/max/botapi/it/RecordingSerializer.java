@@ -18,7 +18,7 @@ package ru.max.botapi.it;
 
 import ru.max.botapi.core.MaxSerializer;
 import ru.max.botapi.core.TypeReference;
-import ru.max.botapi.jackson.JacksonMaxSerializer;
+import ru.max.botapi.testsupport.TestSerializers;
 
 /**
  * Serializer decorator that remembers the last JSON it was asked to deserialize.
@@ -35,7 +35,7 @@ public final class RecordingSerializer implements MaxSerializer {
 
     private static final ThreadLocal<String> LAST_JSON = new ThreadLocal<>();
 
-    private final MaxSerializer delegate = new JacksonMaxSerializer();
+    private final MaxSerializer delegate = TestSerializers.create();
 
     /**
      * Returns the last JSON deserialized on the current thread.

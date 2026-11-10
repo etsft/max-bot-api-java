@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import ru.max.botapi.jackson.JacksonMaxSerializer;
+import ru.max.botapi.core.MaxSerializer;
 import ru.max.botapi.model.ActionRequestBody;
 import ru.max.botapi.model.AddMemberFailure;
 import ru.max.botapi.model.AddMembersResult;
@@ -54,6 +54,7 @@ import ru.max.botapi.model.UploadEndpoint;
 import ru.max.botapi.model.UploadType;
 import ru.max.botapi.model.UserIdsList;
 import ru.max.botapi.model.VideoAttachmentDetails;
+import ru.max.botapi.testsupport.TestSerializers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
@@ -89,7 +90,7 @@ class MaxBotAPITest {
                 .enableRateLimiting(false)
                 .maxRetries(0)
                 .build();
-        JacksonMaxSerializer serializer = new JacksonMaxSerializer();
+        MaxSerializer serializer = TestSerializers.create();
         JdkHttpMaxTransportClient transport = new JdkHttpMaxTransportClient(TOKEN, config);
         MaxClient client = new MaxClient(transport, serializer, config);
         api = new MaxBotAPI(client);

@@ -23,7 +23,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import ru.max.botapi.jackson.JacksonMaxSerializer;
+import ru.max.botapi.core.MaxSerializer;
 import ru.max.botapi.model.BotCommand;
 import ru.max.botapi.model.BotCommandsPatch;
 import ru.max.botapi.model.BotCommandsResult;
@@ -34,6 +34,7 @@ import ru.max.botapi.model.NewCommentBody;
 import ru.max.botapi.model.SendCommentResult;
 import ru.max.botapi.model.SimpleQueryResult;
 import ru.max.botapi.model.TextFormat;
+import ru.max.botapi.testsupport.TestSerializers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
@@ -67,7 +68,7 @@ class CommentsApiTest {
                 .enableRateLimiting(false)
                 .maxRetries(0)
                 .build();
-        JacksonMaxSerializer serializer = new JacksonMaxSerializer();
+        MaxSerializer serializer = TestSerializers.create();
         JdkHttpMaxTransportClient transport = new JdkHttpMaxTransportClient(TOKEN, config);
         MaxClient client = new MaxClient(transport, serializer, config);
         api = new MaxBotAPI(client);

@@ -21,29 +21,9 @@ import tools.jackson.databind.DeserializationContext;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.deser.std.StdDeserializer;
 
-import ru.max.botapi.model.BotAddedUpdate;
-import ru.max.botapi.model.BotRemovedUpdate;
-import ru.max.botapi.model.BotStartedUpdate;
-import ru.max.botapi.model.BotStoppedUpdate;
-import ru.max.botapi.model.ChatTitleChangedUpdate;
-import ru.max.botapi.model.CommentCreatedUpdate;
-import ru.max.botapi.model.CommentEditedUpdate;
-import ru.max.botapi.model.CommentRemovedUpdate;
-import ru.max.botapi.model.DialogClearedUpdate;
-import ru.max.botapi.model.DialogMutedUpdate;
-import ru.max.botapi.model.DialogRemovedUpdate;
-import ru.max.botapi.model.DialogUnmutedUpdate;
-import ru.max.botapi.model.MessageCallbackUpdate;
-import ru.max.botapi.model.MessageChatCreatedUpdate;
-import ru.max.botapi.model.MessageConstructedUpdate;
-import ru.max.botapi.model.MessageConstructionRequestUpdate;
-import ru.max.botapi.model.MessageCreatedUpdate;
-import ru.max.botapi.model.MessageEditedUpdate;
-import ru.max.botapi.model.MessageRemovedUpdate;
+import ru.max.botapi.model.ModelTypes;
 import ru.max.botapi.model.UnknownUpdate;
 import ru.max.botapi.model.Update;
-import ru.max.botapi.model.UserAddedUpdate;
-import ru.max.botapi.model.UserRemovedUpdate;
 
 /**
  * Custom Jackson deserializer for the {@link Update} sealed hierarchy.
@@ -67,7 +47,6 @@ final class UpdateDeserializer extends StdDeserializer<Update> {
     }
 
     @Override
-    @SuppressWarnings("deprecation") // still dispatches the legacy types the API may send
     public Update deserialize(JsonParser p, DeserializationContext ctxt) {
         JsonNode node = ctxt.readTree(p);
         if (!node.isObject()) {
@@ -75,31 +54,8 @@ final class UpdateDeserializer extends StdDeserializer<Update> {
                     "Expected a JSON object for an update, got %s", node.getNodeType());
         }
         String updateType = LenientReads.discriminator(node, "update_type");
-        return switch (updateType) {
-            case "message_created" -> parseOrUnknown(ctxt, node, MessageCreatedUpdate.class, updateType);
-            case "message_callback" -> parseOrUnknown(ctxt, node, MessageCallbackUpdate.class, updateType);
-            case "message_edited" -> parseOrUnknown(ctxt, node, MessageEditedUpdate.class, updateType);
-            case "message_removed" -> parseOrUnknown(ctxt, node, MessageRemovedUpdate.class, updateType);
-            case "bot_added" -> parseOrUnknown(ctxt, node, BotAddedUpdate.class, updateType);
-            case "bot_removed" -> parseOrUnknown(ctxt, node, BotRemovedUpdate.class, updateType);
-            case "user_added" -> parseOrUnknown(ctxt, node, UserAddedUpdate.class, updateType);
-            case "user_removed" -> parseOrUnknown(ctxt, node, UserRemovedUpdate.class, updateType);
-            case "bot_started" -> parseOrUnknown(ctxt, node, BotStartedUpdate.class, updateType);
-            case "bot_stopped" -> parseOrUnknown(ctxt, node, BotStoppedUpdate.class, updateType);
-            case "chat_title_changed" -> parseOrUnknown(ctxt, node, ChatTitleChangedUpdate.class, updateType);
-            case "message_construction_request" ->
-                    parseOrUnknown(ctxt, node, MessageConstructionRequestUpdate.class, updateType);
-            case "message_constructed" -> parseOrUnknown(ctxt, node, MessageConstructedUpdate.class, updateType);
-            case "message_chat_created" -> parseOrUnknown(ctxt, node, MessageChatCreatedUpdate.class, updateType);
-            case "dialog_cleared" -> parseOrUnknown(ctxt, node, DialogClearedUpdate.class, updateType);
-            case "dialog_muted" -> parseOrUnknown(ctxt, node, DialogMutedUpdate.class, updateType);
-            case "dialog_unmuted" -> parseOrUnknown(ctxt, node, DialogUnmutedUpdate.class, updateType);
-            case "dialog_removed" -> parseOrUnknown(ctxt, node, DialogRemovedUpdate.class, updateType);
-            case "comment_created" -> parseOrUnknown(ctxt, node, CommentCreatedUpdate.class, updateType);
-            case "comment_edited" -> parseOrUnknown(ctxt, node, CommentEditedUpdate.class, updateType);
-            case "comment_removed" -> parseOrUnknown(ctxt, node, CommentRemovedUpdate.class, updateType);
-            default -> unknown(node, updateType);
-        };
+        Class<? extends Update> type = ModelTypes.updates().get(updateType);
+        return type == null ? unknown(node, updateType) : parseOrUnknown(ctxt, node, type, updateType);
     }
 
     /**

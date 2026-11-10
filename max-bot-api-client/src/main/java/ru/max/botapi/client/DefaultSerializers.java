@@ -16,85 +16,129 @@
 
 package ru.max.botapi.client;
 
-import java.lang.reflect.InvocationTargetException;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.ServiceConfigurationError;
+import java.util.ServiceLoader;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ru.max.botapi.core.MaxSerializer;
+import ru.max.botapi.core.MaxSerializerProvider;
 
 /**
- * Locates a default {@link MaxSerializer} on the classpath via reflection, so the client has no
- * compile-time dependency on any JSON library.
+ * Locates the default {@link MaxSerializer} through {@link MaxSerializerProvider} services, so the
+ * client has no compile-time dependency on any JSON library.
  *
- * <p>Candidates are tried in order: {@code max-bot-api-jackson}, then {@code max-bot-api-gson}.</p>
+ * <p>Providers are discovered with {@link ServiceLoader} in the client's own class loader and in
+ * the thread context class loader, and tried from the highest {@link MaxSerializerProvider#priority()}
+ * down: {@code max-bot-api-jackson}, then {@code max-bot-api-gson}, unless a custom adapter
+ * outranks them. Nothing is cached, so no class loader is retained across application restarts.</p>
  */
 final class DefaultSerializers {
 
     private static final Logger LOG = LoggerFactory.getLogger(DefaultSerializers.class);
 
-    /** Fully qualified names of the bundled serializer adapters, in order of preference. */
-    static final List<String> CANDIDATES = List.of(
-            "ru.max.botapi.jackson.JacksonMaxSerializer",
-            "ru.max.botapi.gson.GsonMaxSerializer");
+    /** Bound on loading failures per class loader, in case a broken lookup never advances. */
+    private static final int MAX_LOADING_FAILURES = 32;
+
+    private static final Comparator<MaxSerializerProvider> BY_PREFERENCE =
+            Comparator.comparingInt(MaxSerializerProvider::priority).reversed()
+                    .thenComparing(MaxSerializerProvider::name);
 
     private DefaultSerializers() {
     }
 
     /**
-     * Instantiates the first bundled serializer adapter found on the classpath.
+     * Creates the serializer of the most preferred provider on the classpath.
      *
-     * @return the instantiated serializer
-     * @throws MaxClientException if no adapter is on the classpath or it cannot be instantiated
+     * @return the created serializer
+     * @throws MaxClientException if no provider is usable or the chosen one fails
      */
     static MaxSerializer load() {
-        return load(CANDIDATES);
+        return load(discoverProviders());
     }
 
     /**
-     * Instantiates the first of {@code classNames} found on the classpath.
+     * Discovers the providers visible to the client's class loader and to the thread context
+     * class loader, one per provider class.
      *
-     * <p>A class that is missing, or whose own dependencies are broken (a {@link LinkageError},
-     * such as a conflicting Jackson version), is skipped in favour of the next one. Any other
-     * failure to instantiate a found class is a configuration bug and is not masked.</p>
+     * <p>A provider that cannot be loaded is logged and skipped.</p>
      *
-     * @param classNames fully qualified names of {@link MaxSerializer} implementations with a
-     *                   public no-arg constructor, in order of preference
-     * @return the instantiated serializer
-     * @throws MaxClientException if no class is usable or the found one cannot be instantiated
+     * @return the discovered providers, in discovery order
      */
-    static MaxSerializer load(List<String> classNames) {
-        Throwable skipped = null;
-        for (String className : classNames) {
+    static List<MaxSerializerProvider> discoverProviders() {
+        Map<String, MaxSerializerProvider> byClassName = new LinkedHashMap<>();
+        ClassLoader own = DefaultSerializers.class.getClassLoader();
+        collect(own, byClassName);
+        ClassLoader context = Thread.currentThread().getContextClassLoader();
+        if (context != null && context != own) {
+            collect(context, byClassName);
+        }
+        return List.copyOf(byClassName.values());
+    }
+
+    private static void collect(ClassLoader loader, Map<String, MaxSerializerProvider> into) {
+        // An explicit iterator rather than stream(): it keeps going past a provider that fails
+        // to load, while a stream is done after the first error
+        Iterator<MaxSerializerProvider> providers =
+                ServiceLoader.load(MaxSerializerProvider.class, loader).iterator();
+        int failures = 0;
+        while (failures < MAX_LOADING_FAILURES) {
             try {
-                return instantiate(className);
-            } catch (ClassNotFoundException e) {
-                skipped = addSkipped(skipped, e);
+                if (!providers.hasNext()) {
+                    return;
+                }
+                MaxSerializerProvider provider = providers.next();
+                into.putIfAbsent(provider.getClass().getName(), provider);
+            } catch (ServiceConfigurationError | LinkageError e) {
+                failures++;
+                LOG.warn("Skipping a MaxSerializerProvider that could not be loaded", e);
+            }
+        }
+    }
+
+    /**
+     * Creates the serializer of the most preferred of {@code providers}.
+     *
+     * <p>A provider whose library is broken on the classpath — {@link MaxSerializerProvider#create()}
+     * throws a {@link LinkageError}, such as for a conflicting Jackson version — is skipped in
+     * favour of the next one. Any other failure is a configuration bug and is not masked.</p>
+     *
+     * @param providers the candidate providers, in any order
+     * @return the created serializer
+     * @throws MaxClientException if no provider is usable or the chosen one fails
+     */
+    static MaxSerializer load(List<MaxSerializerProvider> providers) {
+        List<MaxSerializerProvider> ordered = providers.stream().sorted(BY_PREFERENCE).toList();
+        if (ordered.size() > 1 && ordered.get(0).priority() == ordered.get(1).priority()) {
+            LOG.warn("Serializers '{}' and '{}' share the top priority {}; using '{}'",
+                    ordered.get(0).name(), ordered.get(1).name(), ordered.get(0).priority(),
+                    ordered.get(0).name());
+        }
+        Throwable skipped = null;
+        for (MaxSerializerProvider provider : ordered) {
+            try {
+                MaxSerializer serializer = Objects.requireNonNull(provider.create(),
+                        "create() returned null");
+                LOG.debug("Using the '{}' JSON serializer", provider.name());
+                return serializer;
             } catch (LinkageError e) {
-                LOG.warn("Serializer {} is on the classpath but its dependencies are broken; "
-                        + "trying the next one", className, e);
+                LOG.warn("Serializer '{}' is on the classpath but its dependencies are broken; "
+                        + "trying the next one", provider.name(), e);
                 skipped = addSkipped(skipped, e);
+            } catch (RuntimeException e) {
+                throw new MaxClientException("Failed to create serializer '" + provider.name() + "'", e);
             }
         }
         throw new MaxClientException(
                 "No JSON serializer found on classpath. Add the 'max-bot-api-jackson' or "
                 + "'max-bot-api-gson' dependency, or supply a custom MaxSerializer.", skipped);
-    }
-
-    private static MaxSerializer instantiate(String className) throws ClassNotFoundException {
-        Class<?> clazz = Class.forName(className);
-        try {
-            return (MaxSerializer) clazz.getDeclaredConstructor().newInstance();
-        } catch (InvocationTargetException e) {
-            if (e.getCause() instanceof LinkageError linkageError) {
-                throw linkageError;
-            }
-            throw new MaxClientException("Failed to instantiate serializer: " + className, e);
-        } catch (InstantiationException | IllegalAccessException | NoSuchMethodException
-                | ClassCastException e) {
-            throw new MaxClientException("Failed to instantiate serializer: " + className, e);
-        }
     }
 
     private static Throwable addSkipped(Throwable first, Throwable next) {

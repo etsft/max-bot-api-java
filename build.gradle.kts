@@ -31,6 +31,14 @@ val publishedModules = setOf(
     "max-bot-api-spring-boot"
 )
 
+// Modules whose unit tests run on both serializer adapters (see TestSerializers). The Spring Boot
+// starter is left out: it builds MaxBotAPI.create(...), which picks Jackson whenever it is present.
+val serializerAgnosticModules = setOf(
+    "max-bot-api-client",
+    "max-bot-api-longpolling",
+    "max-bot-api-webhook"
+)
+
 subprojects {
     apply(plugin = "java")
     apply(plugin = "jacoco")
@@ -54,8 +62,27 @@ subprojects {
         testRuntimeOnly(catalog.junit.platform.launcher)
     }
 
-    tasks.test {
+    tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+    }
+
+    // Suites that pick their serializer through TestSerializers run a second time on Gson.
+    // `test` runs them on Jackson (the default); jacoco measures `test` only.
+    if (name in serializerAgnosticModules) {
+        val testSourceSet = the<SourceSetContainer>()["test"]
+        val testGson = tasks.register<Test>("testGson") {
+            group = "verification"
+            description = "Runs the unit tests with the Gson serializer adapter."
+            testClassesDirs = testSourceSet.output.classesDirs
+            classpath = testSourceSet.runtimeClasspath
+            systemProperty("max.test.serializer", "gson")
+            // Never alongside `test`: the webhook tests bind local ports
+            mustRunAfter(tasks.test)
+            extensions.getByType<JacocoTaskExtension>().isEnabled = false
+        }
+        tasks.check {
+            dependsOn(testGson)
+        }
     }
 
     jacoco {

@@ -38,8 +38,9 @@ import ru.max.botapi.client.JdkHttpMaxTransportClient;
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.MaxClient;
 import ru.max.botapi.client.MaxClientConfig;
-import ru.max.botapi.jackson.JacksonMaxSerializer;
+import ru.max.botapi.core.MaxSerializer;
 import ru.max.botapi.model.Update;
+import ru.max.botapi.testsupport.TestSerializers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
@@ -105,7 +106,7 @@ class MaxWebhookServerTest {
                     received.add(update);
                     latch.countDown();
                 })
-                .serializer(new JacksonMaxSerializer())
+                .serializer(TestSerializers.create())
                 .port(webhookPort)
                 .build();
         server.start();
@@ -131,7 +132,7 @@ class MaxWebhookServerTest {
         server = MaxWebhookServer.builder()
                 .handler(update -> {
                 })
-                .serializer(new JacksonMaxSerializer())
+                .serializer(TestSerializers.create())
                 .port(webhookPort)
                 .build();
         server.start();
@@ -152,7 +153,7 @@ class MaxWebhookServerTest {
         server = MaxWebhookServer.builder()
                 .handler(update -> {
                 })
-                .serializer(new JacksonMaxSerializer())
+                .serializer(TestSerializers.create())
                 .secret("my-secret")
                 .port(webhookPort)
                 .build();
@@ -177,7 +178,7 @@ class MaxWebhookServerTest {
 
         server = MaxWebhookServer.builder()
                 .handler(update -> latch.countDown())
-                .serializer(new JacksonMaxSerializer())
+                .serializer(TestSerializers.create())
                 .secret("my-secret")
                 .port(webhookPort)
                 .build();
@@ -205,7 +206,7 @@ class MaxWebhookServerTest {
                 .handler(update -> {
                     throw new RuntimeException("Handler error");
                 })
-                .serializer(new JacksonMaxSerializer())
+                .serializer(TestSerializers.create())
                 .port(webhookPort)
                 .build();
         server.start();
@@ -234,7 +235,7 @@ class MaxWebhookServerTest {
         server = MaxWebhookServer.builder()
                 .handler(update -> {
                 })
-                .serializer(new JacksonMaxSerializer())
+                .serializer(TestSerializers.create())
                 .port(webhookPort)
                 .build();
         server.start();
@@ -256,7 +257,7 @@ class MaxWebhookServerTest {
         server = MaxWebhookServer.builder()
                 .handler(update -> {
                 })
-                .serializer(new JacksonMaxSerializer())
+                .serializer(TestSerializers.create())
                 .port(webhookPort)
                 .build();
         server.start();
@@ -279,7 +280,7 @@ class MaxWebhookServerTest {
         server = MaxWebhookServer.builder()
                 .handler(update -> {
                 })
-                .serializer(new JacksonMaxSerializer())
+                .serializer(TestSerializers.create())
                 .port(webhookPort)
                 .build();
 
@@ -299,7 +300,7 @@ class MaxWebhookServerTest {
         server = MaxWebhookServer.builder()
                 .handler(update -> {
                 })
-                .serializer(new JacksonMaxSerializer())
+                .serializer(TestSerializers.create())
                 .port(webhookPort)
                 .build();
 
@@ -326,7 +327,7 @@ class MaxWebhookServerTest {
                             }
                             handled.countDown();
                         })
-                        .serializer(new JacksonMaxSerializer())
+                        .serializer(TestSerializers.create())
                         .port(webhookPort)
                         .dispatchExecutor(executor)
                         .build();
@@ -357,7 +358,7 @@ class MaxWebhookServerTest {
                 .enableRateLimiting(false)
                 .maxRetries(0)
                 .build();
-        JacksonMaxSerializer serializer = new JacksonMaxSerializer();
+        MaxSerializer serializer = TestSerializers.create();
         JdkHttpMaxTransportClient transport = new JdkHttpMaxTransportClient("test-token", config);
         MaxClient client = new MaxClient(transport, serializer, config);
         return new MaxBotAPI(client);
@@ -368,7 +369,7 @@ class MaxWebhookServerTest {
         server = MaxWebhookServer.builder()
                 .handler(update -> {
                 })
-                .serializer(new JacksonMaxSerializer())
+                .serializer(TestSerializers.create())
                 .port(webhookPort)
                 .path("/mypath")
                 .build();
@@ -383,7 +384,7 @@ class MaxWebhookServerTest {
         assertThatThrownBy(() -> MaxWebhookServer.builder()
                 .handler(update -> {
                 })
-                .serializer(new JacksonMaxSerializer())
+                .serializer(TestSerializers.create())
                 .path("noSlash")
                 .build())
                 .isInstanceOf(IllegalArgumentException.class);
@@ -394,7 +395,7 @@ class MaxWebhookServerTest {
         server = MaxWebhookServer.builder()
                 .handler(update -> {
                 })
-                .serializer(new JacksonMaxSerializer())
+                .serializer(TestSerializers.create())
                 .secret("my-secret")
                 .port(webhookPort)
                 .build();
@@ -419,7 +420,7 @@ class MaxWebhookServerTest {
         // constantTimeEquals) and does not throw NullPointerException.
         server = MaxWebhookServer.builder()
                 .handler(update -> { })
-                .serializer(new JacksonMaxSerializer())
+                .serializer(TestSerializers.create())
                 .secret("safe-secret")
                 .port(webhookPort)
                 .build();

@@ -22,14 +22,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.deser.std.StdDeserializer;
 
 import ru.max.botapi.model.Button;
-import ru.max.botapi.model.CallbackButton;
-import ru.max.botapi.model.ChatButton;
-import ru.max.botapi.model.ClipboardButton;
-import ru.max.botapi.model.LinkButton;
-import ru.max.botapi.model.MessageButton;
-import ru.max.botapi.model.OpenAppButton;
-import ru.max.botapi.model.RequestContactButton;
-import ru.max.botapi.model.RequestGeoLocationButton;
+import ru.max.botapi.model.ModelTypes;
 import ru.max.botapi.model.UnknownButton;
 
 /**
@@ -49,21 +42,11 @@ final class ButtonDeserializer extends StdDeserializer<Button> {
     }
 
     @Override
-    @SuppressWarnings("deprecation") // still dispatches the legacy types the API may send
     public Button deserialize(JsonParser p, DeserializationContext ctxt) {
         JsonNode node = ctxt.readTree(p);
         String type = LenientReads.discriminator(node, "type");
-        return switch (type) {
-            case "callback" -> parseOrUnknown(ctxt, node, CallbackButton.class, type);
-            case "link" -> parseOrUnknown(ctxt, node, LinkButton.class, type);
-            case "request_contact" -> parseOrUnknown(ctxt, node, RequestContactButton.class, type);
-            case "request_geo_location" -> parseOrUnknown(ctxt, node, RequestGeoLocationButton.class, type);
-            case "chat" -> parseOrUnknown(ctxt, node, ChatButton.class, type);
-            case "open_app" -> parseOrUnknown(ctxt, node, OpenAppButton.class, type);
-            case "message" -> parseOrUnknown(ctxt, node, MessageButton.class, type);
-            case "clipboard" -> parseOrUnknown(ctxt, node, ClipboardButton.class, type);
-            default -> unknown(node, type);
-        };
+        Class<? extends Button> buttonType = ModelTypes.buttons().get(type);
+        return buttonType == null ? unknown(node, type) : parseOrUnknown(ctxt, node, buttonType, type);
     }
 
     /**

@@ -5,5 +5,7 @@ dependencies {
 
     testImplementation(libs.wiremock.standalone)
     testImplementation(project(":max-bot-api-jackson"))
+    testImplementation(project(":max-bot-api-gson"))
+    testImplementation(project(":max-bot-api-test-support"))
     testRuntimeOnly(libs.slf4j.simple)
 }

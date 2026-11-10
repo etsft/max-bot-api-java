@@ -16,12 +16,21 @@
 
 package ru.max.botapi.client;
 
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import ru.max.botapi.core.MaxSerializer;
+import ru.max.botapi.core.MaxSerializerProvider;
 import ru.max.botapi.core.TypeReference;
+import ru.max.botapi.gson.GsonMaxSerializer;
 import ru.max.botapi.jackson.JacksonMaxSerializer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,103 +41,169 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class DefaultSerializersTest {
 
-    private static final String MISSING = "ru.max.botapi.missing.MissingSerializer";
+    private static final MaxSerializer STUB = new StubSerializer();
 
     @Test
-    void prefersJacksonThenGson() {
-        assertThat(DefaultSerializers.CANDIDATES).containsExactly(
-                "ru.max.botapi.jackson.JacksonMaxSerializer",
-                "ru.max.botapi.gson.GsonMaxSerializer");
+    void discoversTheBundledAdapters() {
+        assertThat(DefaultSerializers.discoverProviders())
+                .extracting(MaxSerializerProvider::name)
+                .contains("jackson", "gson");
+    }
+
+    @Test
+    void prefersJacksonOverGson() {
         assertThat(DefaultSerializers.load()).isInstanceOf(JacksonMaxSerializer.class);
+        List<MaxSerializerProvider> withoutJackson = DefaultSerializers.discoverProviders().stream()
+                .filter(provider -> !provider.name().equals("jackson"))
+                .toList();
+        assertThat(DefaultSerializers.load(withoutJackson)).isInstanceOf(GsonMaxSerializer.class);
     }
 
     @Test
-    void skipsCandidatesThatAreNotOnTheClasspath() {
-        assertThat(DefaultSerializers.load(List.of(MISSING, StubSerializer.class.getName())))
-                .isInstanceOf(StubSerializer.class);
+    void usesTheHighestPriorityRegardlessOfOrder() {
+        MaxSerializer preferred = new StubSerializer();
+
+        MaxSerializer chosen = DefaultSerializers.load(List.of(
+                provider("low", 1, () -> STUB),
+                provider("high", 200, () -> preferred),
+                provider("mid", 100, () -> STUB)));
+
+        assertThat(chosen).isSameAs(preferred);
     }
 
     @Test
-    void failsWhenNoCandidateIsOnTheClasspath() {
-        assertThatThrownBy(() -> DefaultSerializers.load(List.of(MISSING, MISSING + "2")))
+    void breaksPriorityTiesByName() {
+        MaxSerializer alpha = new StubSerializer();
+
+        MaxSerializer chosen = DefaultSerializers.load(List.of(
+                provider("beta", 5, () -> STUB),
+                provider("alpha", 5, () -> alpha)));
+
+        assertThat(chosen).isSameAs(alpha);
+    }
+
+    @Test
+    void skipsProvidersWithBrokenDependencies() {
+        MaxSerializer fallback = new StubSerializer();
+
+        MaxSerializer chosen = DefaultSerializers.load(List.of(
+                provider("missing-class", 3, () -> {
+                    throw new NoClassDefFoundError("tools/jackson/Missing");
+                }),
+                provider("broken-init", 2, () -> {
+                    throw new ExceptionInInitializerError("broken static init");
+                }),
+                provider("fallback", 1, () -> fallback)));
+
+        assertThat(chosen).isSameAs(fallback);
+    }
+
+    @Test
+    void failsWithAllCausesWhenEveryProviderIsBroken() {
+        assertThatThrownBy(() -> DefaultSerializers.load(List.of(
+                provider("a", 2, () -> {
+                    throw new NoClassDefFoundError("A");
+                }),
+                provider("b", 1, () -> {
+                    throw new NoClassDefFoundError("B");
+                }))))
                 .isInstanceOf(MaxClientException.class)
                 .hasMessageContaining("max-bot-api-jackson")
                 .hasMessageContaining("max-bot-api-gson")
                 .satisfies(e -> assertThat(e.getCause())
-                        .isInstanceOf(ClassNotFoundException.class)
-                        .satisfies(cause -> assertThat(cause.getSuppressed()).hasSize(1)));
+                        .hasMessage("A")
+                        .satisfies(cause -> assertThat(cause.getSuppressed())
+                                .singleElement().satisfies(s -> assertThat(s).hasMessage("B"))));
     }
 
     @Test
-    void failsWhenTheFoundClassCannotBeInstantiated() {
-        assertThatThrownBy(() -> DefaultSerializers.load(List.of(String.class.getName())))
-                .isInstanceOf(MaxClientException.class)
-                .hasMessage("Failed to instantiate serializer: java.lang.String")
-                .hasCauseInstanceOf(ClassCastException.class);
-        assertThatThrownBy(() -> DefaultSerializers.load(List.of(NoDefaultConstructor.class.getName())))
-                .isInstanceOf(MaxClientException.class)
-                .hasCauseInstanceOf(NoSuchMethodException.class);
-    }
-
-    @Test
-    void skipsCandidatesWithBrokenDependencies() {
-        assertThat(DefaultSerializers.load(List.of(
-                BrokenStaticInit.class.getName(),
-                BrokenConstructor.class.getName(),
-                StubSerializer.class.getName())))
-                .isInstanceOf(StubSerializer.class);
-    }
-
-    @Test
-    void failsWithAllCausesWhenEveryCandidateIsBroken() {
-        assertThatThrownBy(() -> DefaultSerializers.load(List.of(BrokenConstructor.class.getName(), MISSING)))
+    void failsWhenThereIsNoProvider() {
+        assertThatThrownBy(() -> DefaultSerializers.load(List.of()))
                 .isInstanceOf(MaxClientException.class)
                 .hasMessageContaining("No JSON serializer found")
-                .satisfies(e -> assertThat(e.getCause())
-                        .isInstanceOf(NoClassDefFoundError.class)
-                        .satisfies(cause -> assertThat(cause.getSuppressed())
-                                .singleElement().isInstanceOf(ClassNotFoundException.class)));
+                .hasNoCause();
     }
 
     @Test
-    void doesNotMaskOtherConstructorFailures() {
+    void doesNotMaskOtherFailures() {
         assertThatThrownBy(() -> DefaultSerializers.load(List.of(
-                FailingConstructor.class.getName(), StubSerializer.class.getName())))
+                provider("buggy", 2, () -> {
+                    throw new IllegalStateException("bug");
+                }),
+                provider("fallback", 1, () -> STUB))))
                 .isInstanceOf(MaxClientException.class)
-                .hasMessageContaining("Failed to instantiate serializer")
-                .rootCause().isInstanceOf(IllegalStateException.class);
+                .hasMessage("Failed to create serializer 'buggy'")
+                .hasCauseInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> DefaultSerializers.load(List.of(provider("null", 1, () -> null))))
+                .isInstanceOf(MaxClientException.class)
+                .hasCauseInstanceOf(NullPointerException.class);
     }
 
-    /** Serializer whose class initialization fails, as with a missing dependency. */
-    public static final class BrokenStaticInit extends StubBase {
+    @Test
+    void discoversProvidersOfTheContextClassLoaderAndSkipsBrokenEntries(@TempDir Path dir)
+            throws IOException {
+        Path services = dir.resolve("META-INF/services");
+        Files.createDirectories(services);
+        Files.writeString(services.resolve(MaxSerializerProvider.class.getName()),
+                "ru.max.botapi.missing.MissingProvider\n" + ContextProvider.class.getName() + "\n");
 
-        static {
-            if (Boolean.parseBoolean("true")) {
-                throw new IllegalStateException("broken static init");
+        Thread thread = Thread.currentThread();
+        ClassLoader original = thread.getContextClassLoader();
+        try (URLClassLoader context = new URLClassLoader(new URL[] {dir.toUri().toURL()},
+                getClass().getClassLoader())) {
+            thread.setContextClassLoader(context);
+
+            assertThat(DefaultSerializers.discoverProviders())
+                    .extracting(MaxSerializerProvider::name)
+                    .contains("context", "jackson", "gson")
+                    .doesNotHaveDuplicates();
+            assertThat(DefaultSerializers.load()).isInstanceOf(StubSerializer.class);
+        } finally {
+            thread.setContextClassLoader(original);
+        }
+    }
+
+    private static MaxSerializerProvider provider(String name, int priority,
+            Supplier<MaxSerializer> factory) {
+        return new MaxSerializerProvider() {
+            @Override
+            public String name() {
+                return name;
             }
+
+            @Override
+            public int priority() {
+                return priority;
+            }
+
+            @Override
+            public MaxSerializer create() {
+                return factory.get();
+            }
+        };
+    }
+
+    /** Provider registered only through the context class loader in a test. */
+    public static final class ContextProvider implements MaxSerializerProvider {
+
+        @Override
+        public String name() {
+            return "context";
+        }
+
+        @Override
+        public int priority() {
+            return 1000;
+        }
+
+        @Override
+        public MaxSerializer create() {
+            return new StubSerializer();
         }
     }
 
-    /** Serializer whose constructor hits a missing class. */
-    public static final class BrokenConstructor extends StubBase {
-
-        /** Creates the instance. */
-        public BrokenConstructor() {
-            throw new NoClassDefFoundError("tools/jackson/Missing");
-        }
-    }
-
-    /** Serializer whose constructor fails for a reason other than linkage. */
-    public static final class FailingConstructor extends StubBase {
-
-        /** Creates the instance. */
-        public FailingConstructor() {
-            throw new IllegalStateException("bug");
-        }
-    }
-
-    /** Base for serializers whose behaviour is never invoked. */
-    public abstract static class StubBase implements MaxSerializer {
+    /** Serializer whose behaviour is never invoked. */
+    static final class StubSerializer implements MaxSerializer {
 
         @Override
         public <T> String serialize(T object) {
@@ -143,37 +218,6 @@ class DefaultSerializersTest {
         @Override
         public <T> T deserialize(String json, TypeReference<T> type) {
             return null;
-        }
-    }
-
-    /** Minimal serializer with a public no-arg constructor. */
-    public static final class StubSerializer implements MaxSerializer {
-
-        @Override
-        public <T> String serialize(T object) {
-            return "";
-        }
-
-        @Override
-        public <T> T deserialize(String json, Class<T> type) {
-            return null;
-        }
-
-        @Override
-        public <T> T deserialize(String json, TypeReference<T> type) {
-            return null;
-        }
-    }
-
-    /** Class without a no-arg constructor. */
-    public static final class NoDefaultConstructor {
-
-        /**
-         * Creates the instance.
-         *
-         * @param ignored unused
-         */
-        public NoDefaultConstructor(String ignored) {
         }
     }
 }
