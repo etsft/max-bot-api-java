@@ -21,9 +21,13 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import ru.max.botapi.model.Attachment;
+import ru.max.botapi.model.AttachmentRequest;
+import ru.max.botapi.model.Button;
 import ru.max.botapi.model.Message;
 import ru.max.botapi.model.MessageCreatedUpdate;
 import ru.max.botapi.model.UnknownAttachment;
+import ru.max.botapi.model.UnknownAttachmentRequest;
+import ru.max.botapi.model.UnknownButton;
 import ru.max.botapi.model.UnknownUpdate;
 import ru.max.botapi.model.Update;
 import ru.max.botapi.model.UpdateList;
@@ -123,6 +127,18 @@ class LenientDeserializationTest {
         }
 
         @Test
+        void nullElementIsSkippedAndMarkerSurvives() {
+            String json = """
+                    {"updates": [null, %s], "marker": 333}""".formatted(VALID_UPDATE);
+
+            UpdateList list = serializer.deserialize(json, UpdateList.class);
+
+            assertThat(list.marker()).isEqualTo(333L);
+            assertThat(list.updates()).hasSize(1);
+            assertThat(list.updates().get(0)).isInstanceOf(MessageCreatedUpdate.class);
+        }
+
+        @Test
         void updatesOfUnexpectedShapeYieldEmptyBatchWithMarker() {
             UpdateList list = serializer.deserialize(
                     "{\"updates\": {\"oops\": true}, \"marker\": 222}", UpdateList.class);
@@ -159,6 +175,40 @@ class LenientDeserializationTest {
 
             assertThat(list.marker()).isEqualTo(555L);
             assertThat(list.updates()).allMatch(MessageCreatedUpdate.class::isInstance);
+        }
+    }
+
+    @Nested
+    class MalformedDiscriminator {
+
+        @Test
+        void nullDiscriminatorReadsAsUnknown() {
+            Button button = serializer.deserialize("{\"type\": null, \"text\": \"t\"}", Button.class);
+            Update update = serializer.deserialize("{\"update_type\": null, \"timestamp\": 1}", Update.class);
+
+            assertThat(button).isEqualTo(new UnknownButton("unknown", "t", "{\"type\":null,\"text\":\"t\"}"));
+            assertThat(update.updateType()).isEqualTo("unknown");
+        }
+
+        @Test
+        void nonScalarDiscriminatorDegradesInsteadOfFailing() {
+            Attachment attachment = serializer.deserialize("{\"type\": {\"a\": 1}}", Attachment.class);
+            AttachmentRequest request = serializer.deserialize("{\"type\": [1]}", AttachmentRequest.class);
+
+            assertThat(attachment).isInstanceOf(UnknownAttachment.class);
+            assertThat(attachment.type()).isEqualTo("unknown");
+            assertThat(request).isInstanceOf(UnknownAttachmentRequest.class);
+            assertThat(request.type()).isEqualTo("unknown");
+        }
+
+        @Test
+        void malformedFallbackFieldsReadAsDefaults() {
+            Button button = serializer.deserialize("{\"type\": \"teleport\", \"text\": {}}", Button.class);
+            Update update = serializer.deserialize(
+                    "{\"update_type\": \"warp\", \"timestamp\": \"abc\"}", Update.class);
+
+            assertThat(((UnknownButton) button).text()).isEmpty();
+            assertThat(((UnknownUpdate) update).timestamp()).isZero();
         }
     }
 

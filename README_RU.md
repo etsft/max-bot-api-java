@@ -43,6 +43,8 @@ dependencies {
     implementation("ru.etsft.max:max-bot-api-client:0.5.0")
     // Сериализатор по умолчанию: MaxBotAPI.create(...) ищет его в classpath
     implementation("ru.etsft.max:max-bot-api-jackson:0.5.0")
+    // ...или вместо Jackson — адаптер Gson
+    // implementation("ru.etsft.max:max-bot-api-gson:0.5.0")
     implementation("ru.etsft.max:max-bot-api-longpolling:0.5.0")
 
     // Опционально: поддержка webhook
@@ -90,6 +92,8 @@ dependencies {
     -->
 </dependencies>
 ```
+
+`MaxBotAPI.create(...)` и `new MaxUploadAPI()` выбирают сериализатор из classpath: `max-bot-api-jackson`, если он есть, иначе `max-bot-api-gson`. Оба адаптера дают одинаковый формат JSON. Чтобы выбрать явно, передайте его в `new MaxUploadAPI(serializer)` или `new MaxClient(transport, serializer, config)`.
 
 `MaxBotAPI` и `MaxUploadAPI` держат HTTP-клиент и реализуют `AutoCloseable`: закрывайте их при остановке бота, например через try-with-resources.
 
@@ -235,7 +239,7 @@ try (MaxUploadAPI uploadApi = new MaxUploadAPI()) {
 | `max-bot-api-core` | Модельные records, sealed interfaces, SPI сериализатора. Нет внешних зависимостей (только JDK). |
 | `max-bot-api-client` | HTTP-транспорт (`java.net.http`), `MaxClient`, фасад `MaxBotAPI`, ограничитель частоты, политика повторных попыток. |
 | `max-bot-api-jackson` | Адаптер сериализатора Jackson 3.x с кастомными десериализаторами для полиморфных типов. |
-| `max-bot-api-gson` | Зарезервирован под адаптер сериализатора Gson; реализации пока нет. |
+| `max-bot-api-gson` | Адаптер сериализатора Gson — альтернатива `max-bot-api-jackson` с тем же форматом JSON и мягкой обработкой полиморфных типов. |
 | `max-bot-api-longpolling` | Потребитель long polling на базе виртуальных потоков с экспоненциальным откатом. |
 | `max-bot-api-webhook` | Встроенный HTTP/HTTPS-сервер webhook (JDK `HttpServer`) с проверкой секретного заголовка. |
 | `max-bot-api-test-support` | WireMock-заглушки, JSON-фикстуры и вспомогательные классы для интеграционных тестов. |
@@ -367,7 +371,7 @@ MaxWebhookServer server = MaxWebhookServer.builder()
 
 Модуль `max-bot-api-spring-boot` обеспечивает настройку как webhook, так и long polling режимов без шаблонного кода благодаря автоконфигурации. Добавьте зависимость и выберите подходящий режим для вашего развёртывания.
 
-Стартер рассчитан на Spring Boot 4.x. Он создаёт `MaxBotAPI` через `MaxBotAPI.create(token)`, которому нужен `max-bot-api-jackson` в classpath. Для режима webhook также нужен Spring MVC — стартер его не подтягивает:
+Стартер рассчитан на Spring Boot 4.x. Он создаёт `MaxBotAPI` через `MaxBotAPI.create(token)`, которому нужен `max-bot-api-jackson` (или `max-bot-api-gson`) в classpath. Для режима webhook также нужен Spring MVC — стартер его не подтягивает:
 
 ```kotlin
 dependencies {

@@ -43,6 +43,8 @@ dependencies {
     implementation("ru.etsft.max:max-bot-api-client:0.5.0")
     // The default serializer: MaxBotAPI.create(...) looks it up on the classpath
     implementation("ru.etsft.max:max-bot-api-jackson:0.5.0")
+    // ...or, instead of Jackson, the Gson adapter
+    // implementation("ru.etsft.max:max-bot-api-gson:0.5.0")
     implementation("ru.etsft.max:max-bot-api-longpolling:0.5.0")
 
     // Optional: webhook support
@@ -90,6 +92,8 @@ dependencies {
     -->
 </dependencies>
 ```
+
+`MaxBotAPI.create(...)` and `new MaxUploadAPI()` pick the serializer from the classpath: `max-bot-api-jackson` if present, otherwise `max-bot-api-gson`. Both adapters produce the same wire format. To choose explicitly, pass one to `new MaxUploadAPI(serializer)` or `new MaxClient(transport, serializer, config)`.
 
 `MaxBotAPI` and `MaxUploadAPI` hold an HTTP client and implement `AutoCloseable`: close them when the bot shuts down, for example with try-with-resources.
 
@@ -235,7 +239,7 @@ try (MaxUploadAPI uploadApi = new MaxUploadAPI()) {
 | `max-bot-api-core` | Model records, sealed interfaces, serializer SPI. Zero external dependencies (JDK only). |
 | `max-bot-api-client` | HTTP transport (`java.net.http`), `MaxClient`, `MaxBotAPI` facade, rate limiter, retry policy. |
 | `max-bot-api-jackson` | Jackson 3.x serializer adapter with custom deserializers for polymorphic types. |
-| `max-bot-api-gson` | Reserved for a Gson serializer adapter; contains no implementation yet. |
+| `max-bot-api-gson` | Gson serializer adapter — an alternative to `max-bot-api-jackson` with the same wire format and lenient handling of polymorphic types. |
 | `max-bot-api-longpolling` | Long polling consumer backed by virtual threads, with exponential backoff. |
 | `max-bot-api-webhook` | Embedded HTTP/HTTPS webhook server (JDK `HttpServer`) with secret-header validation. |
 | `max-bot-api-test-support` | WireMock stubs, JSON fixtures, and test helpers for integration tests. |
@@ -367,7 +371,7 @@ Either way the server answers 200 even when the handler throws, so MAX does not 
 
 The `max-bot-api-spring-boot` module provides zero-boilerplate setup for both webhook and long-polling modes via auto-configuration. Add the dependency and choose the mode that fits your deployment.
 
-The starter targets Spring Boot 4.x. It builds `MaxBotAPI` with `MaxBotAPI.create(token)`, which needs `max-bot-api-jackson` on the classpath. Webhook mode also needs Spring MVC, which the starter does not bring in:
+The starter targets Spring Boot 4.x. It builds `MaxBotAPI` with `MaxBotAPI.create(token)`, which needs `max-bot-api-jackson` (or `max-bot-api-gson`) on the classpath. Webhook mode also needs Spring MVC, which the starter does not bring in:
 
 ```kotlin
 dependencies {

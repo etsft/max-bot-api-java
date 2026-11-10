@@ -52,7 +52,7 @@ final class ButtonDeserializer extends StdDeserializer<Button> {
     @SuppressWarnings("deprecation") // still dispatches the legacy types the API may send
     public Button deserialize(JsonParser p, DeserializationContext ctxt) {
         JsonNode node = ctxt.readTree(p);
-        String type = node.has("type") ? node.get("type").asString() : "unknown";
+        String type = LenientReads.discriminator(node, "type");
         return switch (type) {
             case "callback" -> parseOrUnknown(ctxt, node, CallbackButton.class, type);
             case "link" -> parseOrUnknown(ctxt, node, LinkButton.class, type);
@@ -88,7 +88,7 @@ final class ButtonDeserializer extends StdDeserializer<Button> {
      * @return the fallback button
      */
     private static UnknownButton unknown(JsonNode node, String type) {
-        String text = node.has("text") ? node.get("text").asString() : "";
+        String text = node.has("text") ? node.get("text").asString("") : "";
         return new UnknownButton(type, text, node.toString());
     }
 }

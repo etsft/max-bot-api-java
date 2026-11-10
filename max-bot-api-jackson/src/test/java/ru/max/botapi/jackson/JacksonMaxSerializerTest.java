@@ -16,9 +16,6 @@
 
 package ru.max.botapi.jackson;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -94,6 +91,8 @@ import ru.max.botapi.model.VideoAttachmentRequest;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import static ru.max.botapi.testsupport.FixtureLoader.loadFixture;
+
 /**
  * Comprehensive tests for {@link JacksonMaxSerializer}.
  */
@@ -105,17 +104,6 @@ class JacksonMaxSerializerTest {
     @BeforeEach
     void setUp() {
         serializer = new JacksonMaxSerializer();
-    }
-
-    private String loadFixture(String path) {
-        try (InputStream is = getClass().getResourceAsStream("/fixtures/" + path)) {
-            if (is == null) {
-                throw new IllegalStateException("Fixture not found: " + path);
-            }
-            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     @Nested

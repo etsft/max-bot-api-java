@@ -18,7 +18,6 @@ package ru.max.botapi.client;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -82,8 +81,6 @@ import ru.max.botapi.model.UploadEndpoint;
 public class MaxUploadAPI implements AutoCloseable {
 
     private static final String MULTIPART_BOUNDARY_PREFIX = "----MaxBotApi";
-    private static final String JACKSON_SERIALIZER_CLASS =
-            "ru.max.botapi.jackson.JacksonMaxSerializer";
     private static final String CRLF = "\r\n";
 
     /** Matches the integer body of {@code <retval>...</retval>} responses (video/audio). */
@@ -95,14 +92,15 @@ public class MaxUploadAPI implements AutoCloseable {
     private final MaxSerializer serializer;
 
     /**
-     * Creates a {@code MaxUploadAPI} using the Jackson serializer loaded via reflection.
+     * Creates a {@code MaxUploadAPI} using a serializer loaded via reflection.
      *
-     * <p>Requires {@code max-bot-api-jackson} on the classpath.</p>
+     * <p>Requires {@code max-bot-api-jackson} or {@code max-bot-api-gson} on the classpath;
+     * Jackson is preferred when both are present.</p>
      *
-     * @throws MaxClientException if the Jackson serializer cannot be instantiated
+     * @throws MaxClientException if no serializer is on the classpath or it cannot be instantiated
      */
     public MaxUploadAPI() {
-        this(loadJacksonSerializer());
+        this(DefaultSerializers.load());
     }
 
     /**
@@ -428,24 +426,6 @@ public class MaxUploadAPI implements AutoCloseable {
             return HttpRequest.BodyPublishers.ofFile(filePath);
         } catch (IOException e) {
             throw new MaxClientException("Cannot open file for upload: " + filePath, e);
-        }
-    }
-
-    /**
-     * Loads the Jackson serializer via reflection to avoid a compile-time dependency on Jackson.
-     */
-    private static MaxSerializer loadJacksonSerializer() {
-        try {
-            Class<?> clazz = Class.forName(JACKSON_SERIALIZER_CLASS);
-            return (MaxSerializer) clazz.getDeclaredConstructor().newInstance();
-        } catch (ClassNotFoundException e) {
-            throw new MaxClientException(
-                    "Jackson serializer not found on classpath. "
-                    + "Add 'max-bot-api-jackson' dependency or supply a custom MaxSerializer.", e);
-        } catch (InvocationTargetException | InstantiationException
-                | IllegalAccessException | NoSuchMethodException e) {
-            throw new MaxClientException(
-                    "Failed to instantiate Jackson serializer: " + JACKSON_SERIALIZER_CLASS, e);
         }
     }
 

@@ -62,7 +62,13 @@ final class UpdateListDeserializer extends StdDeserializer<UpdateList> {
         if (updatesNode != null && updatesNode.isArray()) {
             for (JsonNode element : updatesNode) {
                 try {
-                    updates.add(ctxt.readTreeAsValue(element, Update.class));
+                    Update update = ctxt.readTreeAsValue(element, Update.class);
+                    if (update != null) {
+                        updates.add(update);
+                    } else {
+                        // UpdateList rejects null elements, which would fail the whole batch
+                        LOG.warn("Skipping a null update");
+                    }
                 } catch (RuntimeException e) {
                     LOG.warn("Skipping an update that could not be deserialized. Raw JSON: {}",
                             LenientReads.truncate(element), e);

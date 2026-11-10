@@ -16,7 +16,6 @@
 
 package ru.max.botapi.client;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Objects;
 
 import ru.max.botapi.client.queries.AddMembersQuery;
@@ -87,9 +86,6 @@ import ru.max.botapi.model.UserIdsList;
  */
 public class MaxBotAPI implements AutoCloseable {
 
-    private static final String JACKSON_SERIALIZER_CLASS =
-            "ru.max.botapi.jackson.JacksonMaxSerializer";
-
     private final MaxClient client;
     private final MaxTransportClient transport;
     private final MaxClientConfig config;
@@ -131,13 +127,13 @@ public class MaxBotAPI implements AutoCloseable {
     /**
      * Creates a {@code MaxBotAPI} with default configuration.
      *
-     * <p>Internally creates a {@link JdkHttpMaxTransportClient} and attempts to load
-     * {@code ru.max.botapi.jackson.JacksonMaxSerializer} via reflection (requires
-     * {@code max-bot-api-jackson} on the classpath).</p>
+     * <p>Internally creates a {@link JdkHttpMaxTransportClient} and loads the serializer via
+     * reflection: {@code JacksonMaxSerializer} if {@code max-bot-api-jackson} is on the classpath,
+     * otherwise {@code GsonMaxSerializer} from {@code max-bot-api-gson}.</p>
      *
      * @param accessToken the bot access token; must not be {@code null}
      * @return a new MaxBotAPI instance
-     * @throws MaxClientException if the Jackson serializer cannot be instantiated
+     * @throws MaxClientException if no serializer is on the classpath or it cannot be instantiated
      */
     public static MaxBotAPI create(String accessToken) {
         return create(accessToken, MaxClientConfig.defaults());
@@ -146,43 +142,22 @@ public class MaxBotAPI implements AutoCloseable {
     /**
      * Creates a {@code MaxBotAPI} with the given configuration.
      *
-     * <p>Internally creates a {@link JdkHttpMaxTransportClient} and attempts to load
-     * {@code ru.max.botapi.jackson.JacksonMaxSerializer} via reflection (requires
-     * {@code max-bot-api-jackson} on the classpath).</p>
+     * <p>Internally creates a {@link JdkHttpMaxTransportClient} and loads the serializer via
+     * reflection: {@code JacksonMaxSerializer} if {@code max-bot-api-jackson} is on the classpath,
+     * otherwise {@code GsonMaxSerializer} from {@code max-bot-api-gson}.</p>
      *
      * @param accessToken the bot access token; must not be {@code null}
      * @param config      the client configuration; must not be {@code null}
      * @return a new MaxBotAPI instance
-     * @throws MaxClientException if the Jackson serializer cannot be instantiated
+     * @throws MaxClientException if no serializer is on the classpath or it cannot be instantiated
      */
     public static MaxBotAPI create(String accessToken, MaxClientConfig config) {
         Objects.requireNonNull(accessToken, "accessToken must not be null");
         Objects.requireNonNull(config, "config must not be null");
-        MaxSerializer serializer = loadJacksonSerializer();
+        MaxSerializer serializer = DefaultSerializers.load();
         JdkHttpMaxTransportClient transport = new JdkHttpMaxTransportClient(accessToken, config);
         MaxClient client = new MaxClient(transport, serializer, config);
         return new MaxBotAPI(client, transport, config);
-    }
-
-    /**
-     * Loads the Jackson serializer via reflection to avoid a compile-time dependency on Jackson.
-     *
-     * @return the instantiated serializer
-     * @throws MaxClientException if the class cannot be found or instantiated
-     */
-    private static MaxSerializer loadJacksonSerializer() {
-        try {
-            Class<?> clazz = Class.forName(JACKSON_SERIALIZER_CLASS);
-            return (MaxSerializer) clazz.getDeclaredConstructor().newInstance();
-        } catch (ClassNotFoundException e) {
-            throw new MaxClientException(
-                    "Jackson serializer not found on classpath. "
-                    + "Add 'max-bot-api-jackson' dependency or supply a custom MaxSerializer.", e);
-        } catch (InvocationTargetException | InstantiationException
-                | IllegalAccessException | NoSuchMethodException e) {
-            throw new MaxClientException(
-                    "Failed to instantiate Jackson serializer: " + JACKSON_SERIALIZER_CLASS, e);
-        }
     }
 
     // ===== Bot Methods =====

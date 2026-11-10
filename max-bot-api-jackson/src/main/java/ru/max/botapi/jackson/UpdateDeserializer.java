@@ -74,7 +74,7 @@ final class UpdateDeserializer extends StdDeserializer<Update> {
             return ctxt.reportInputMismatch(Update.class,
                     "Expected a JSON object for an update, got %s", node.getNodeType());
         }
-        String updateType = node.has("update_type") ? node.get("update_type").asString() : "unknown";
+        String updateType = LenientReads.discriminator(node, "update_type");
         return switch (updateType) {
             case "message_created" -> parseOrUnknown(ctxt, node, MessageCreatedUpdate.class, updateType);
             case "message_callback" -> parseOrUnknown(ctxt, node, MessageCallbackUpdate.class, updateType);
@@ -124,7 +124,7 @@ final class UpdateDeserializer extends StdDeserializer<Update> {
      * @return the fallback update
      */
     private static UnknownUpdate unknown(JsonNode node, String updateType) {
-        long timestamp = node.has("timestamp") ? node.get("timestamp").asLong() : 0L;
+        long timestamp = node.has("timestamp") ? node.get("timestamp").asLong(0L) : 0L;
         return new UnknownUpdate(updateType, timestamp, node.toString());
     }
 }

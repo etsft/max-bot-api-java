@@ -64,7 +64,7 @@ import ru.max.botapi.model.UpdateType;
  * <pre>{@code
  * MaxWebhookServer server = MaxWebhookServer.builder()
  *     .handler(update -> System.out.println(update.updateType()))
- *     .serializer(new JacksonMaxSerializer())
+ *     .serializer(new JacksonMaxSerializer()) // or new GsonMaxSerializer()
  *     .port(8080)
  *     .build();
  * server.start();

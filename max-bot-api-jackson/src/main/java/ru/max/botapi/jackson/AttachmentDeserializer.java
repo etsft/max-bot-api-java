@@ -53,7 +53,7 @@ final class AttachmentDeserializer extends StdDeserializer<Attachment> {
     @Override
     public Attachment deserialize(JsonParser p, DeserializationContext ctxt) {
         JsonNode node = ctxt.readTree(p);
-        String type = node.has("type") ? node.get("type").asString() : "unknown";
+        String type = LenientReads.discriminator(node, "type");
         return switch (type) {
             case "image" -> parseOrUnknown(ctxt, node, PhotoAttachment.class, type);
             case "video" -> parseOrUnknown(ctxt, node, VideoAttachment.class, type);

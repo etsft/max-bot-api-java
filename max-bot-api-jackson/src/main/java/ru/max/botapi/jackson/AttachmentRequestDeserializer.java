@@ -48,7 +48,7 @@ final class AttachmentRequestDeserializer extends StdDeserializer<AttachmentRequ
     @Override
     public AttachmentRequest deserialize(JsonParser p, DeserializationContext ctxt) {
         JsonNode node = ctxt.readTree(p);
-        String type = node.has("type") ? node.get("type").asString() : "unknown";
+        String type = LenientReads.discriminator(node, "type");
         return switch (type) {
             case "image" -> ctxt.readTreeAsValue(node, ImageAttachmentRequest.class);
             case "video" -> ctxt.readTreeAsValue(node, VideoAttachmentRequest.class);

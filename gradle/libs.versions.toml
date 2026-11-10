@@ -5,6 +5,7 @@ slf4j = "2.0.19"
 wiremock = "3.13.2"
 jackson = "3.1.5"
 jsonUnit = "6.2.0"
+gson = "2.14.0"
 springBoot = "4.1.1"
 
 # Tool versions: read as libs.versions.<x>.get() in the matching toolVersion
@@ -26,6 +27,7 @@ slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 wiremock-standalone = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 jackson-databind = { module = "tools.jackson.core:jackson-databind", version.ref = "jackson" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 json-unit-assertj = { module = "net.javacrumbs.json-unit:json-unit-assertj", version.ref = "jsonUnit" }
 
 # Explicit versions rather than the spring-boot-dependencies BOM. The BOM also constrains

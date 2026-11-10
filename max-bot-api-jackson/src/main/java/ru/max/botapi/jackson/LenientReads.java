@@ -66,6 +66,21 @@ final class LenientReads {
     }
 
     /**
+     * Reads the discriminator of a sealed-hierarchy node.
+     *
+     * <p>A missing, {@code null} or non-scalar value reads as {@code "unknown"}, so the node
+     * degrades to the fallback type instead of failing the enclosing document.</p>
+     *
+     * @param node  the JSON node of the value
+     * @param field the discriminator property
+     * @return the discriminator text, or {@code "unknown"}
+     */
+    static String discriminator(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        return value == null || value.isNull() || value.isContainer() ? "unknown" : value.asString();
+    }
+
+    /**
      * Renders a node as a JSON string, truncated to a length that is safe to log.
      *
      * @param node the node to render
