@@ -59,7 +59,7 @@ class CommentTypesTest {
     @Test
     void commentMessage_construction() {
         var body = new CommentMessageBody("mid.c1", 1L, "Hi", null);
-        var comment = new CommentMessage(null, CHANNEL, 100L, null, body);
+        var comment = new CommentMessage(null, CHANNEL, 100L, null, body, null);
 
         assertThat(comment.sender()).isNull();
         assertThat(comment.recipient().postId()).isEqualTo("mid.post123");
@@ -70,9 +70,9 @@ class CommentTypesTest {
     void commentMessage_nulls_throw() {
         var body = new CommentMessageBody("mid.c1", 1L, null, null);
         assertThatNullPointerException()
-                .isThrownBy(() -> new CommentMessage(null, null, 0L, null, body));
+                .isThrownBy(() -> new CommentMessage(null, null, 0L, null, body, null));
         assertThatNullPointerException()
-                .isThrownBy(() -> new CommentMessage(null, CHANNEL, 0L, null, null));
+                .isThrownBy(() -> new CommentMessage(null, CHANNEL, 0L, null, null, null));
     }
 
     @Test
@@ -113,7 +113,7 @@ class CommentTypesTest {
     void commentList_copiesMessages() {
         var body = new CommentMessageBody("mid.c1", 1L, "Hi", null);
         var messages = new java.util.ArrayList<CommentMessage>();
-        messages.add(new CommentMessage(null, CHANNEL, 100L, null, body));
+        messages.add(new CommentMessage(null, CHANNEL, 100L, null, body, null));
         var list = new CommentList(messages);
 
         messages.clear();
@@ -134,7 +134,7 @@ class CommentTypesTest {
     @Test
     void sendCommentResult_construction() {
         var body = new CommentMessageBody("mid.c1", 1L, "Hi", null);
-        var comment = new CommentMessage(null, CHANNEL, 100L, null, body);
+        var comment = new CommentMessage(null, CHANNEL, 100L, null, body, null);
         assertThat(new SendCommentResult(comment).message()).isSameAs(comment);
     }
 

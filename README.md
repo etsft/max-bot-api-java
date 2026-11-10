@@ -317,6 +317,7 @@ consumer = MaxLongPollingConsumer.builder()
 | `COMMENT_CREATED` | `comment_created` | A new comment was published on a channel post |
 | `COMMENT_EDITED` | `comment_edited` | A comment on a channel post was edited |
 | `COMMENT_REMOVED` | `comment_removed` | A comment on a channel post was deleted |
+| `BOT_ADMIN_PERMISSIONS_CHANGED` | `bot_admin_permissions_changed` | The bot's administrator permissions in a chat changed |
 
 `message_construction_request`, `message_constructed` and `message_chat_created` are inherited
 from the TamTam API and are not part of the MAX API documentation. They are deprecated and kept only so that a response still carrying them

@@ -104,11 +104,15 @@ class UserBotTypesTest {
     }
 
     @Test
-    void botCommand_nulls_throw() {
+    void botCommand_nullName_throws() {
         assertThatNullPointerException()
                 .isThrownBy(() -> new BotCommand(null, "desc"));
-        assertThatNullPointerException()
-                .isThrownBy(() -> new BotCommand("name", null));
+    }
+
+    @Test
+    void botCommand_descriptionIsOptional() {
+        var cmd = new BotCommand("start", null);
+        assertThat(cmd.description()).isNull();
     }
 
     @Test

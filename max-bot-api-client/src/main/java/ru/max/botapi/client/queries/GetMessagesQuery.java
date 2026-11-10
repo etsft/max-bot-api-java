@@ -86,7 +86,10 @@ public class GetMessagesQuery extends MaxQuery<MessageList> {
      *
      * @param from the start timestamp
      * @return this query for chaining
+     *
+     * @deprecated the API deprecates {@code from}; use {@link #after(long)} instead.
      */
+    @Deprecated
     public GetMessagesQuery from(long from) {
         queryParams.put("from", String.valueOf(from));
         return this;
@@ -97,9 +100,34 @@ public class GetMessagesQuery extends MaxQuery<MessageList> {
      *
      * @param to the end timestamp
      * @return this query for chaining
+     *
+     * @deprecated the API deprecates {@code to}; use {@link #before(long)} instead.
      */
+    @Deprecated
     public GetMessagesQuery to(long to) {
         queryParams.put("to", String.valueOf(to));
+        return this;
+    }
+
+    /**
+     * Returns only messages sent after the given timestamp (Unix time in milliseconds).
+     *
+     * @param after the timestamp; must not be negative
+     * @return this query for chaining
+     */
+    public GetMessagesQuery after(long after) {
+        queryParams.put("after", String.valueOf(after));
+        return this;
+    }
+
+    /**
+     * Returns only messages sent before the given timestamp (Unix time in milliseconds).
+     *
+     * @param before the timestamp; must not be negative
+     * @return this query for chaining
+     */
+    public GetMessagesQuery before(long before) {
+        queryParams.put("before", String.valueOf(before));
         return this;
     }
 

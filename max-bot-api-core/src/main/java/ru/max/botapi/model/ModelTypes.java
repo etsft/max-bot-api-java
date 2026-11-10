@@ -53,7 +53,8 @@ public final class ModelTypes {
             Map.entry("dialog_removed", DialogRemovedUpdate.class),
             Map.entry("comment_created", CommentCreatedUpdate.class),
             Map.entry("comment_edited", CommentEditedUpdate.class),
-            Map.entry("comment_removed", CommentRemovedUpdate.class));
+            Map.entry("comment_removed", CommentRemovedUpdate.class),
+            Map.entry("bot_admin_permissions_changed", BotAdminPermissionsChangedUpdate.class));
 
     private static final Map<String, Class<? extends Attachment>> ATTACHMENTS = Map.of(
             "image", PhotoAttachment.class,

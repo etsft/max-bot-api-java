@@ -22,18 +22,16 @@ import java.util.Objects;
  * A command supported by a bot.
  *
  * @param name        command name (without leading slash)
- * @param description human-readable description of the command
+ * @param description human-readable description of the command, or {@code null} if it has none
  */
-public record BotCommand(String name, String description) {
+public record BotCommand(String name, @Nullable String description) {
 
     /**
      * Creates a BotCommand.
      *
-     * @param name        must not be {@code null}
-     * @param description must not be {@code null}
+     * @param name must not be {@code null}
      */
     public BotCommand {
         Objects.requireNonNull(name, "name must not be null");
-        Objects.requireNonNull(description, "description must not be null");
     }
 }

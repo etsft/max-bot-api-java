@@ -94,7 +94,7 @@ class SubscriptionUploadCommonTest {
     void videoAttachmentDetails_construction() {
         var urls = new VideoUrls("http://1080", "http://720", null, null, null, null, "http://hls");
         var details = new VideoAttachmentDetails(
-                "vtok", urls, new VideoThumbnail("http://thumb"), 1920, 1080, 120);
+                "vtok", urls, new VideoAttachmentDetails.Thumbnail(7L, "ttok", "http://thumb"), 1920, 1080, 120);
         assertThat(details.urls().mp41080()).isEqualTo("http://1080");
         assertThat(details.urls().mp4480()).isNull();
         assertThat(details.thumbnail().url()).isEqualTo("http://thumb");

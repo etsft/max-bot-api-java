@@ -52,4 +52,15 @@ public class SendCommentQuery extends MaxQuery<SendCommentResult> {
                 HttpMethod.POST, SendCommentResult.class);
         this.body = Objects.requireNonNull(body, "body must not be null");
     }
+
+    /**
+     * Sets whether to disable link preview in the comment.
+     *
+     * @param disable {@code true} to disable link preview
+     * @return this query for chaining
+     */
+    public SendCommentQuery disableLinkPreview(boolean disable) {
+        queryParams.put("disable_link_preview", String.valueOf(disable));
+        return this;
+    }
 }

@@ -119,7 +119,10 @@ public enum UpdateType {
     COMMENT_EDITED("comment_edited"),
 
     /** A comment on a channel post was deleted. */
-    COMMENT_REMOVED("comment_removed");
+    COMMENT_REMOVED("comment_removed"),
+
+    /** The bot's administrator permissions in a chat changed. */
+    BOT_ADMIN_PERMISSIONS_CHANGED("bot_admin_permissions_changed");
 
     private final String value;
 
@@ -174,7 +177,7 @@ public enum UpdateType {
      *
      * <p>Equivalent to {@code UpdateType.toStrings(EnumSet.allOf(UpdateType.class))}.</p>
      *
-     * @return unmodifiable set of all 14 known API value strings
+     * @return unmodifiable set of all known API value strings
      */
     public static Set<String> allValues() {
         return Arrays.stream(values())

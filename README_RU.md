@@ -317,6 +317,7 @@ consumer = MaxLongPollingConsumer.builder()
 | `COMMENT_CREATED` | `comment_created` | Опубликован новый комментарий к посту в канале |
 | `COMMENT_EDITED` | `comment_edited` | Комментарий к посту в канале изменён |
 | `COMMENT_REMOVED` | `comment_removed` | Комментарий к посту в канале удалён |
+| `BOT_ADMIN_PERMISSIONS_CHANGED` | `bot_admin_permissions_changed` | Изменились права бота как администратора чата |
 
 `message_construction_request`, `message_constructed` и `message_chat_created` достались
 библиотеке от TamTam API и в документации MAX не описаны. Они помечены `@Deprecated` и

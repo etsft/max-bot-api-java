@@ -27,7 +27,7 @@ import java.util.Objects;
  *
  * @param token     video token
  * @param urls      optional playback URLs, absent while the video is unavailable
- * @param thumbnail optional thumbnail object with its own URL
+ * @param thumbnail optional thumbnail image
  * @param width     optional video width in pixels
  * @param height    optional video height in pixels
  * @param duration  optional duration
@@ -35,7 +35,7 @@ import java.util.Objects;
 public record VideoAttachmentDetails(
         String token,
         @Nullable VideoUrls urls,
-        @Nullable VideoThumbnail thumbnail,
+        @Nullable Thumbnail thumbnail,
         @Nullable Integer width,
         @Nullable Integer height,
         @Nullable Integer duration
@@ -48,5 +48,23 @@ public record VideoAttachmentDetails(
      */
     public VideoAttachmentDetails {
         Objects.requireNonNull(token, "token must not be null");
+    }
+
+    /**
+     * Thumbnail image of a video, as returned by {@code GET /videos/{videoToken}}.
+     *
+     * <p>The API documents all three fields as always present, but they are modelled as
+     * optional so that a partial thumbnail of a video still being processed does not fail the
+     * whole response.</p>
+     *
+     * @param photoId unique identifier of the thumbnail image
+     * @param token   token of the thumbnail image, usable to reattach it
+     * @param url     thumbnail image URL
+     */
+    public record Thumbnail(
+            @Nullable Long photoId,
+            @Nullable String token,
+            @Nullable String url
+    ) {
     }
 }

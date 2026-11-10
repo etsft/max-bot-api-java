@@ -221,6 +221,30 @@ class CommentsApiTest {
     }
 
     @Test
+    void sendCommentWithoutLinkPreview() {
+        stubFor(post(urlPathEqualTo("/messages/" + POST_ID + "/comments"))
+                .withQueryParam("disable_link_preview", equalTo("true"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody("""
+                                {
+                                  "message": {
+                                    "recipient": {"chat_id": 42, "chat_type": "channel"},
+                                    "timestamp": 1700000003000,
+                                    "body": {"mid": "mid.c10", "seq": 10, "text": "See https://max.ru"}
+                                  }
+                                }
+                                """)));
+
+        SendCommentResult result = api
+                .sendComment(new NewCommentBody("See https://max.ru"), POST_ID)
+                .disableLinkPreview(true)
+                .execute();
+
+        assertThat(result.message().body().mid()).isEqualTo("mid.c10");
+    }
+
+    @Test
     void editComment() {
         stubFor(put(urlPathEqualTo("/messages/" + POST_ID + "/comments"))
                 .withQueryParam("comment_id", equalTo("mid.c9"))

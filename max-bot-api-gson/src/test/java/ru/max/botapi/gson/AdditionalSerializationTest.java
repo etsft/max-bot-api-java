@@ -338,10 +338,12 @@ class AdditionalSerializationTest {
                     "vtok",
                     new VideoUrls("https://cdn.example.com/1080.mp4", null, null, null, null,
                             null, "https://cdn.example.com/master.m3u8"),
-                    new VideoThumbnail("https://cdn.example.com/thumb.jpg"), 1920, 1080, 120);
+                    new VideoAttachmentDetails.Thumbnail(77L, "ttok",
+                            "https://cdn.example.com/thumb.jpg"), 1920, 1080, 120);
             String json = serializer.serialize(details);
             assertThatJson(json).node("urls.mp4_1080")
                     .isEqualTo("https://cdn.example.com/1080.mp4");
+            assertThatJson(json).node("thumbnail.photo_id").isEqualTo(77);
             VideoAttachmentDetails deserialized = serializer.deserialize(json,
                     VideoAttachmentDetails.class);
             assertThat(deserialized.urls().mp41080()).isEqualTo("https://cdn.example.com/1080.mp4");
@@ -350,6 +352,9 @@ class AdditionalSerializationTest {
             assertThat(deserialized.width()).isEqualTo(1920);
             assertThat(deserialized.height()).isEqualTo(1080);
             assertThat(deserialized.duration()).isEqualTo(120);
+            assertThat(deserialized.thumbnail())
+                    .isEqualTo(new VideoAttachmentDetails.Thumbnail(77L, "ttok",
+                            "https://cdn.example.com/thumb.jpg"));
         }
 
         @Test

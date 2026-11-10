@@ -883,6 +883,10 @@ class MaxBotAPITest {
     void getMessagesWithAllParams() {
         stubFor(get(urlPathEqualTo("/messages"))
                 .withHeader(AUTH_HEADER, equalTo(TOKEN))
+                .withQueryParam("chat_id", equalTo("123"))
+                .withQueryParam("after", equalTo("1700000000000"))
+                .withQueryParam("before", equalTo("1700001000000"))
+                .withQueryParam("count", equalTo("20"))
                 .willReturn(aResponse()
                         .withHeader("Content-Type", CONTENT_JSON)
                         .withBody("""
@@ -893,10 +897,30 @@ class MaxBotAPITest {
                                 """)));
 
         MessageList list = api.getMessages()
+                .chatId(123L)
+                .after(1700000000000L)
+                .before(1700001000000L)
+                .count(20)
+                .execute();
+
+        assertThat(list).isNotNull();
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    void getMessagesWithDeprecatedParams() {
+        stubFor(get(urlPathEqualTo("/messages"))
+                .withQueryParam("user_id", equalTo("99001"))
+                .withQueryParam("from", equalTo("1700000000000"))
+                .withQueryParam("to", equalTo("1700001000000"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody("{\"messages\": []}")));
+
+        MessageList list = api.getMessages()
                 .userId(99001L)
                 .from(1700000000000L)
                 .to(1700001000000L)
-                .count(20)
                 .execute();
 
         assertThat(list).isNotNull();

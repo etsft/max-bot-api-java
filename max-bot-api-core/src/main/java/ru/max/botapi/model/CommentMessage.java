@@ -30,13 +30,15 @@ import java.util.Objects;
  * @param timestamp comment timestamp (epoch millis)
  * @param link      the comment this one replies to
  * @param body      the comment content
+ * @param stat      comment statistics, if the API sends them
  */
 public record CommentMessage(
         @Nullable User sender,
         MessageRecipient recipient,
         long timestamp,
         @Nullable CommentLinkedMessage link,
-        CommentMessageBody body
+        CommentMessageBody body,
+        @Nullable MessageStat stat
 ) {
 
     /**

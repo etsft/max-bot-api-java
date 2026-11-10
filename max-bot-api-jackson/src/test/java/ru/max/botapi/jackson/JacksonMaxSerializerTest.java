@@ -28,6 +28,7 @@ import ru.max.botapi.model.AttachmentRequest;
 import ru.max.botapi.model.AudioAttachment;
 import ru.max.botapi.model.AudioAttachmentRequest;
 import ru.max.botapi.model.BotAddedUpdate;
+import ru.max.botapi.model.BotAdminPermissionsChangedUpdate;
 import ru.max.botapi.model.BotCommand;
 import ru.max.botapi.model.BotInfo;
 import ru.max.botapi.model.BotRemovedUpdate;
@@ -39,9 +40,11 @@ import ru.max.botapi.model.CallbackButton;
 import ru.max.botapi.model.Chat;
 import ru.max.botapi.model.ChatButton;
 import ru.max.botapi.model.ChatPatch;
+import ru.max.botapi.model.ChatPermission;
 import ru.max.botapi.model.ChatStatus;
 import ru.max.botapi.model.ChatTitleChangedUpdate;
 import ru.max.botapi.model.ChatType;
+import ru.max.botapi.model.CommentMessage;
 import ru.max.botapi.model.ContactAttachment;
 import ru.max.botapi.model.ContactAttachmentRequest;
 import ru.max.botapi.model.FileAttachment;
@@ -267,6 +270,53 @@ class JacksonMaxSerializerTest {
             assertThat(update).isInstanceOf(ChatTitleChangedUpdate.class);
             ChatTitleChangedUpdate ctcu = (ChatTitleChangedUpdate) update;
             assertThat(ctcu.title()).isEqualTo("New Group Title");
+        }
+
+        @Test
+        void botAdminPermissionsChanged() {
+            Update update = serializer.deserialize(
+                    loadFixture("updates/bot-admin-permissions-changed.json"), Update.class);
+            assertThat(update).isInstanceOf(BotAdminPermissionsChangedUpdate.class);
+            var changed = (BotAdminPermissionsChangedUpdate) update;
+            assertThat(changed.updateType()).isEqualTo("bot_admin_permissions_changed");
+            assertThat(changed.chatId()).isEqualTo(50001L);
+            assertThat(changed.userId()).isEqualTo(99001L);
+            assertThat(changed.botId()).isEqualTo(88001L);
+            assertThat(changed.isChannel()).isTrue();
+            assertThat(changed.isAdmin()).isTrue();
+            // the unknown permission is dropped instead of failing the update
+            assertThat(changed.permissions())
+                    .containsExactly(ChatPermission.READ_ALL_MESSAGES, ChatPermission.WRITE);
+        }
+
+        @Test
+        void botAdminPermissionsChanged_withoutPermissions() {
+            Update update = serializer.deserialize("""
+                    {"update_type":"bot_admin_permissions_changed","timestamp":1,
+                     "chat_id":1,"user_id":2,"bot_id":3,"is_channel":false,"is_admin":false}
+                    """, Update.class);
+            assertThat(update).isInstanceOf(BotAdminPermissionsChangedUpdate.class);
+            assertThat(((BotAdminPermissionsChangedUpdate) update).permissions()).isNull();
+        }
+
+        @Test
+        void botCommandWithoutDescription() {
+            BotCommand command = serializer.deserialize("{\"name\":\"start\"}", BotCommand.class);
+            assertThat(command.name()).isEqualTo("start");
+            assertThat(command.description()).isNull();
+            assertThatJson(serializer.serialize(command)).isEqualTo("{\"name\":\"start\"}");
+        }
+
+        @Test
+        void commentMessageReadsStat() {
+            CommentMessage comment = serializer.deserialize("""
+                    {"recipient":{"chat_id":42,"chat_type":"channel","post_id":"mid.post123"},
+                     "timestamp":1700000003000,
+                     "body":{"mid":"mid.c9","seq":9,"text":"Hi"},
+                     "stat":{"views":15}}
+                    """, CommentMessage.class);
+            assertThat(comment.stat()).isNotNull();
+            assertThat(comment.stat().views()).isEqualTo(15);
         }
 
         @Test

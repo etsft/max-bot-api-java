@@ -173,10 +173,11 @@ class UpdateTest {
                 new CommentCreatedUpdate(0, null),
                 new CommentEditedUpdate(0, null),
                 new CommentRemovedUpdate(0, "m", 1, 1, null),
+                new BotAdminPermissionsChangedUpdate(0, 1L, 2L, 3L, false, true, null),
                 new UnknownUpdate("x", 0, "{}")
         };
 
-        assertThat(all).hasSize(22);
+        assertThat(all).hasSize(23);
 
         for (Update upd : all) {
             String desc = switch (upd) {
@@ -201,6 +202,7 @@ class UpdateTest {
                 case CommentCreatedUpdate u -> u.updateType();
                 case CommentEditedUpdate u -> u.updateType();
                 case CommentRemovedUpdate u -> u.updateType();
+                case BotAdminPermissionsChangedUpdate u -> u.updateType();
                 case UnknownUpdate u -> u.updateType();
             };
             assertThat(desc).isNotBlank();

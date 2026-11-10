@@ -27,8 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class UpdateTypeTest {
 
     @Test
-    void allValues_hasAll21KnownTypes() {
-        assertThat(UpdateType.values()).hasSize(21);
+    void allValues_hasAll22KnownTypes() {
+        assertThat(UpdateType.values()).hasSize(22);
     }
 
     @Test
@@ -63,6 +63,8 @@ class UpdateTypeTest {
         assertThat(UpdateType.of("bot_added")).isEqualTo(UpdateType.BOT_ADDED);
         assertThat(UpdateType.of("chat_title_changed"))
                 .isEqualTo(UpdateType.CHAT_TITLE_CHANGED);
+        assertThat(UpdateType.of("bot_admin_permissions_changed"))
+                .isEqualTo(UpdateType.BOT_ADMIN_PERMISSIONS_CHANGED);
     }
 
     @Test
@@ -86,9 +88,9 @@ class UpdateTypeTest {
     }
 
     @Test
-    void allValuesStrings_hasAll21Values() {
+    void allValuesStrings_hasAll22Values() {
         Set<String> all = UpdateType.allValues();
-        assertThat(all).hasSize(21);
+        assertThat(all).hasSize(22);
         assertThat(all).contains(
                 "message_created", "message_callback", "message_edited",
                 "message_removed", "bot_added", "bot_removed",
