@@ -22,7 +22,11 @@ import java.util.Objects;
 /**
  * Retry policy with exponential backoff for retryable HTTP status codes.
  *
- * <p>Retries are performed for HTTP 429 (Too Many Requests) and 503 (Service Unavailable).
+ * <p>Retries are performed for HTTP 429 (Too Many Requests) for every method, and for HTTP 503
+ * (Service Unavailable) only for idempotent methods ({@code GET}, {@code PUT}, {@code DELETE}).
+ * A 503 may come from a proxy after the API has already handled the request, so resending a
+ * {@code POST} or {@code PATCH} could, for example, send a message twice. A 429 means the request
+ * was rejected before processing, so it is always safe to resend.
  * Backoff follows an exponential pattern: 1s, 2s, 4s, etc.</p>
  *
  * <p>It also paces resends while an uploaded attachment is not processed yet, see
@@ -59,13 +63,39 @@ public class RetryPolicy {
     }
 
     /**
-     * Returns whether the given status code is retryable.
+     * Returns whether the given status code is retryable for at least some HTTP methods.
+     *
+     * <p>Use {@link #shouldRetry(HttpMethod, int)} to decide whether a specific request may be
+     * resent.</p>
      *
      * @param statusCode HTTP status code
-     * @return {@code true} if the request should be retried
+     * @return {@code true} if the status code is retryable
      */
     public boolean shouldRetry(int statusCode) {
         return statusCode == HTTP_TOO_MANY_REQUESTS || statusCode == HTTP_SERVICE_UNAVAILABLE;
+    }
+
+    /**
+     * Returns whether a request with the given method that got the given status code may be
+     * resent.
+     *
+     * @param method     HTTP method of the request; must not be {@code null}
+     * @param statusCode HTTP status code
+     * @return {@code true} if the request should be retried
+     */
+    public boolean shouldRetry(HttpMethod method, int statusCode) {
+        Objects.requireNonNull(method, "method must not be null");
+        if (statusCode == HTTP_TOO_MANY_REQUESTS) {
+            return true;
+        }
+        return statusCode == HTTP_SERVICE_UNAVAILABLE && isIdempotent(method);
+    }
+
+    private static boolean isIdempotent(HttpMethod method) {
+        return switch (method) {
+            case GET, PUT, DELETE -> true;
+            case POST, PATCH -> false;
+        };
     }
 
     /**

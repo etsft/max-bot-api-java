@@ -17,14 +17,15 @@
 package ru.max.botapi.model;
 
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Represents a chat (dialog, group chat, or channel) in MAX Messenger.
  *
  * @param chatId           unique chat identifier
- * @param type             type of the chat
- * @param status           current chat status
+ * @param type             type of the chat, or
+ *                         {@code null} if the API sent a value this library version does not know
+ * @param status           current chat status, or
+ *                         {@code null} if the API sent a value this library version does not know
  * @param title            chat title (null for dialogs)
  * @param icon             chat icon image
  * @param lastEventTime    timestamp of the last event (epoch millis)
@@ -41,8 +42,8 @@ import java.util.Objects;
  */
 public record Chat(
         long chatId,
-        ChatType type,
-        ChatStatus status,
+        @Nullable ChatType type,
+        @Nullable ChatStatus status,
         @Nullable String title,
         @Nullable Image icon,
         long lastEventTime,
@@ -60,13 +61,8 @@ public record Chat(
 
     /**
      * Creates a Chat.
-     *
-     * @param type   must not be {@code null}
-     * @param status must not be {@code null}
      */
     public Chat {
-        Objects.requireNonNull(type, "type must not be null");
-        Objects.requireNonNull(status, "status must not be null");
         participants = participants == null ? null : Map.copyOf(participants);
     }
 }

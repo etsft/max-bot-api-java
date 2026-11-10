@@ -63,6 +63,7 @@ public class MaxClient {
 
     private final MaxTransportClient transport;
     private final MaxSerializer serializer;
+    private final MaxClientConfig config;
     private final RetryPolicy retryPolicy;
     private final Duration attachmentReadyTimeout;
     private final @Nullable RateLimiter rateLimiter;
@@ -77,7 +78,7 @@ public class MaxClient {
     public MaxClient(MaxTransportClient transport, MaxSerializer serializer, MaxClientConfig config) {
         this.transport = Objects.requireNonNull(transport, "transport must not be null");
         this.serializer = Objects.requireNonNull(serializer, "serializer must not be null");
-        Objects.requireNonNull(config, "config must not be null");
+        this.config = Objects.requireNonNull(config, "config must not be null");
         this.retryPolicy = new RetryPolicy(config.maxRetries());
         this.attachmentReadyTimeout = config.attachmentReadyTimeout();
         this.rateLimiter = config.enableRateLimiting()
@@ -97,12 +98,21 @@ public class MaxClient {
             RetryPolicy retryPolicy) {
         this.transport = Objects.requireNonNull(transport, "transport must not be null");
         this.serializer = Objects.requireNonNull(serializer, "serializer must not be null");
-        Objects.requireNonNull(config, "config must not be null");
+        this.config = Objects.requireNonNull(config, "config must not be null");
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy must not be null");
         this.attachmentReadyTimeout = config.attachmentReadyTimeout();
         this.rateLimiter = config.enableRateLimiting()
                 ? new RateLimiter(config.maxRequestsPerSecond())
                 : null;
+    }
+
+    /**
+     * Returns the configuration this client was created with.
+     *
+     * @return the client configuration; never {@code null}
+     */
+    public MaxClientConfig config() {
+        return config;
     }
 
     /**
@@ -212,7 +222,7 @@ public class MaxClient {
         acquireRateLimit();
         MaxResponse response = transport.execute(request);
         int attempt = 0;
-        while (response.statusCode() >= 400 && retryPolicy.shouldRetry(response.statusCode())
+        while (response.statusCode() >= 400 && retryPolicy.shouldRetry(request.method(), response.statusCode())
                 && attempt < retryPolicy.maxRetries()) {
             Duration delay = getRetryDelay(response, attempt);
             LOG.debug("Retrying request to {} after {}ms (attempt {}/{})",

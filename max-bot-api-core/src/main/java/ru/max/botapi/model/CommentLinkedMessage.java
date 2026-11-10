@@ -24,13 +24,14 @@ import java.util.Objects;
  * <p>Comments cannot be forwarded, so unlike {@link LinkedMessage} the link type is always
  * {@link MessageLinkType#REPLY}.</p>
  *
- * @param type    type of link; always {@link MessageLinkType#REPLY} for comments
+ * @param type    type of link; {@link MessageLinkType#REPLY} for comments, or
+ *                {@code null} if the API sent a value this library version does not know
  * @param sender  the original sender (null when the comment was posted as the channel)
  * @param chatId  the channel the comment belongs to
  * @param message the body of the linked comment
  */
 public record CommentLinkedMessage(
-        MessageLinkType type,
+        @Nullable MessageLinkType type,
         @Nullable User sender,
         @Nullable Long chatId,
         CommentMessageBody message
@@ -39,11 +40,9 @@ public record CommentLinkedMessage(
     /**
      * Creates a CommentLinkedMessage.
      *
-     * @param type    must not be {@code null}
      * @param message must not be {@code null}
      */
     public CommentLinkedMessage {
-        Objects.requireNonNull(type, "type must not be null");
         Objects.requireNonNull(message, "message must not be null");
     }
 }

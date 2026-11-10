@@ -170,14 +170,14 @@ public class MaxLongPollingConsumer implements AutoCloseable {
                         try {
                             handler.onUpdate(update);
                         } catch (Exception e) {
-                            errorHandler.accept(e);
+                            reportError(e);
                         }
                     }
                     if (result.marker() != null) {
                         marker = result.marker();
                     }
                 } catch (Exception e) {
-                    errorHandler.accept(e);
+                    reportError(e);
                     errorStreak++;
                     if (errorStreak >= STALL_WARNING_THRESHOLD) {
                         LOG.warn("Long polling has failed {} times in a row; the marker is still {}. "
@@ -186,10 +186,35 @@ public class MaxLongPollingConsumer implements AutoCloseable {
                     sleepOnError(errorStreak);
                 }
             }
+        } catch (Throwable t) {
+            // An Error (from the handler or the JVM) ends the loop. Log it loudly: otherwise
+            // the bot silently stops receiving updates.
+            LOG.error("Long polling stopped by an unrecoverable error; no further updates "
+                    + "will be received", t);
+            throw t;
         } finally {
-            // Reset the started flag so the consumer can be restarted after stop().
+            // Reflect the real state, and reset the started flag so the consumer can be
+            // restarted after stop().
+            running = false;
             started.set(false);
             LOG.info("Long polling loop exited");
+        }
+    }
+
+    /**
+     * Passes an exception to the user's error handler.
+     *
+     * <p>An exception thrown by the error handler itself is logged and swallowed: letting it
+     * escape would skip the marker update (replaying the batch) or end the polling loop.</p>
+     *
+     * @param e the exception to report
+     */
+    private void reportError(Exception e) {
+        try {
+            errorHandler.accept(e);
+        } catch (Exception handlerFailure) {
+            LOG.warn("The long polling error handler threw an exception; ignoring it",
+                    handlerFailure);
         }
     }
 

@@ -308,6 +308,37 @@ class JacksonMaxSerializerTest {
         }
 
         @Test
+        void unknownEnumValuesReadAsNullInsteadOfFailing() {
+            Chat chat = serializer.deserialize("""
+                    {"chat_id":1,"type":"supergroup","status":"archived","last_event_time":1,
+                     "participants_count":2,"is_public":false}
+                    """, Chat.class);
+            assertThat(chat.chatId()).isEqualTo(1L);
+            assertThat(chat.type()).isNull();
+            assertThat(chat.status()).isNull();
+
+            Message message = serializer.deserialize("""
+                    {"recipient":{"chat_id":1,"chat_type":"supergroup"},"timestamp":1,
+                     "body":{"mid":"m","seq":1},
+                     "link":{"type":"quote","message":{"mid":"m0","seq":0}}}
+                    """, Message.class);
+            assertThat(message.recipient().chatType()).isNull();
+            assertThat(message.link().type()).isNull();
+            assertThat(message.body().mid()).isEqualTo("m");
+        }
+
+        @Test
+        void enumGivenAsObjectFailsTheUpdateInsteadOfMisreadingIt() {
+            Update update = serializer.deserialize("""
+                    {"update_type":"message_created","timestamp":1,"message":{
+                     "recipient":{"chat_id":1,"chat_type":{"chat_id":666,"chat_type":"dialog"}},
+                     "timestamp":5,"body":{"mid":"m","seq":1}}}
+                    """, Update.class);
+            assertThat(update).isInstanceOf(UnknownUpdate.class);
+            assertThat(update.timestamp()).isEqualTo(1L);
+        }
+
+        @Test
         void commentMessageReadsStat() {
             CommentMessage comment = serializer.deserialize("""
                     {"recipient":{"chat_id":42,"chat_type":"channel","post_id":"mid.post123"},

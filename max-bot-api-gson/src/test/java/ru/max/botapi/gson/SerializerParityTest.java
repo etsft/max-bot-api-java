@@ -209,6 +209,18 @@ class SerializerParityTest {
                 Arguments.of("{\"text\":\"t\",\"format\":\"rtf\"}", NewMessageBody.class),
                 Arguments.of("{\"user_id\":1,\"permissions\":[\"write\",\"teleport\",\"edit_message\"]}",
                         ChatMember.class),
+                // an object or array where an enum is expected is rejected, never half-read
+                Arguments.of("{\"action\":{\"action\":\"typing_on\"}}", ActionRequestBody.class),
+                Arguments.of("{\"action\":[\"typing_on\"]}", ActionRequestBody.class),
+                Arguments.of("{\"update_type\":\"message_created\",\"timestamp\":1,\"message\":{"
+                        + "\"recipient\":{\"chat_id\":1,\"chat_type\":{\"chat_id\":666,\"chat_type\":\"dialog\"}},"
+                        + "\"timestamp\":5,\"body\":{\"mid\":\"m\",\"seq\":1}}}", Update.class),
+                // enum values added to the API later read as null instead of failing the document
+                Arguments.of("{\"chat_id\":1,\"type\":\"supergroup\",\"status\":\"archived\","
+                        + "\"last_event_time\":1,\"participants_count\":2,\"is_public\":false}", Chat.class),
+                Arguments.of("{\"recipient\":{\"chat_id\":1,\"chat_type\":\"supergroup\"},\"timestamp\":1,"
+                        + "\"body\":{\"mid\":\"m\",\"seq\":1},\"link\":{\"type\":\"quote\","
+                        + "\"message\":{\"mid\":\"m0\",\"seq\":0}}}", Message.class),
                 // naming exceptions
                 Arguments.of("{\"text\":\"t\",\"notify\":false}", NewMessageBody.class),
                 Arguments.of("{\"message_id\":\"m\",\"notify\":true}", PinMessageBody.class),

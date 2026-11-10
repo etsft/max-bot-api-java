@@ -21,13 +21,14 @@ import java.util.Objects;
 /**
  * A linked (forwarded or replied-to) message reference.
  *
- * @param type    type of link (forward or reply)
+ * @param type    type of link (forward or reply), or
+ *                {@code null} if the API sent a value this library version does not know
  * @param sender  the original sender (null if unknown/deleted)
  * @param chatId  the original chat ID
  * @param message the body of the linked message
  */
 public record LinkedMessage(
-        MessageLinkType type,
+        @Nullable MessageLinkType type,
         @Nullable User sender,
         @Nullable Long chatId,
         MessageBody message
@@ -36,11 +37,9 @@ public record LinkedMessage(
     /**
      * Creates a LinkedMessage.
      *
-     * @param type    must not be {@code null}
      * @param message must not be {@code null}
      */
     public LinkedMessage {
-        Objects.requireNonNull(type, "type must not be null");
         Objects.requireNonNull(message, "message must not be null");
     }
 }

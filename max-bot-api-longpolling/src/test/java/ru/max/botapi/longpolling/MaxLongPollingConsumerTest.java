@@ -41,6 +41,7 @@ import ru.max.botapi.testsupport.TestSerializers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.moreThanOrExactly;
@@ -419,5 +420,73 @@ class MaxLongPollingConsumerTest {
 
         assertThat(reached).isTrue();
         assertThat(updateCount.get()).isGreaterThanOrEqualTo(2);
+    }
+
+    private static final String ONE_UPDATE_WITH_MARKER = """
+            {
+              "updates": [
+                {"update_type": "bot_started", "timestamp": 1700001000000, "chat_id": 50001,
+                 "user": {"user_id": 99001, "first_name": "Bob", "is_bot": false,
+                          "last_activity_time": 1700000100000}}
+              ],
+              "marker": 7
+            }
+            """;
+
+    @Test
+    void throwingErrorHandlerDoesNotStopPollingOrSkipTheMarker() throws Exception {
+        CountDownLatch twoUpdates = new CountDownLatch(2);
+        stubFor(get(urlPathEqualTo("/updates"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody(ONE_UPDATE_WITH_MARKER)));
+
+        MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
+                .api(api)
+                .pollTimeout(1)
+                .handler(update -> {
+                    twoUpdates.countDown();
+                    throw new RuntimeException("handler failure");
+                })
+                .onError(e -> {
+                    throw new IllegalStateException("error handler failure");
+                })
+                .build();
+
+        consumer.start();
+        boolean reached = twoUpdates.await(10, TimeUnit.SECONDS);
+        consumer.stop();
+
+        assertThat(reached).isTrue();
+        // The marker was advanced past the batch despite both handlers throwing.
+        verify(moreThanOrExactly(1), getRequestedFor(urlPathEqualTo("/updates"))
+                .withQueryParam("marker", equalTo("7")));
+    }
+
+    @Test
+    void errorThrownByHandlerEndsPollingAndIsReflectedInIsRunning() throws Exception {
+        CountDownLatch handled = new CountDownLatch(1);
+        stubFor(get(urlPathEqualTo("/updates"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody(ONE_UPDATE_WITH_MARKER)));
+
+        MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
+                .api(api)
+                .pollTimeout(1)
+                .handler(update -> {
+                    handled.countDown();
+                    throw new AssertionError("fatal handler failure");
+                })
+                .build();
+
+        consumer.start();
+        assertThat(handled.await(10, TimeUnit.SECONDS)).isTrue();
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+        while (consumer.isRunning() && System.nanoTime() < deadline) {
+            Thread.onSpinWait();
+        }
+
+        assertThat(consumer.isRunning()).isFalse();
     }
 }

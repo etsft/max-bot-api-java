@@ -1,6 +1,12 @@
+plugins {
+    `java-library`
+}
+
 dependencies {
-    implementation(project(":max-bot-api-core"))
-    implementation(project(":max-bot-api-client"))
+    // Part of this module's public API (MaxBotAPI, UpdateHandler, MaxSerializer), so consumers
+    // must get them on their compile classpath.
+    api(project(":max-bot-api-core"))
+    api(project(":max-bot-api-client"))
     implementation(libs.slf4j.api)
 
     testImplementation(libs.wiremock.standalone)

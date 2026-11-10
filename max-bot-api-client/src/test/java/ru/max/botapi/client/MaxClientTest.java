@@ -252,6 +252,64 @@ class MaxClientTest {
     }
 
     @Test
+    void doesNotRetryPostOn503() {
+        // A 503 may come from a proxy after the API already handled the request: resending a
+        // POST /messages could deliver the message twice.
+        AtomicInteger callCount = new AtomicInteger();
+        MaxTransportClient transport = countingTransport(callCount, 503);
+        MaxClient client = new MaxClient(transport, stubSerializer,
+                MaxClientConfig.builder().enableRateLimiting(false).maxRetries(3).build(),
+                new RetryPolicy(3, Duration.ZERO));
+        MaxRequest post = new MaxRequest(HttpMethod.POST, "/messages", Map.of(), "{}", Map.of());
+
+        assertThatThrownBy(() -> client.execute(post, String.class))
+                .isInstanceOf(MaxApiException.class);
+        assertThat(callCount.get()).isEqualTo(1);
+    }
+
+    @Test
+    void retriesPostOn429() {
+        AtomicInteger callCount = new AtomicInteger();
+        MaxTransportClient transport = countingTransport(callCount, 429);
+        MaxClient client = new MaxClient(transport, stubSerializer,
+                MaxClientConfig.builder().enableRateLimiting(false).maxRetries(3).build(),
+                new RetryPolicy(3, Duration.ZERO));
+        MaxRequest post = new MaxRequest(HttpMethod.POST, "/messages", Map.of(), "{}", Map.of());
+
+        assertThat(client.execute(post, String.class)).isEqualTo(USER_JSON);
+        assertThat(callCount.get()).isEqualTo(2);
+    }
+
+    @Test
+    void exposesItsConfig() {
+        MaxClientConfig config = MaxClientConfig.builder().enableRateLimiting(false).maxRetries(1).build();
+        MaxClient client = new MaxClient(stubTransport(200, USER_JSON), stubSerializer, config);
+        assertThat(client.config()).isSameAs(config);
+    }
+
+    /** Returns a transport that answers {@code firstStatus} once, then 200. */
+    private static MaxTransportClient countingTransport(AtomicInteger callCount, int firstStatus) {
+        return new MaxTransportClient() {
+            @Override
+            public MaxResponse execute(MaxRequest request) {
+                if (callCount.incrementAndGet() == 1) {
+                    return new MaxResponse(firstStatus, "{\"code\":\"x\",\"message\":\"busy\"}", Map.of());
+                }
+                return new MaxResponse(200, USER_JSON, Map.of());
+            }
+
+            @Override
+            public CompletableFuture<MaxResponse> executeAsync(MaxRequest request) {
+                return CompletableFuture.completedFuture(execute(request));
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+    }
+
+    @Test
     void retryWithInvalidRetryAfterHeaderFallsBackToExponential() {
         AtomicInteger callCount = new AtomicInteger();
         MaxTransportClient transport = new MaxTransportClient() {

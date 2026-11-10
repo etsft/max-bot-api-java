@@ -85,10 +85,10 @@ class CommentTypesTest {
     }
 
     @Test
-    void commentLinkedMessage_nulls_throw() {
+    void commentLinkedMessage_nullMessage_throws() {
         var body = new CommentMessageBody("mid.c0", 0L, null, null);
-        assertThatNullPointerException()
-                .isThrownBy(() -> new CommentLinkedMessage(null, null, null, body));
+        // an unknown link type reads as null and must not fail the comment
+        assertThat(new CommentLinkedMessage(null, null, null, body).type()).isNull();
         assertThatNullPointerException()
                 .isThrownBy(() -> new CommentLinkedMessage(MessageLinkType.REPLY, null, null, null));
     }

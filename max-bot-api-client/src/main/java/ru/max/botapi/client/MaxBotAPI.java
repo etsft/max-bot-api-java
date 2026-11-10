@@ -88,18 +88,18 @@ public class MaxBotAPI implements AutoCloseable {
 
     private final MaxClient client;
     private final MaxTransportClient transport;
-    private final MaxClientConfig config;
 
     /**
      * Creates a {@code MaxBotAPI} wrapping an existing {@link MaxClient}.
      *
      * <p>Use this constructor when you need full control over transport and serializer
-     * configuration.</p>
+     * configuration. {@link #config()} returns the configuration the client was created
+     * with.</p>
      *
      * @param client the configured MAX client; must not be {@code null}
      */
     public MaxBotAPI(MaxClient client) {
-        this(client, null, MaxClientConfig.defaults());
+        this(client, null);
     }
 
     /**
@@ -107,12 +107,10 @@ public class MaxBotAPI implements AutoCloseable {
      *
      * @param client    the configured MAX client; must not be {@code null}
      * @param transport the transport to close when this instance is closed; may be {@code null}
-     * @param config    the client configuration; must not be {@code null}
      */
-    private MaxBotAPI(MaxClient client, MaxTransportClient transport, MaxClientConfig config) {
+    private MaxBotAPI(MaxClient client, MaxTransportClient transport) {
         this.client = Objects.requireNonNull(client, "client must not be null");
         this.transport = transport;
-        this.config = Objects.requireNonNull(config, "config must not be null");
     }
 
     /**
@@ -121,7 +119,7 @@ public class MaxBotAPI implements AutoCloseable {
      * @return the client configuration; never {@code null}
      */
     public MaxClientConfig config() {
-        return config;
+        return client.config();
     }
 
     /**
@@ -157,7 +155,7 @@ public class MaxBotAPI implements AutoCloseable {
         MaxSerializer serializer = DefaultSerializers.load();
         JdkHttpMaxTransportClient transport = new JdkHttpMaxTransportClient(accessToken, config);
         MaxClient client = new MaxClient(transport, serializer, config);
-        return new MaxBotAPI(client, transport, config);
+        return new MaxBotAPI(client, transport);
     }
 
     // ===== Bot Methods =====

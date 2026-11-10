@@ -16,6 +16,7 @@
 
 package ru.max.botapi.client;
 
+import java.time.Duration;
 import java.util.List;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
@@ -94,6 +95,24 @@ class MaxBotAPITest {
         JdkHttpMaxTransportClient transport = new JdkHttpMaxTransportClient(TOKEN, config);
         MaxClient client = new MaxClient(transport, serializer, config);
         api = new MaxBotAPI(client);
+    }
+
+    @Test
+    void wrappedClientConfigIsReported(WireMockRuntimeInfo wmInfo) {
+        // Long polling reads its timeout from api.config(), so it must be the client's own
+        // configuration rather than the defaults.
+        MaxClientConfig config = MaxClientConfig.builder()
+                .baseUrl(wmInfo.getHttpBaseUrl())
+                .requestTimeout(Duration.ofSeconds(20))
+                .longPollTimeout(Duration.ofSeconds(15))
+                .build();
+        MaxClient client = new MaxClient(
+                new JdkHttpMaxTransportClient(TOKEN, config), TestSerializers.create(), config);
+
+        MaxBotAPI wrapped = new MaxBotAPI(client);
+
+        assertThat(wrapped.config()).isSameAs(config);
+        assertThat(wrapped.config().longPollTimeout()).isEqualTo(Duration.ofSeconds(15));
     }
 
     // ===== Bot Methods =====

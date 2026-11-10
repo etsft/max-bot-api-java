@@ -16,30 +16,20 @@
 
 package ru.max.botapi.model;
 
-import java.util.Objects;
-
 /**
  * Identifies the recipient of a message.
  *
  * @param chatId   chat identifier (null when recipient is identified by other means)
- * @param chatType type of the chat
+ * @param chatType type of the chat, or
+ *                 {@code null} if the API sent a value this library version does not know
  * @param userId   the user on the other side of a dialog; absent for a chat or a channel
  * @param postId   identifier of the post a comment belongs to; set on {@code comment_*} events
  *                 and on comments returned by the {@code /comments} methods, absent otherwise
  */
 public record MessageRecipient(
         @Nullable Long chatId,
-        ChatType chatType,
+        @Nullable ChatType chatType,
         @Nullable Long userId,
         @Nullable String postId
 ) {
-
-    /**
-     * Creates a MessageRecipient.
-     *
-     * @param chatType must not be {@code null}
-     */
-    public MessageRecipient {
-        Objects.requireNonNull(chatType, "chatType must not be null");
-    }
 }

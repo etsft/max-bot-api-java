@@ -40,6 +40,28 @@ class RetryPolicyTest {
     }
 
     @Test
+    void retries429ForEveryMethod() {
+        for (HttpMethod method : HttpMethod.values()) {
+            assertThat(policy.shouldRetry(method, 429)).as(method.name()).isTrue();
+        }
+    }
+
+    @Test
+    void retries503OnlyForIdempotentMethods() {
+        assertThat(policy.shouldRetry(HttpMethod.GET, 503)).isTrue();
+        assertThat(policy.shouldRetry(HttpMethod.PUT, 503)).isTrue();
+        assertThat(policy.shouldRetry(HttpMethod.DELETE, 503)).isTrue();
+        assertThat(policy.shouldRetry(HttpMethod.POST, 503)).isFalse();
+        assertThat(policy.shouldRetry(HttpMethod.PATCH, 503)).isFalse();
+    }
+
+    @Test
+    void doesNotRetryOtherStatusesForAnyMethod() {
+        assertThat(policy.shouldRetry(HttpMethod.GET, 500)).isFalse();
+        assertThat(policy.shouldRetry(HttpMethod.GET, 400)).isFalse();
+    }
+
+    @Test
     void shouldNotRetryOn400() {
         assertThat(policy.shouldRetry(400)).isFalse();
     }

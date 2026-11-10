@@ -118,6 +118,12 @@ final class EnumLowercaseModule extends SimpleModule {
 
         @Override
         public Enum<?> deserialize(JsonParser p, DeserializationContext ctxt) {
+            // An object or array is malformed input, not an unknown value. Reject it rather than
+            // return null: returning without consuming the container would leave the parser
+            // inside it, and its fields would be bound to the enclosing object.
+            if (!p.currentToken().isScalarValue()) {
+                return (Enum<?>) ctxt.handleUnexpectedToken(enumType, p);
+            }
             String text = p.getString();
             if (text == null || text.isBlank()) {
                 return (Enum<?>) ctxt.handleUnexpectedToken(enumType, p);

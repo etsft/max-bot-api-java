@@ -40,17 +40,12 @@ class ChatTypesTest {
     }
 
     @Test
-    void chat_nullType_throws() {
-        assertThatNullPointerException()
-                .isThrownBy(() -> new Chat(1L, null, ChatStatus.ACTIVE, null,
-                        null, 0L, 0, null, null, false, null, null, null, null, null, null));
-    }
-
-    @Test
-    void chat_nullStatus_throws() {
-        assertThatNullPointerException()
-                .isThrownBy(() -> new Chat(1L, ChatType.CHAT, null, null,
-                        null, 0L, 0, null, null, false, null, null, null, null, null, null));
+    void chat_unknownTypeAndStatus_areNull() {
+        // The serializers read enum values added to the API later as null.
+        var chat = new Chat(1L, null, null, null,
+                null, 0L, 0, null, null, false, null, null, null, null, null, null);
+        assertThat(chat.type()).isNull();
+        assertThat(chat.status()).isNull();
     }
 
     @Test
