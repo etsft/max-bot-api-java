@@ -146,6 +146,17 @@ subprojects {
         apply(plugin = "maven-publish")
         apply(plugin = "signing")
 
+        // A stable module name for applications on the module path, e.g. max-bot-api-spring-boot
+        // becomes ru.max.botapi.spring. No package is split across these modules.
+        tasks.named<Jar>("jar") {
+            manifest {
+                attributes(
+                    "Automatic-Module-Name" to "ru.max.botapi." +
+                        project.name.removePrefix("max-bot-api-").removeSuffix("-boot")
+                )
+            }
+        }
+
         java {
             withSourcesJar()
             withJavadocJar()

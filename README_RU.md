@@ -40,18 +40,18 @@
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("ru.etsft.max:max-bot-api-client:0.5.0")
+    implementation("ru.etsft.max:max-bot-api-client:0.6.0")
     // Сериализатор по умолчанию: MaxBotAPI.create(...) ищет его в classpath
-    implementation("ru.etsft.max:max-bot-api-jackson:0.5.0")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.6.0")
     // ...или вместо Jackson — адаптер Gson
-    // implementation("ru.etsft.max:max-bot-api-gson:0.5.0")
-    implementation("ru.etsft.max:max-bot-api-longpolling:0.5.0")
+    // implementation("ru.etsft.max:max-bot-api-gson:0.6.0")
+    implementation("ru.etsft.max:max-bot-api-longpolling:0.6.0")
 
     // Опционально: поддержка webhook
-    // implementation("ru.etsft.max:max-bot-api-webhook:0.5.0")
+    // implementation("ru.etsft.max:max-bot-api-webhook:0.6.0")
 
     // Опционально: автоконфигурация Spring Boot (webhook + long polling)
-    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.5.0")
+    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.6.0")
 }
 ```
 
@@ -62,24 +62,24 @@ dependencies {
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-client</artifactId>
-        <version>0.5.0</version>
+        <version>0.6.0</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-jackson</artifactId>
-        <version>0.5.0</version>
+        <version>0.6.0</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-longpolling</artifactId>
-        <version>0.5.0</version>
+        <version>0.6.0</version>
     </dependency>
     <!-- Опционально: поддержка webhook -->
     <!--
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-webhook</artifactId>
-        <version>0.5.0</version>
+        <version>0.6.0</version>
     </dependency>
     -->
     <!-- Опционально: автоконфигурация Spring Boot (webhook + long polling) -->
@@ -87,13 +87,13 @@ dependencies {
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-spring-boot</artifactId>
-        <version>0.5.0</version>
+        <version>0.6.0</version>
     </dependency>
     -->
 </dependencies>
 ```
 
-`MaxBotAPI.create(...)` и `new MaxUploadAPI()` выбирают сериализатор из classpath: `max-bot-api-jackson`, если он есть, иначе `max-bot-api-gson`. Оба адаптера дают одинаковый формат JSON. Чтобы выбрать явно, передайте его в `new MaxUploadAPI(serializer)` или `new MaxClient(transport, serializer, config)`.
+`MaxBotAPI.create(...)` и `new MaxUploadAPI()` выбирают сериализатор из classpath (`api.uploads()` берёт сериализатор и настройки самого API): `max-bot-api-jackson`, если он есть, иначе `max-bot-api-gson`. Оба адаптера дают одинаковый формат JSON. Чтобы выбрать явно, передайте его в `new MaxUploadAPI(serializer)` или `new MaxClient(transport, serializer, config)`.
 
 Адаптеры находятся через `java.util.ServiceLoader`. Свой адаптер можно подключить, реализовав `ru.max.botapi.core.MaxSerializerProvider` и указав его в `META-INF/services/ru.max.botapi.core.MaxSerializerProvider`; побеждает провайдер с наибольшим `priority()` (у Jackson 100, у Gson 50).
 
@@ -124,7 +124,7 @@ MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
             String text = body == null ? null : body.text();
             Long chatId = msg.message().recipient().chatId();
             if (text != null && chatId != null) {
-                api.sendMessage(new NewMessageBody(text, null, null, null, null))
+                api.sendMessage(NewMessageBody.text(text))
                     .chatId(chatId)
                     .execute();
             }
@@ -138,18 +138,13 @@ consumer.start();
 ### Отправка сообщения со встроенной клавиатурой
 
 ```java
-List<List<Button>> buttons = List.of(
-    List.of(
-        new CallbackButton("Yes", "btn_yes", ButtonIntent.POSITIVE),
-        new CallbackButton("No",  "btn_no",  ButtonIntent.NEGATIVE)
-    )
-);
+InlineKeyboardAttachmentRequest keyboard = InlineKeyboardAttachmentRequest.builder()
+    .row(new CallbackButton("Yes", "btn_yes", ButtonIntent.POSITIVE),
+         new CallbackButton("No",  "btn_no",  ButtonIntent.NEGATIVE))
+    .row(CallbackButton.of("Later", "btn_later"))
+    .build();
 
-InlineKeyboardAttachment.KeyboardPayload payload =
-    new InlineKeyboardAttachment.KeyboardPayload(buttons);
-InlineKeyboardAttachmentRequest keyboard = new InlineKeyboardAttachmentRequest(payload);
-
-api.sendMessage(new NewMessageBody("Choose:", List.of(keyboard), null, null, null))
+api.sendMessage(NewMessageBody.text("Choose:").withAttachments(keyboard))
     .chatId(chatId)
     .execute();
 ```
@@ -167,6 +162,17 @@ switch (update) {
     case MessageCreatedUpdate msg -> { /* обработать новое сообщение */ }
     default -> { /* игнорировать неизвестные типы обновлений */ }
 }
+```
+
+Или зарегистрируйте обработчик на каждый тип апдейта через `UpdateRouter`, он сам приводит апдейт к нужному типу:
+
+```java
+UpdateHandler handler = UpdateRouter.builder()
+    .on(MessageCreatedUpdate.class, msg -> { /* обработать новое сообщение */ })
+    .on(MessageCallbackUpdate.class, cb -> api.answerOnCallback(
+            new CallbackAnswer(null, "Answered!"), cb.callback().callbackId()).execute())
+    .otherwise(update -> { /* всё остальное; по умолчанию игнорируется */ })
+    .build();
 ```
 
 `callback().payload()` равен `null`, если у кнопки нет payload, — проверяйте это до `switch` по нему.
@@ -215,7 +221,7 @@ api.editMyCommands(new BotCommandsPatch(List.of())).execute();
 Загрузка файла выполняется в два шага: сначала запрашивается URL для загрузки через API, затем файл передаётся потоком на этот URL. Форма ответа и тип результата зависят от `UploadType` — см. [Загрузка файлов](#загрузка-файлов) ниже.
 
 ```java
-try (MaxUploadAPI uploadApi = new MaxUploadAPI()) {
+try (MaxUploadAPI uploadApi = api.uploads()) {
     // Шаг 1: запросить endpoint для загрузки
     UploadEndpoint endpoint = api.getUploadUrl(UploadType.FILE).execute();
 
@@ -224,11 +230,9 @@ try (MaxUploadAPI uploadApi = new MaxUploadAPI()) {
 
     // Шаг 3: прикрепить полученный токен к сообщению. MAX обрабатывает загрузку
     // асинхронно; execute() повторяет отправку, пока вложение не будет готово.
-    api.sendMessage(new NewMessageBody(
-        "File:",
-        List.of(new FileAttachmentRequest(new MediaRequestPayload(info.token()))),
-        null, null, null
-    )).chatId(chatId).execute();
+    api.sendMessage(NewMessageBody.text("File:")
+        .withAttachments(new FileAttachmentRequest(new MediaRequestPayload(info.token()))))
+        .chatId(chatId).execute();
 }
 ```
 
@@ -280,7 +284,16 @@ consumer.stop();    // корректное завершение работы
 - Если не удался сам `getUpdates` (сетевой сбой, ошибка API), цикл повторяет запрос с экспоненциальным откатом: 1 с → 2 с → 4 с → 8 с → 16 с → 30 с (максимум). Успешный опрос сбрасывает откат.
 - Если исключение выбросил обработчик, потребитель без паузы переходит к следующему обновлению. Маркер всё равно продвигается, поэтому это обновление повторно не придёт.
 
-Обработчик выполняется в потоке опроса, и следующий опрос ждёт его завершения. Долгую работу передавайте в отдельный executor.
+Обработчик выполняется в потоке опроса, и следующий опрос ждёт его завершения. Для долгих обработчиков (загрузка файлов, вызовы других сервисов) передайте потребителю executor: каждое обновление будет обрабатываться в нём, а опрос пойдёт дальше. Тогда обновления могут обрабатываться параллельно и не по порядку, а обновление, которое ещё обрабатывалось при остановке приложения, теряется.
+
+```java
+ExecutorService handlers = Executors.newVirtualThreadPerTaskExecutor();
+MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
+    .api(api)
+    .handler(handler)
+    .dispatchExecutor(handlers)   // executor ваш: закройте его после остановки потребителя
+    .build();
+```
 
 Для получения только определённых типов событий используйте `.types()` с константами `UpdateType`:
 
@@ -378,8 +391,8 @@ MaxWebhookServer server = MaxWebhookServer.builder()
 
 ```kotlin
 dependencies {
-    implementation("ru.etsft.max:max-bot-api-spring-boot:0.5.0")
-    implementation("ru.etsft.max:max-bot-api-jackson:0.5.0")
+    implementation("ru.etsft.max:max-bot-api-spring-boot:0.6.0")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.6.0")
     implementation("org.springframework.boot:spring-boot-starter-webmvc") // только для режима webhook
 }
 ```
@@ -549,7 +562,7 @@ FileUploadedInfo info = uploadApi.uploadFile(endpoint, Path.of("/tmp/doc.pdf"), 
 
 FileAttachmentRequest att =
     new FileAttachmentRequest(new MediaRequestPayload(info.token()));
-api.sendMessage(new NewMessageBody("File:", List.of(att), null, null, null))
+api.sendMessage(NewMessageBody.text("File:").withAttachments(att))
     .chatId(chatId).execute();
 ```
 
@@ -562,7 +575,7 @@ ImageUploadedInfo info = uploadApi.uploadImage(endpoint, Path.of("/tmp/photo.jpg
 // Передайте карту photos в payload без изменений.
 ImageAttachmentRequest att = new ImageAttachmentRequest(
     new PhotoAttachmentRequestPayload(null, null, info.photos()));
-api.sendMessage(new NewMessageBody(null, List.of(att), null, null, null))
+api.sendMessage(NewMessageBody.attachments(att))
     .chatId(chatId).execute();
 ```
 
@@ -575,7 +588,7 @@ MediaUploadedInfo info = uploadApi.uploadMedia(endpoint, Path.of("/tmp/clip.mp4"
 // info.token() == endpoint.token() (ответ на загрузку не содержит токена).
 VideoAttachmentRequest att =
     new VideoAttachmentRequest(new MediaRequestPayload(info.token()));
-api.sendMessage(new NewMessageBody("Video:", List.of(att), null, null, null))
+api.sendMessage(NewMessageBody.text("Video:").withAttachments(att))
     .chatId(chatId).execute();
 ```
 
@@ -707,7 +720,7 @@ RuntimeException
 
 ```java
 try {
-    api.sendMessage(new NewMessageBody("Hello", null, null, null, null))
+    api.sendMessage(NewMessageBody.text("Hello"))
         .chatId(chatId)
         .execute();
 } catch (MaxRateLimitException e) {
@@ -719,6 +732,26 @@ try {
     System.err.println("Ошибка транспорта: " + e.getMessage());
 }
 ```
+
+---
+
+## Переход на 0.6.0
+
+В 0.6.0 добавлен адаптер Gson и исправлена обработка значений, которые API добавит позже. Большая часть кода компилируется без изменений; проверьте пункты ниже. Полный список — в [CHANGELOG.md](CHANGELOG.md).
+
+| Было | Стало |
+|---|---|
+| `Chat.type()`, `Chat.status()`, `MessageRecipient.chatType()`, `LinkedMessage.type()` никогда не `null` | `null`, если API прислал значение, незнакомое этой версии; в `switch` по ним нужен `case null` |
+| исчерпывающий `switch` по `Update` | нужна ветка для нового `BotAdminPermissionsChangedUpdate` |
+| `VideoAttachmentDetails.thumbnail()` — `VideoThumbnail` | `VideoAttachmentDetails.Thumbnail(photoId, token, url)`, все поля необязательные |
+| `CommentMessage(sender, recipient, timestamp, link, body)` | добавлен `stat` |
+| `GetMessagesQuery.from()` / `to()` | устарели; используйте `after()` / `before()` |
+| `max.bot.webhook.auto-unregister` по умолчанию `true` | по умолчанию `false`: чтобы удалять webhook при остановке, включите явно |
+| 503 повторяется для всех методов | только для `GET`, `PUT` и `DELETE`; `POST` и `PATCH` могли уже выполниться |
+| `Retry-After` соблюдается любой длины | ожидание дольше 60 секунд не повторяется: значение в `MaxRateLimitException.retryAfter()` |
+| Тело webhook любого размера | больше 1 МБ — ответ 413 (`max.bot.webhook.max-body-size`, `MaxWebhookServer.Builder.maxBodySize`) |
+| `Update` сериализуется без `update_type`; `Unknown*` — полем `raw_json` | с `update_type`; `Unknown*` — исходным JSON |
+| Эндпоинт — `MaxWebhookController.handleWebhook(String, String)` | эндпоинт — `receiveWebhook(InputStream, String)`; `handleWebhook` остался для уже прочитанного тела |
 
 ---
 
