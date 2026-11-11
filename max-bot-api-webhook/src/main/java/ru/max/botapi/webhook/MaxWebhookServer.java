@@ -211,10 +211,14 @@ public class MaxWebhookServer implements AutoCloseable {
     /**
      * Returns the port this server listens on.
      *
-     * @return the configured port number
+     * <p>Once started this is the bound port, which differs from the configured one when the
+     * server was built with {@code port(0)} to pick any free port.</p>
+     *
+     * @return the bound port if started, otherwise the configured port
      */
     public int getPort() {
-        return port;
+        HttpServer s = this.server;
+        return s == null ? port : s.getAddress().getPort();
     }
 
     /**
@@ -386,7 +390,8 @@ public class MaxWebhookServer implements AutoCloseable {
         }
 
         /**
-         * Sets the port the server binds to. Defaults to {@value DEFAULT_PORT}.
+         * Sets the port the server binds to. Defaults to {@value DEFAULT_PORT}; {@code 0} picks
+         * any free port, see {@link MaxWebhookServer#getPort()}.
          *
          * @param port the TCP port number
          * @return this builder

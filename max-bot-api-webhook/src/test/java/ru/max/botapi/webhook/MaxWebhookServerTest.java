@@ -17,7 +17,6 @@
 package ru.max.botapi.webhook;
 
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -78,15 +77,11 @@ class MaxWebhookServerTest {
             }
             """;
 
-    private int webhookPort;
-    private String webhookBaseUrl;
     private MaxWebhookServer server;
     private HttpClient httpClient;
 
     @BeforeEach
     void setUp() throws IOException {
-        webhookPort = findFreePort();
-        webhookBaseUrl = "http://localhost:" + webhookPort;
         httpClient = HttpClient.newHttpClient();
     }
 
@@ -108,12 +103,12 @@ class MaxWebhookServerTest {
                     latch.countDown();
                 })
                 .serializer(TestSerializers.create())
-                .port(webhookPort)
+                .port(0)
                 .build();
         server.start();
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(webhookBaseUrl + "/webhook"))
+                .uri(URI.create(baseUrl() + "/webhook"))
                 .header("Content-Type", CONTENT_JSON)
                 .POST(HttpRequest.BodyPublishers.ofString(UPDATE_JSON))
                 .build();
@@ -134,12 +129,12 @@ class MaxWebhookServerTest {
                 .handler(update -> {
                 })
                 .serializer(TestSerializers.create())
-                .port(webhookPort)
+                .port(0)
                 .build();
         server.start();
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(webhookBaseUrl + "/webhook"))
+                .uri(URI.create(baseUrl() + "/webhook"))
                 .GET()
                 .build();
 
@@ -156,12 +151,12 @@ class MaxWebhookServerTest {
                 })
                 .serializer(TestSerializers.create())
                 .secret("my-secret")
-                .port(webhookPort)
+                .port(0)
                 .build();
         server.start();
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(webhookBaseUrl + "/webhook"))
+                .uri(URI.create(baseUrl() + "/webhook"))
                 .header("Content-Type", CONTENT_JSON)
                 .header("X-Max-Bot-Api-Secret", "wrong-secret")
                 .POST(HttpRequest.BodyPublishers.ofString(UPDATE_JSON))
@@ -181,12 +176,12 @@ class MaxWebhookServerTest {
                 .handler(update -> latch.countDown())
                 .serializer(TestSerializers.create())
                 .secret("my-secret")
-                .port(webhookPort)
+                .port(0)
                 .build();
         server.start();
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(webhookBaseUrl + "/webhook"))
+                .uri(URI.create(baseUrl() + "/webhook"))
                 .header("Content-Type", CONTENT_JSON)
                 .header("X-Max-Bot-Api-Secret", "my-secret")
                 .POST(HttpRequest.BodyPublishers.ofString(UPDATE_JSON))
@@ -209,7 +204,7 @@ class MaxWebhookServerTest {
                 .handler(received::add)
                 .serializer(TestSerializers.create())
                 .maxBodySize(size - 1)
-                .port(webhookPort)
+                .port(0)
                 .build();
         server.start();
 
@@ -227,7 +222,7 @@ class MaxWebhookServerTest {
                 .handler(received::add)
                 .serializer(TestSerializers.create())
                 .maxBodySize(size)
-                .port(webhookPort)
+                .port(0)
                 .build();
         server.start();
 
@@ -245,7 +240,7 @@ class MaxWebhookServerTest {
 
     private HttpResponse<String> postUpdate() throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(webhookBaseUrl + "/webhook"))
+                .uri(URI.create(baseUrl() + "/webhook"))
                 .header("Content-Type", CONTENT_JSON)
                 .POST(HttpRequest.BodyPublishers.ofString(UPDATE_JSON))
                 .build();
@@ -259,12 +254,12 @@ class MaxWebhookServerTest {
                     throw new RuntimeException("Handler error");
                 })
                 .serializer(TestSerializers.create())
-                .port(webhookPort)
+                .port(0)
                 .build();
         server.start();
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(webhookBaseUrl + "/webhook"))
+                .uri(URI.create(baseUrl() + "/webhook"))
                 .header("Content-Type", CONTENT_JSON)
                 .POST(HttpRequest.BodyPublishers.ofString(UPDATE_JSON))
                 .build();
@@ -288,7 +283,7 @@ class MaxWebhookServerTest {
                 .handler(update -> {
                 })
                 .serializer(TestSerializers.create())
-                .port(webhookPort)
+                .port(0)
                 .build();
         server.start();
 
@@ -310,7 +305,7 @@ class MaxWebhookServerTest {
                 .handler(update -> {
                 })
                 .serializer(TestSerializers.create())
-                .port(webhookPort)
+                .port(0)
                 .build();
         server.start();
 
@@ -333,7 +328,7 @@ class MaxWebhookServerTest {
                 .handler(update -> {
                 })
                 .serializer(TestSerializers.create())
-                .port(webhookPort)
+                .port(0)
                 .build();
 
         assertThatThrownBy(() -> server.register(api, "https://example.com/webhook", null))
@@ -353,7 +348,7 @@ class MaxWebhookServerTest {
                 .handler(update -> {
                 })
                 .serializer(TestSerializers.create())
-                .port(webhookPort)
+                .port(0)
                 .build();
 
         assertThatThrownBy(() -> server.unregister(api, "https://example.com/webhook"))
@@ -380,13 +375,13 @@ class MaxWebhookServerTest {
                             handled.countDown();
                         })
                         .serializer(TestSerializers.create())
-                        .port(webhookPort)
+                        .port(0)
                         .dispatchExecutor(executor)
                         .build();
                 server.start();
 
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(webhookBaseUrl + "/webhook"))
+                        .uri(URI.create(baseUrl() + "/webhook"))
                         .header("Content-Type", CONTENT_JSON)
                         .POST(HttpRequest.BodyPublishers.ofString(UPDATE_JSON))
                         .build();
@@ -422,12 +417,14 @@ class MaxWebhookServerTest {
                 .handler(update -> {
                 })
                 .serializer(TestSerializers.create())
-                .port(webhookPort)
+                .port(0)
                 .path("/mypath")
                 .build();
+        assertThat(server.getPort()).isZero();
         server.start();
 
-        assertThat(server.getPort()).isEqualTo(webhookPort);
+        // port(0) binds any free port; getPort() then reports the bound one.
+        assertThat(server.getPort()).isPositive();
         assertThat(server.getPath()).isEqualTo("/mypath");
     }
 
@@ -449,13 +446,13 @@ class MaxWebhookServerTest {
                 })
                 .serializer(TestSerializers.create())
                 .secret("my-secret")
-                .port(webhookPort)
+                .port(0)
                 .build();
         server.start();
 
         // send request without any secret header at all
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(webhookBaseUrl + "/webhook"))
+                .uri(URI.create(baseUrl() + "/webhook"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(UPDATE_JSON))
                 .build();
@@ -474,12 +471,12 @@ class MaxWebhookServerTest {
                 .handler(update -> { })
                 .serializer(TestSerializers.create())
                 .secret("safe-secret")
-                .port(webhookPort)
+                .port(0)
                 .build();
         server.start();
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(webhookBaseUrl + "/webhook"))
+                .uri(URI.create(baseUrl() + "/webhook"))
                 .header("Content-Type", "application/json")
                 // No X-Max-Bot-Api-Secret header — headerSecret will be null
                 .POST(HttpRequest.BodyPublishers.ofString(UPDATE_JSON))
@@ -491,10 +488,8 @@ class MaxWebhookServerTest {
         assertThat(response.statusCode()).isEqualTo(401);
     }
 
-    private static int findFreePort() throws IOException {
-        try (ServerSocket socket = new ServerSocket(0)) {
-            socket.setReuseAddress(true);
-            return socket.getLocalPort();
-        }
+    /** The started server's URL; binding port 0 leaves no window for another process to take the port. */
+    private String baseUrl() {
+        return "http://localhost:" + server.getPort();
     }
 }

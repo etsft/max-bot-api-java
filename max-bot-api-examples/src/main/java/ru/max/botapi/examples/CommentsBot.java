@@ -76,7 +76,7 @@ public final class CommentsBot {
                 consumer.start();
                 System.out.println("CommentsBot is running. Press Ctrl+C to stop.");
 
-                Thread.currentThread().join();
+                ExampleSupport.awaitShutdown();
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

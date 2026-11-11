@@ -83,7 +83,7 @@ public final class WebhookBot {
                         String text = body == null ? null : body.text();
                         Long chatId = msg.message().recipient().chatId();
                         if (text != null && !text.isBlank() && chatId != null) {
-                            api.sendMessage(new NewMessageBody(text, null, null, null, null))
+                            api.sendMessage(NewMessageBody.text(text))
                                     .chatId(chatId)
                                     .execute();
                         }

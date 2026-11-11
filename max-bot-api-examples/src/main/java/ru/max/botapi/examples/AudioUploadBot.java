@@ -18,7 +18,8 @@ package ru.max.botapi.examples;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.MaxUploadAPI;
@@ -78,9 +79,12 @@ public final class AudioUploadBot {
         }
 
         try (MaxBotAPI api = MaxBotAPI.create(token);
-             MaxUploadAPI uploadApi = new MaxUploadAPI();
+             MaxUploadAPI uploadApi = api.uploads();
+             // Uploads take a while: run them off the polling thread so updates keep coming.
+             ExecutorService handlers = Executors.newVirtualThreadPerTaskExecutor();
              MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
                      .api(api)
+                     .dispatchExecutor(handlers)
                      .handler(update -> {
                          if (update instanceof MessageCreatedUpdate msg) {
                              var body = msg.message().body();
@@ -95,7 +99,7 @@ public final class AudioUploadBot {
             consumer.start();
             System.out.println("AudioUploadBot is running. Send /upload to test. Press Ctrl+C to stop.");
 
-            Thread.currentThread().join();
+            ExampleSupport.awaitShutdown();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -122,11 +126,7 @@ public final class AudioUploadBot {
             AudioAttachmentRequest audioAttachment =
                     new AudioAttachmentRequest(new MediaRequestPayload(uploaded.token()));
 
-            NewMessageBody body = new NewMessageBody(
-                    "Here is your audio:",
-                    List.of(audioAttachment),
-                    null, null, null
-            );
+            NewMessageBody body = NewMessageBody.text("Here is your audio:").withAttachments(audioAttachment);
 
             // Waits while MAX is still processing the upload (attachmentReadyTimeout)
             api.sendMessage(body).chatId(chatId).execute();

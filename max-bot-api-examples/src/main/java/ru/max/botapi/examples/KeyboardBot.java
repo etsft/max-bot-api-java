@@ -16,15 +16,11 @@
 
 package ru.max.botapi.examples;
 
-import java.util.List;
-
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.longpolling.MaxLongPollingConsumer;
-import ru.max.botapi.model.Button;
 import ru.max.botapi.model.ButtonIntent;
 import ru.max.botapi.model.CallbackAnswer;
 import ru.max.botapi.model.CallbackButton;
-import ru.max.botapi.model.InlineKeyboardAttachment;
 import ru.max.botapi.model.InlineKeyboardAttachmentRequest;
 import ru.max.botapi.model.MessageCallbackUpdate;
 import ru.max.botapi.model.MessageCreatedUpdate;
@@ -79,7 +75,7 @@ public final class KeyboardBot {
             consumer.start();
             System.out.println("KeyboardBot is running. Press Ctrl+C to stop.");
 
-            Thread.currentThread().join();
+            ExampleSupport.awaitShutdown();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -92,26 +88,13 @@ public final class KeyboardBot {
         }
 
         // Build inline keyboard with three buttons in two rows
-        List<List<Button>> buttons = List.of(
-                List.of(
-                        new CallbackButton("Hello", "btn_hello", ButtonIntent.POSITIVE),
-                        new CallbackButton("World", "btn_world", ButtonIntent.DEFAULT)
-                ),
-                List.of(
-                        new CallbackButton("Info", "btn_info", ButtonIntent.DEFAULT)
-                )
-        );
+        InlineKeyboardAttachmentRequest keyboard = InlineKeyboardAttachmentRequest.builder()
+                .row(new CallbackButton("Hello", "btn_hello", ButtonIntent.POSITIVE),
+                        CallbackButton.of("World", "btn_world"))
+                .row(CallbackButton.of("Info", "btn_info"))
+                .build();
 
-        InlineKeyboardAttachment.KeyboardPayload payload =
-                new InlineKeyboardAttachment.KeyboardPayload(buttons);
-
-        InlineKeyboardAttachmentRequest keyboard = new InlineKeyboardAttachmentRequest(payload);
-
-        NewMessageBody body = new NewMessageBody(
-                "Choose an option:",
-                List.of(keyboard),
-                null, null, null
-        );
+        NewMessageBody body = NewMessageBody.text("Choose an option:").withAttachments(keyboard);
 
         api.sendMessage(body).chatId(chatId).execute();
     }

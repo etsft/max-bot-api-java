@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -488,5 +490,44 @@ class MaxLongPollingConsumerTest {
         }
 
         assertThat(consumer.isRunning()).isFalse();
+    }
+
+    @Test
+    void dispatchExecutorKeepsPollingWhileAHandlerIsBusy() throws Exception {
+        stubFor(get(urlPathEqualTo("/updates"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody(ONE_UPDATE_WITH_MARKER)));
+        CountDownLatch release = new CountDownLatch(1);
+        CountDownLatch threeHandlersStarted = new CountDownLatch(3);
+        List<Exception> errors = new CopyOnWriteArrayList<>();
+
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            MaxLongPollingConsumer consumer = MaxLongPollingConsumer.builder()
+                    .api(api)
+                    .pollTimeout(1)
+                    .dispatchExecutor(executor)
+                    .handler(update -> {
+                        threeHandlersStarted.countDown();
+                        try {
+                            release.await();
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                        throw new IllegalStateException("handler failure");
+                    })
+                    .onError(errors::add)
+                    .build();
+
+            consumer.start();
+            // Three handlers blocked at once: the polling thread kept going without them.
+            boolean concurrent = threeHandlersStarted.await(10, TimeUnit.SECONDS);
+            consumer.stop();
+            release.countDown();
+
+            assertThat(concurrent).isTrue();
+        }
+        // Handler failures reach the error handler (a poll finishing after the executor closed adds a rejection).
+        assertThat(errors).anyMatch(e -> e instanceof IllegalStateException);
     }
 }

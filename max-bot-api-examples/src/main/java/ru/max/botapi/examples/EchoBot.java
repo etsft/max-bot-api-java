@@ -64,7 +64,7 @@ public final class EchoBot {
                                  try {
                                      String reply = "Chat %d, User %s: %s".formatted(
                                              chatId, sender == null ? "-" : sender.userId(), text);
-                                     api.sendMessage(new NewMessageBody(reply, null, null, null, null))
+                                     api.sendMessage(NewMessageBody.text(reply))
                                              .chatId(chatId)
                                              .execute();
                                  } catch (Exception e) {
@@ -78,8 +78,7 @@ public final class EchoBot {
             consumer.start();
             System.out.println("EchoBot is running. Press Ctrl+C to stop.");
 
-            // Keep the main thread alive until interrupted
-            Thread.currentThread().join();
+            ExampleSupport.awaitShutdown();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

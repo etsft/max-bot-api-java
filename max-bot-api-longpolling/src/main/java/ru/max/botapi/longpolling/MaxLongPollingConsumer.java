@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -29,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.queries.GetUpdatesQuery;
 import ru.max.botapi.core.UpdateHandler;
+import ru.max.botapi.model.Nullable;
 import ru.max.botapi.model.Update;
 import ru.max.botapi.model.UpdateList;
 import ru.max.botapi.model.UpdateType;
@@ -52,6 +54,11 @@ import ru.max.botapi.model.UpdateType;
  * consumer.stop();
  * }</pre>
  *
+ * <p>By default each update is handled on the polling thread, in order, and the next poll
+ * starts only after the whole batch is handled, so a slow handler (an upload, a call to another
+ * service) delays every later update. A {@link Builder#dispatchExecutor(Executor) dispatch
+ * executor} runs the handler there instead and lets polling go on.</p>
+ *
  * <p>This class implements {@link AutoCloseable}; calling {@link #close()} is equivalent
  * to calling {@link #stop()}.</p>
  */
@@ -72,6 +79,7 @@ public class MaxLongPollingConsumer implements AutoCloseable {
     private final Consumer<Exception> errorHandler;
     private final Set<UpdateType> updateTypes;
     private final int pollTimeout;
+    private final @Nullable Executor dispatchExecutor;
 
     private final AtomicBoolean started = new AtomicBoolean(false);
     private volatile boolean running;
@@ -87,6 +95,7 @@ public class MaxLongPollingConsumer implements AutoCloseable {
                         ? EnumSet.noneOf(UpdateType.class)
                         : EnumSet.copyOf(builder.updateTypes));
         this.pollTimeout = builder.pollTimeout;
+        this.dispatchExecutor = builder.dispatchExecutor;
     }
 
     /**
@@ -168,7 +177,11 @@ public class MaxLongPollingConsumer implements AutoCloseable {
                     errorStreak = 0;
                     for (Update update : result.updates()) {
                         try {
-                            handler.onUpdate(update);
+                            if (dispatchExecutor == null) {
+                                handler.onUpdate(update);
+                            } else {
+                                dispatchExecutor.execute(() -> handleDispatched(update));
+                            }
                         } catch (Exception e) {
                             reportError(e);
                         }
@@ -209,6 +222,14 @@ public class MaxLongPollingConsumer implements AutoCloseable {
      *
      * @param e the exception to report
      */
+    private void handleDispatched(Update update) {
+        try {
+            handler.onUpdate(update);
+        } catch (Exception e) {
+            reportError(e);
+        }
+    }
+
     private void reportError(Exception e) {
         try {
             errorHandler.accept(e);
@@ -257,8 +278,29 @@ public class MaxLongPollingConsumer implements AutoCloseable {
         private Consumer<Exception> errorHandler;
         private Set<UpdateType> updateTypes;
         private Integer pollTimeout;
+        private @Nullable Executor dispatchExecutor;
 
         private Builder() {
+        }
+
+        /**
+         * Sets the executor the handler runs on, so a slow handler does not hold up polling.
+         *
+         * <p>By default ({@code null}) updates are handled on the polling thread one after
+         * another. With an executor each update is handed to it and polling continues at once,
+         * so updates may be handled concurrently and out of order, and an update still being
+         * handled when the application stops is lost: the marker has already moved past it.
+         * Handler exceptions still go to the {@link #onError(Consumer) error handler}. The
+         * caller owns the executor and shuts it down; {@code Executors.newVirtualThreadPerTaskExecutor()}
+         * suits most handlers.</p>
+         *
+         * @param dispatchExecutor the executor, or {@code null} to handle updates on the
+         *                         polling thread
+         * @return this builder
+         */
+        public Builder dispatchExecutor(@Nullable Executor dispatchExecutor) {
+            this.dispatchExecutor = dispatchExecutor;
+            return this;
         }
 
         /**
