@@ -17,6 +17,7 @@
 package ru.max.botapi.model;
 
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * The discriminator values of the sealed model hierarchies and the record each one maps to.
@@ -126,5 +127,31 @@ public final class ModelTypes {
      */
     public static Map<String, Class<? extends Button>> buttons() {
         return BUTTONS;
+    }
+
+    /**
+     * Returns the JSON object an {@code Unknown*} value was read from, so that a serializer can
+     * write it back unchanged instead of as a {@code raw_json} field.
+     *
+     * <p>Only a value whose raw JSON is an object qualifies: an {@code Unknown*} built by hand
+     * with, say, an empty string is written field by field as before.</p>
+     *
+     * @param value any model value; may be {@code null}
+     * @return the raw JSON object, or empty if {@code value} is not an {@code Unknown*} type or
+     *         does not carry a JSON object
+     */
+    public static Optional<String> rawJsonOf(@Nullable Object value) {
+        String raw = switch (value) {
+            case UnknownUpdate u -> u.rawJson();
+            case UnknownAttachment a -> a.rawJson();
+            case UnknownAttachmentRequest r -> r.rawJson();
+            case UnknownButton b -> b.rawJson();
+            case null, default -> null;
+        };
+        if (raw == null) {
+            return Optional.empty();
+        }
+        String trimmed = raw.strip();
+        return trimmed.startsWith("{") && trimmed.endsWith("}") ? Optional.of(trimmed) : Optional.empty();
     }
 }

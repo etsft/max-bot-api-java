@@ -62,6 +62,7 @@ public class MaxBotApiModule extends SimpleModule {
         addSerializer(new SealedTypeSerializer<>(Attachment.class, Attachment::type));
         addSerializer(new SealedTypeSerializer<>(AttachmentRequest.class, AttachmentRequest::type));
         addSerializer(new SealedTypeSerializer<>(Button.class, Button::type));
+        addSerializer(new SealedTypeSerializer<>(Update.class, "update_type", Update::updateType));
     }
 
     @Override

@@ -60,7 +60,7 @@ final class MaxTypeAdapters {
      */
     static void register(GsonBuilder builder) {
         builder.registerTypeAdapterFactory(new SealedTypeAdapterFactory<>(Update.class, "update_type",
-                ModelTypes.updates(), MaxTypeAdapters::unknownUpdate, true, true, null));
+                ModelTypes.updates(), MaxTypeAdapters::unknownUpdate, true, true, Update::updateType));
         builder.registerTypeAdapterFactory(new SealedTypeAdapterFactory<>(Attachment.class, "type",
                 ModelTypes.attachments(), (type, node) -> new UnknownAttachment(type, node.toString()),
                 true, false, Attachment::type));

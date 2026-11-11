@@ -25,11 +25,14 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+
+import ru.max.botapi.model.ModelTypes;
 
 /**
  * Gson factory for a sealed model hierarchy dispatched on a discriminator field.
@@ -43,7 +46,8 @@ import com.google.gson.stream.JsonWriter;
  * <p>When a discriminator writer is given, every type of the hierarchy — the interface and
  * each concrete record — is written with the discriminator as the first property. The
  * concrete types matter because {@link Gson#toJson(Object)} resolves the adapter from the
- * runtime class.</p>
+ * runtime class. An {@code Unknown*} value read from JSON is written as that original JSON
+ * instead, see {@link ModelTypes#rawJsonOf(Object)}.</p>
  *
  * @param <B> the sealed interface type
  */
@@ -166,6 +170,20 @@ final class SealedTypeAdapterFactory<B> implements TypeAdapterFactory {
         public void write(JsonWriter out, T value) throws IOException {
             if (value == null) {
                 out.nullValue();
+                return;
+            }
+            String rawJson = ModelTypes.rawJsonOf(value).orElse(null);
+            if (rawJson != null) {
+                // Parsed rather than passed to out.jsonValue(): the tree writer behind
+                // toJsonTree(), used for enclosing records, does not support raw values.
+                // Nulls are kept so the original JSON comes out unchanged.
+                boolean serializeNulls = out.getSerializeNulls();
+                out.setSerializeNulls(true);
+                try {
+                    elementAdapter.write(out, JsonParser.parseString(rawJson));
+                } finally {
+                    out.setSerializeNulls(serializeNulls);
+                }
                 return;
             }
             JsonObject fields = delegate.toJsonTree(value).getAsJsonObject();

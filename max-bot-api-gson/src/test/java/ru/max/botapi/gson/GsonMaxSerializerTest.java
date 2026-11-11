@@ -777,7 +777,7 @@ class GsonMaxSerializerTest {
         @Test
         void unknownButtonRoundTrip() {
             UnknownButton original = new UnknownButton("future_button", "Press Me",
-                    "{\"type\":\"future_button\"}");
+                    "{\"type\":\"future_button\",\"text\":\"Press Me\"}");
             String json = serializer.serialize((Button) original);
             assertThatJson(json).node("type").isEqualTo("future_button");
             assertThatJson(json).node("text").isEqualTo("Press Me");

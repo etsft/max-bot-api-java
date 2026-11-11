@@ -26,12 +26,16 @@ import tools.jackson.databind.DatabindException;
 import tools.jackson.databind.SerializationContext;
 import tools.jackson.databind.ser.std.StdSerializer;
 
+import ru.max.botapi.model.ModelTypes;
+
 /**
- * Generic serializer for sealed type hierarchies that need a {@code type} discriminator
- * field in the output JSON.
+ * Generic serializer for sealed type hierarchies that need a discriminator field in the
+ * output JSON.
  *
- * <p>Writes the {@code "type"} field first, then writes each record component as a
- * field, converting names to snake_case.</p>
+ * <p>Writes the discriminator field ({@code type} or {@code update_type}) first, then writes
+ * each record component as a field, converting names to snake_case. An {@code Unknown*} value
+ * read from JSON is written as that original JSON instead, see
+ * {@link ModelTypes#rawJsonOf(Object)}.</p>
  *
  * @param <T> the sealed interface type
  */
@@ -40,24 +44,35 @@ final class SealedTypeSerializer<T> extends StdSerializer<T> {
     private static final ConcurrentHashMap<Class<?>, RecordComponent[]> COMPONENT_CACHE
             = new ConcurrentHashMap<>();
 
+    private final String discriminatorField;
     private final Function<T, String> typeExtractor;
 
     SealedTypeSerializer(Class<T> clazz, Function<T, String> typeExtractor) {
+        this(clazz, "type", typeExtractor);
+    }
+
+    SealedTypeSerializer(Class<T> clazz, String discriminatorField, Function<T, String> typeExtractor) {
         super(clazz);
+        this.discriminatorField = discriminatorField;
         this.typeExtractor = typeExtractor;
     }
 
     @Override
     public void serialize(T value, JsonGenerator gen, SerializationContext ctxt) {
+        String rawJson = ModelTypes.rawJsonOf(value).orElse(null);
+        if (rawJson != null) {
+            gen.writeRawValue(rawJson);
+            return;
+        }
         gen.writeStartObject();
-        gen.writeStringProperty("type", typeExtractor.apply(value));
+        gen.writeStringProperty(discriminatorField, typeExtractor.apply(value));
 
         RecordComponent[] components = COMPONENT_CACHE.computeIfAbsent(
                 value.getClass(), Class::getRecordComponents);
         if (components != null) {
             for (RecordComponent component : components) {
                 String fieldName = toSnakeCase(component.getName());
-                if ("type".equals(fieldName)) {
+                if (discriminatorField.equals(fieldName)) {
                     continue; // already written as discriminator
                 }
                 try {

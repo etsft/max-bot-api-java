@@ -48,7 +48,9 @@ import ru.max.botapi.model.PhotoAttachmentRequestPayload;
 import ru.max.botapi.model.PinMessageBody;
 import ru.max.botapi.model.SenderAction;
 import ru.max.botapi.model.TextFormat;
+import ru.max.botapi.model.UnknownAttachment;
 import ru.max.botapi.model.UnknownButton;
+import ru.max.botapi.model.UnknownUpdate;
 import ru.max.botapi.model.Update;
 import ru.max.botapi.model.UpdateList;
 import ru.max.botapi.model.User;
@@ -296,7 +298,7 @@ class SerializerParityTest {
     static Stream<Object> models() {
         var keyboard = new InlineKeyboardAttachment.KeyboardPayload(List.of(List.of(
                 new CallbackButton("Yes", "yes", null),
-                new UnknownButton("teleport", "Go", "{}"))));
+                new UnknownButton("teleport", "Go", "{\"type\":\"teleport\",\"text\":\"Go\",\"to\":7}"))));
         return Stream.of(
                 new NewMessageBody("<b>hi</b> & 'bye'", List.of(new InlineKeyboardAttachmentRequest(keyboard)),
                         null, true, TextFormat.HTML),
@@ -311,7 +313,10 @@ class SerializerParityTest {
                 new CallbackButton("Yes", "yes", null),
                 new MessageList(List.of(), null),
                 List.of(new CallbackButton("Yes", "yes", null)),
-                Map.of("k", TextFormat.MARKDOWN));
+                Map.of("k", TextFormat.MARKDOWN),
+                new UnknownUpdate("warp", 5L, "{\"update_type\":\"warp\",\"timestamp\":5,\"x\":[1]}"),
+                new UnknownAttachment("hologram", "{\"type\":\"hologram\",\"payload\":{\"d\":3}}"),
+                new UnknownButton("teleport", "Go", ""));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -350,6 +355,41 @@ class SerializerParityTest {
         String json = "[" + loadFixture(path) + "]";
         var listType = new TypeReference<List<Update>>() { };
         assertThat(GSON.deserialize(json, listType)).isEqualTo(JACKSON.deserialize(json, listType));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("fixtures")
+    void updatesSurviveASerializationRoundTrip(String path, Class<?> type) {
+        if (type != Update.class) {
+            return;
+        }
+        String json = loadFixture(path);
+        for (MaxSerializer serializer : List.of(JACKSON, GSON)) {
+            Update update = serializer.deserialize(json, Update.class);
+            String written = serializer.serialize(update);
+            assertThatJson(written).node("update_type").isEqualTo(update.updateType());
+            assertThat(serializer.deserialize(written, Update.class)).isEqualTo(update);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("unknownValues")
+    void unknownValuesAreWrittenAsTheJsonTheyWereReadFrom(String json, Class<?> type) {
+        for (MaxSerializer serializer : List.of(JACKSON, GSON)) {
+            Object value = serializer.deserialize(json, type);
+            assertThatJson(serializer.serialize(value)).isEqualTo(json);
+        }
+    }
+
+    static Stream<Arguments> unknownValues() {
+        return Stream.of(
+                Arguments.of("{\"update_type\":\"warp\",\"timestamp\":5,\"x\":{\"y\":[1,2]}}", Update.class),
+                // a known type that failed to read degrades to UnknownUpdate and is written back as is
+                Arguments.of("{\"update_type\":\"message_created\",\"timestamp\":6,\"message\":7}",
+                        Update.class),
+                Arguments.of("{\"type\":\"hologram\",\"payload\":{\"d\":3}}", Attachment.class),
+                Arguments.of("{\"type\":\"teleport\",\"text\":\"Go\",\"to\":7}", Button.class),
+                Arguments.of("{\"type\":\"hologram\",\"payload\":{\"d\":3}}", AttachmentRequest.class));
     }
 
     private static Arguments fixture(String path, Class<?> type) {

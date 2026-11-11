@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -60,5 +61,25 @@ class ModelTypesTest {
     @MethodSource("tables")
     void tablesAreImmutable(Class<?> sealedType, Map<String, Class<?>> table, Class<?> fallback) {
         assertThatThrownBy(() -> table.put("x", fallback)).isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    void rawJsonOfReturnsTheObjectAnUnknownValueWasReadFrom() {
+        assertThat(ModelTypes.rawJsonOf(new UnknownUpdate("x", 1L, " {\"a\":1} ")))
+                .contains("{\"a\":1}");
+        assertThat(ModelTypes.rawJsonOf(new UnknownAttachment("x", "{}"))).contains("{}");
+        assertThat(ModelTypes.rawJsonOf(new UnknownAttachmentRequest("x", "{\"b\":2}")))
+                .contains("{\"b\":2}");
+        assertThat(ModelTypes.rawJsonOf(new UnknownButton("x", "t", "{}"))).contains("{}");
+    }
+
+    @Test
+    void rawJsonOfIsEmptyForKnownValuesNullAndNonObjects() {
+        assertThat(ModelTypes.rawJsonOf(null)).isEmpty();
+        assertThat(ModelTypes.rawJsonOf("{}")).isEmpty();
+        assertThat(ModelTypes.rawJsonOf(new CallbackButton("t", "p", null))).isEmpty();
+        assertThat(ModelTypes.rawJsonOf(new UnknownButton("x", "t", ""))).isEmpty();
+        assertThat(ModelTypes.rawJsonOf(new UnknownButton("x", "t", "[1]"))).isEmpty();
+        assertThat(ModelTypes.rawJsonOf(new UnknownButton("x", "t", "{\"a\":1"))).isEmpty();
     }
 }
