@@ -1082,6 +1082,19 @@ class MaxBotAPITest {
     }
 
     @Test
+    void idsAreEncodedSoTheyCannotChangeTheRequestPath() {
+        String hostile = "mid/../chats?x=1 #";
+        String encoded = "mid%2F..%2Fchats%3Fx%3D1%20%23";
+
+        assertThat(api.getMessageById(hostile).path()).isEqualTo("/messages/" + encoded);
+        assertThat(api.getVideoAttachmentDetails(hostile).path()).isEqualTo("/videos/" + encoded);
+        assertThat(api.getComments(hostile).path())
+                .isEqualTo("/messages/" + encoded + "/comments");
+        assertThat(api.getCommentById(hostile, "c/1").path())
+                .isEqualTo("/messages/" + encoded + "/comments/c%2F1");
+    }
+
+    @Test
     void getChatByLinkEncodesSpacesAsPercent20InPath() {
         // Spaces must be encoded as %20 (RFC 3986 path encoding), not + (form encoding).
         stubFor(get(urlPathEqualTo("/chats/my%20chat"))

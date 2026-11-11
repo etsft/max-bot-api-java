@@ -287,13 +287,49 @@ class MaxClientTest {
         assertThat(client.config()).isSameAs(config);
     }
 
+    @Test
+    void doesNotWaitForAnOverlongRetryAfter() {
+        // Retry-After: 3600 would block the calling thread for an hour.
+        AtomicInteger callCount = new AtomicInteger();
+        MaxTransportClient transport = countingTransport(callCount, 429,
+                Map.of("Retry-After", List.of("3600")));
+        MaxClient client = new MaxClient(transport, stubSerializer,
+                MaxClientConfig.builder().enableRateLimiting(false).maxRetries(3).build());
+
+        long start = System.nanoTime();
+        assertThatThrownBy(() -> client.execute(simpleRequest(), String.class))
+                .isInstanceOfSatisfying(MaxRateLimitException.class,
+                        e -> assertThat(e.retryAfter()).isEqualTo(Duration.ofHours(1)));
+        assertThat(callCount.get()).isEqualTo(1);
+        assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(5));
+    }
+
+    @Test
+    void negativeRetryAfterRetriesAtOnce() {
+        AtomicInteger callCount = new AtomicInteger();
+        MaxTransportClient transport = countingTransport(callCount, 429,
+                Map.of("Retry-After", List.of("-5")));
+        MaxClient client = new MaxClient(transport, stubSerializer,
+                MaxClientConfig.builder().enableRateLimiting(false).maxRetries(3).build());
+
+        assertThat(client.execute(simpleRequest(), String.class)).isEqualTo(USER_JSON);
+        assertThat(callCount.get()).isEqualTo(2);
+    }
+
     /** Returns a transport that answers {@code firstStatus} once, then 200. */
     private static MaxTransportClient countingTransport(AtomicInteger callCount, int firstStatus) {
+        return countingTransport(callCount, firstStatus, Map.of());
+    }
+
+    /** Returns a transport that answers {@code firstStatus} with the given headers once, then 200. */
+    private static MaxTransportClient countingTransport(AtomicInteger callCount, int firstStatus,
+            Map<String, List<String>> firstHeaders) {
         return new MaxTransportClient() {
             @Override
             public MaxResponse execute(MaxRequest request) {
                 if (callCount.incrementAndGet() == 1) {
-                    return new MaxResponse(firstStatus, "{\"code\":\"x\",\"message\":\"busy\"}", Map.of());
+                    return new MaxResponse(firstStatus, "{\"code\":\"x\",\"message\":\"busy\"}",
+                            firstHeaders);
                 }
                 return new MaxResponse(200, USER_JSON, Map.of());
             }

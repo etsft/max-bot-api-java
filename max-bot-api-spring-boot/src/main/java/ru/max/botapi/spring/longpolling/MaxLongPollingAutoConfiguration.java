@@ -29,6 +29,8 @@ import ru.max.botapi.core.PollingErrorHandler;
 import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.longpolling.MaxLongPollingConsumer;
 import ru.max.botapi.model.Nullable;
+import ru.max.botapi.spring.ConditionalOnMaxBotMode;
+import ru.max.botapi.spring.MaxBotMode;
 import ru.max.botapi.spring.MaxBotProperties;
 
 /**
@@ -45,12 +47,11 @@ import ru.max.botapi.spring.MaxBotProperties;
  *
  * @see MaxLongPollingProperties
  * @see MaxLongPollingLifecycle
- * @see ru.max.botapi.spring.MaxBotMode
+ * @see MaxBotMode
  */
 @AutoConfiguration
 @ConditionalOnClass(MaxLongPollingConsumer.class)
-@ConditionalOnProperty(prefix = "max.bot", name = "mode",
-        havingValue = "longpolling")
+@ConditionalOnMaxBotMode(MaxBotMode.LONGPOLLING)
 @EnableConfigurationProperties({MaxBotProperties.class,
         MaxLongPollingProperties.class})
 public class MaxLongPollingAutoConfiguration {

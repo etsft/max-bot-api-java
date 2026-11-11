@@ -22,6 +22,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -198,6 +199,57 @@ class MaxWebhookServerTest {
 
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(called).isTrue();
+    }
+
+    @Test
+    void rejectsBodyLargerThanTheLimitWithoutCallingTheHandler() throws Exception {
+        CopyOnWriteArrayList<Update> received = new CopyOnWriteArrayList<>();
+        int size = UPDATE_JSON.getBytes(StandardCharsets.UTF_8).length;
+        server = MaxWebhookServer.builder()
+                .handler(received::add)
+                .serializer(TestSerializers.create())
+                .maxBodySize(size - 1)
+                .port(webhookPort)
+                .build();
+        server.start();
+
+        HttpResponse<String> response = postUpdate();
+
+        assertThat(response.statusCode()).isEqualTo(413);
+        assertThat(received).isEmpty();
+    }
+
+    @Test
+    void acceptsBodyExactlyAtTheLimit() throws Exception {
+        CopyOnWriteArrayList<Update> received = new CopyOnWriteArrayList<>();
+        int size = UPDATE_JSON.getBytes(StandardCharsets.UTF_8).length;
+        server = MaxWebhookServer.builder()
+                .handler(received::add)
+                .serializer(TestSerializers.create())
+                .maxBodySize(size)
+                .port(webhookPort)
+                .build();
+        server.start();
+
+        HttpResponse<String> response = postUpdate();
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(received).hasSize(1);
+    }
+
+    @Test
+    void maxBodySizeMustBePositive() {
+        assertThatThrownBy(() -> MaxWebhookServer.builder().maxBodySize(0))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private HttpResponse<String> postUpdate() throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(webhookBaseUrl + "/webhook"))
+                .header("Content-Type", CONTENT_JSON)
+                .POST(HttpRequest.BodyPublishers.ofString(UPDATE_JSON))
+                .build();
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
     @Test

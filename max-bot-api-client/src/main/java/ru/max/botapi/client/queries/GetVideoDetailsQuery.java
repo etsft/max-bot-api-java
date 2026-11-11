@@ -16,8 +16,6 @@
 
 package ru.max.botapi.client.queries;
 
-import java.util.Objects;
-
 import ru.max.botapi.client.HttpMethod;
 import ru.max.botapi.client.MaxClient;
 import ru.max.botapi.client.MaxQuery;
@@ -42,7 +40,7 @@ public class GetVideoDetailsQuery extends MaxQuery<VideoAttachmentDetails> {
      */
     public GetVideoDetailsQuery(MaxClient client, String videoToken) {
         super(client,
-                "/videos/" + Objects.requireNonNull(videoToken, "videoToken must not be null"),
+                "/videos/" + PathSegments.encode(videoToken, "videoToken"),
                 HttpMethod.GET, VideoAttachmentDetails.class);
     }
 }

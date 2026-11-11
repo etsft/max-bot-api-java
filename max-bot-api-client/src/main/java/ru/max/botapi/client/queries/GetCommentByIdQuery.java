@@ -16,8 +16,6 @@
 
 package ru.max.botapi.client.queries;
 
-import java.util.Objects;
-
 import ru.max.botapi.client.HttpMethod;
 import ru.max.botapi.client.MaxClient;
 import ru.max.botapi.client.MaxQuery;
@@ -45,9 +43,9 @@ public class GetCommentByIdQuery extends MaxQuery<CommentMessage> {
      */
     public GetCommentByIdQuery(MaxClient client, String messageId, String commentId) {
         super(client, "/messages/"
-                        + Objects.requireNonNull(messageId, "messageId must not be null")
+                        + PathSegments.encode(messageId, "messageId")
                         + "/comments/"
-                        + Objects.requireNonNull(commentId, "commentId must not be null"),
+                        + PathSegments.encode(commentId, "commentId"),
                 HttpMethod.GET, CommentMessage.class);
     }
 }

@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.unit.DataSize;
 
 import ru.max.botapi.model.UpdateType;
 
@@ -39,7 +40,8 @@ class MaxWebhookPropertiesTest {
         assertThat(props.getSecret()).isNull();
         assertThat(props.getUrl()).isNull();
         assertThat(props.isAutoRegister()).isTrue();
-        assertThat(props.isAutoUnregister()).isTrue();
+        assertThat(props.isAutoUnregister()).isFalse();
+        assertThat(props.getMaxBodySize()).isEqualTo(DataSize.ofMegabytes(1));
         assertThat(props.getUpdateTypes()).isEmpty();
     }
 
@@ -86,7 +88,8 @@ class MaxWebhookPropertiesTest {
                         "max.bot.webhook.secret=yaml-secret",
                         "max.bot.webhook.url=https://yaml.example.com/webhook",
                         "max.bot.webhook.auto-register=false",
-                        "max.bot.webhook.auto-unregister=false",
+                        "max.bot.webhook.auto-unregister=true",
+                        "max.bot.webhook.max-body-size=64KB",
                         "max.bot.webhook.update-types=MESSAGE_CREATED")
                 .run(context -> {
                     assertThat(context).hasSingleBean(
@@ -103,7 +106,9 @@ class MaxWebhookPropertiesTest {
                     assertThat(properties.getUrl())
                             .isEqualTo("https://yaml.example.com/webhook");
                     assertThat(properties.isAutoRegister()).isFalse();
-                    assertThat(properties.isAutoUnregister()).isFalse();
+                    assertThat(properties.isAutoUnregister()).isTrue();
+                    assertThat(properties.getMaxBodySize())
+                            .isEqualTo(DataSize.ofKilobytes(64));
                     assertThat(properties.getUpdateTypes())
                             .containsExactly(UpdateType.MESSAGE_CREATED);
                 });
@@ -123,7 +128,9 @@ class MaxWebhookPropertiesTest {
                     assertThat(properties.getSecret()).isNull();
                     assertThat(properties.getUrl()).isNull();
                     assertThat(properties.isAutoRegister()).isTrue();
-                    assertThat(properties.isAutoUnregister()).isTrue();
+                    assertThat(properties.isAutoUnregister()).isFalse();
+                    assertThat(properties.getMaxBodySize())
+                            .isEqualTo(DataSize.ofMegabytes(1));
                     assertThat(properties.getUpdateTypes()).isEmpty();
                 });
     }

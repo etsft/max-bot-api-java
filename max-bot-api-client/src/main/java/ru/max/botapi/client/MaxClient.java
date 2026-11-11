@@ -225,6 +225,11 @@ public class MaxClient {
         while (response.statusCode() >= 400 && retryPolicy.shouldRetry(request.method(), response.statusCode())
                 && attempt < retryPolicy.maxRetries()) {
             Duration delay = getRetryDelay(response, attempt);
+            if (delay == null) {
+                LOG.debug("Not retrying request to {}: Retry-After exceeds {}s",
+                        request.path(), retryPolicy.maxRetryAfter().toSeconds());
+                break;
+            }
             LOG.debug("Retrying request to {} after {}ms (attempt {}/{})",
                     request.path(), delay.toMillis(), attempt + 1, retryPolicy.maxRetries());
             sleep(delay);
@@ -235,16 +240,12 @@ public class MaxClient {
         return response;
     }
 
-    private Duration getRetryDelay(MaxResponse response, int attempt) {
+    /** Returns the wait before the next attempt, or {@code null} if the server asks for too long. */
+    private @Nullable Duration getRetryDelay(MaxResponse response, int attempt) {
         if (response.statusCode() == HTTP_TOO_MANY_REQUESTS) {
-            List<String> retryAfterValues = response.headers().get("Retry-After");
-            if (retryAfterValues != null && !retryAfterValues.isEmpty()) {
-                try {
-                    long seconds = Long.parseLong(retryAfterValues.getFirst());
-                    return Duration.ofSeconds(seconds);
-                } catch (NumberFormatException ignored) {
-                    // fall through to exponential backoff
-                }
+            Duration retryAfter = parseRetryAfter(response.headers());
+            if (retryAfter != null) {
+                return retryPolicy.retryAfterDelay(retryAfter);
             }
         }
         return retryPolicy.getDelay(attempt);
@@ -351,11 +352,16 @@ public class MaxClient {
         return json.substring(contentStart, endQuote);
     }
 
-    private @Nullable Duration parseRetryAfter(Map<String, List<String>> headers) {
+    /**
+     * Reads {@code Retry-After} as a number of seconds; a negative value becomes zero, and an
+     * absent or non-numeric value (such as an HTTP date) gives {@code null}.
+     */
+    private static @Nullable Duration parseRetryAfter(Map<String, List<String>> headers) {
         List<String> values = headers.get("Retry-After");
         if (values != null && !values.isEmpty()) {
             try {
-                return Duration.ofSeconds(Long.parseLong(values.getFirst()));
+                long seconds = Long.parseLong(values.getFirst().trim());
+                return Duration.ofSeconds(Math.max(0, seconds));
             } catch (NumberFormatException ignored) {
                 return null;
             }

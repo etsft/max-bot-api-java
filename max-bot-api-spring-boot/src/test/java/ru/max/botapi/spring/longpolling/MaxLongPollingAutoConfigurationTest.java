@@ -19,6 +19,8 @@ package ru.max.botapi.spring.longpolling;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -59,6 +61,17 @@ class MaxLongPollingAutoConfigurationTest {
                     assertThat(context).hasSingleBean(
                             MaxLongPollingProperties.class);
                 });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"long-polling", "LONGPOLLING", "longPolling", "long_polling"})
+    void lifecycleCreated_forEverySpellingSpringBindsToTheMode(String mode) {
+        contextRunner
+                .withUserConfiguration(HandlerConfig.class)
+                .withPropertyValues(
+                        "max.bot.mode=" + mode,
+                        "max.bot.longpolling.token=test-token")
+                .run(context -> assertThat(context).hasSingleBean(MaxLongPollingLifecycle.class));
     }
 
     @Test

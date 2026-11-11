@@ -50,7 +50,7 @@ public class DeleteCommentQuery extends MaxQuery<SimpleQueryResult> {
      */
     public DeleteCommentQuery(MaxClient client, String messageId, String commentId) {
         super(client, "/messages/"
-                        + Objects.requireNonNull(messageId, "messageId must not be null")
+                        + PathSegments.encode(messageId, "messageId")
                         + "/comments",
                 HttpMethod.DELETE, SimpleQueryResult.class);
         queryParams.put("comment_id",

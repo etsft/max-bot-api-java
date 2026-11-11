@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.util.unit.DataSize;
 
 import ru.max.botapi.model.UpdateType;
 
@@ -41,8 +42,9 @@ import ru.max.botapi.model.UpdateType;
  *       secret: "shared-secret"
  *       url: "https://myapp.example.com/max-bot/webhook"
  *       auto-register: true
- *       auto-unregister: true
+ *       auto-unregister: false
  *       async-dispatch: false
+ *       max-body-size: 1MB
  *       update-types:
  *         - MESSAGE_CREATED
  *         - MESSAGE_CALLBACK
@@ -84,9 +86,12 @@ public class MaxWebhookProperties {
 
     /**
      * Whether to automatically unregister the webhook URL on graceful shutdown.
-     * Only effective when {@code autoRegister} is {@code true}.
+     * Only effective when {@code autoRegister} is {@code true}. Off by default: the subscription
+     * is shared by every instance of the application, so during a rolling deploy an old
+     * instance shutting down would remove the webhook the new instances rely on. Enable it only
+     * for a single-instance deployment that should stop receiving updates when it stops.
      */
-    private boolean autoUnregister = true;
+    private boolean autoUnregister = false;
 
     /**
      * Whether to answer MAX with HTTP 200 as soon as an update is received and run the
@@ -95,6 +100,13 @@ public class MaxWebhookProperties {
      * can take that long. When {@code false}, the handler runs before the response is sent.
      */
     private boolean asyncDispatch = false;
+
+    /**
+     * Largest webhook request body accepted. A larger request is answered with HTTP 413 without
+     * being read further, so a client cannot exhaust memory with a huge POST. MAX updates are a
+     * few kilobytes; the default of 1 MB leaves ample room.
+     */
+    private DataSize maxBodySize = DataSize.ofMegabytes(1);
 
     /**
      * List of update types to subscribe to.
@@ -226,6 +238,28 @@ public class MaxWebhookProperties {
      */
     public void setAsyncDispatch(boolean asyncDispatch) {
         this.asyncDispatch = asyncDispatch;
+    }
+
+    /**
+     * Returns the largest webhook request body accepted.
+     *
+     * @return the limit (defaults to 1 MB)
+     */
+    public DataSize getMaxBodySize() {
+        return maxBodySize;
+    }
+
+    /**
+     * Sets the largest webhook request body accepted.
+     *
+     * @param maxBodySize the limit; must be positive
+     * @throws IllegalArgumentException if {@code maxBodySize} is not positive
+     */
+    public void setMaxBodySize(DataSize maxBodySize) {
+        if (maxBodySize == null || maxBodySize.toBytes() <= 0) {
+            throw new IllegalArgumentException("max-body-size must be positive, got: " + maxBodySize);
+        }
+        this.maxBodySize = maxBodySize;
     }
 
     /**

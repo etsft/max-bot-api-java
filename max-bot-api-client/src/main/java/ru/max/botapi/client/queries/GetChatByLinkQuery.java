@@ -16,8 +16,6 @@
 
 package ru.max.botapi.client.queries;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 import ru.max.botapi.client.HttpMethod;
@@ -35,11 +33,10 @@ import ru.max.botapi.model.Chat;
  * {@code "max.ru/my_chat"} and {@code "https://max.ru/my_chat"} all address the same chat — and
  * only then percent-encoded as a path segment.</p>
  *
- * <p>Encoding uses {@link java.net.URLEncoder} with a {@code +} → {@code %20} replacement so
- * that spaces are encoded as {@code %20} (correct for path segments per RFC 3986) rather than
- * {@code +} (which is correct only for {@code application/x-www-form-urlencoded} query strings).
- * This ensures links containing Unicode characters or special characters (spaces, {@code #},
- * etc.) do not produce a malformed URI when the transport layer calls {@code URI.create()}.</p>
+ * <p>Encoding follows RFC 3986 for path segments: spaces become {@code %20} rather than
+ * {@code +}, and Unicode or special characters ({@code #}, {@code ?}, etc.) are
+ * percent-encoded, so they do not produce a malformed URI when the transport layer calls
+ * {@code URI.create()}.</p>
  *
  * <p>An invite link ({@code https://max.ru/join/...}) is not a public link and cannot be
  * resolved by this endpoint at all; it is rejected here rather than sent and 404'd.</p>
@@ -109,24 +106,16 @@ public class GetChatByLinkQuery extends MaxQuery<Chat> {
     }
 
     /**
-     * Percent-encodes a string for use as a URL path segment.
+     * Percent-encodes the link as a path segment, keeping a leading {@code @} verbatim: it is a
+     * legal path character (RFC 3986 {@code pchar}) and MAX matches the link as the user wrote it.
      *
-     * <p>{@link URLEncoder#encode(String, java.nio.charset.Charset)} produces
-     * {@code application/x-www-form-urlencoded} encoding where spaces become {@code +}.
-     * RFC 3986 path segments require spaces to be {@code %20}, so we replace {@code +}
-     * after encoding.</p>
-     *
-     * <p>A leading {@code @} is kept verbatim: it is a legal path character (RFC 3986
-     * {@code pchar}) and MAX matches the link as the user wrote it.</p>
-     *
-     * @param segment the raw path segment value
-     * @return the percent-encoded segment safe for inclusion in a URL path
+     * @param segment the normalized link
+     * @return the percent-encoded segment
      */
     private static String encodePathSegment(String segment) {
         if (segment.startsWith("@")) {
-            return "@" + encodePathSegment(segment.substring(1));
+            return "@" + PathSegments.encode(segment.substring(1));
         }
-        return URLEncoder.encode(segment, StandardCharsets.UTF_8)
-                .replace("+", "%20");
+        return PathSegments.encode(segment);
     }
 }

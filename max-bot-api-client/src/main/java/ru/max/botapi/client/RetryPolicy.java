@@ -19,6 +19,8 @@ package ru.max.botapi.client;
 import java.time.Duration;
 import java.util.Objects;
 
+import ru.max.botapi.model.Nullable;
+
 /**
  * Retry policy with exponential backoff for retryable HTTP status codes.
  *
@@ -29,18 +31,26 @@ import java.util.Objects;
  * was rejected before processing, so it is always safe to resend.
  * Backoff follows an exponential pattern: 1s, 2s, 4s, etc.</p>
  *
+ * <p>A 429 response's {@code Retry-After} header (in seconds) takes precedence over the backoff,
+ * but only up to {@link #maxRetryAfter()} (60 seconds by default): a longer wait would block the
+ * calling thread for that long, so the request is not retried and the
+ * {@link MaxRateLimitException} carrying the server's value is thrown instead. A negative value
+ * is treated as zero.</p>
+ *
  * <p>It also paces resends while an uploaded attachment is not processed yet, see
  * {@link #attachmentRetryDelay(int)}.</p>
  */
 public class RetryPolicy {
 
     private static final Duration DEFAULT_BASE_DELAY = Duration.ofSeconds(1);
+    private static final Duration DEFAULT_MAX_RETRY_AFTER = Duration.ofSeconds(60);
     private static final int HTTP_TOO_MANY_REQUESTS = 429;
     private static final int HTTP_SERVICE_UNAVAILABLE = 503;
     private static final int ATTACHMENT_DELAY_CAP_FACTOR = 3;
 
     private final int maxRetries;
     private final Duration baseDelay;
+    private final Duration maxRetryAfter;
 
     /**
      * Creates a RetryPolicy with the given maximum retries and default 1-second base delay.
@@ -58,8 +68,25 @@ public class RetryPolicy {
      * @param baseDelay  base delay for exponential backoff
      */
     public RetryPolicy(int maxRetries, Duration baseDelay) {
+        this(maxRetries, baseDelay, DEFAULT_MAX_RETRY_AFTER);
+    }
+
+    /**
+     * Creates a RetryPolicy with configurable base delay and {@code Retry-After} limit.
+     *
+     * @param maxRetries    maximum number of retries (0 for no retries)
+     * @param baseDelay     base delay for exponential backoff
+     * @param maxRetryAfter the longest server-requested wait that is still honoured by
+     *                      retrying; must not be negative
+     * @throws IllegalArgumentException if {@code maxRetryAfter} is negative
+     */
+    public RetryPolicy(int maxRetries, Duration baseDelay, Duration maxRetryAfter) {
         this.maxRetries = maxRetries;
         this.baseDelay = Objects.requireNonNull(baseDelay, "baseDelay must not be null");
+        this.maxRetryAfter = Objects.requireNonNull(maxRetryAfter, "maxRetryAfter must not be null");
+        if (maxRetryAfter.isNegative()) {
+            throw new IllegalArgumentException("maxRetryAfter must not be negative");
+        }
     }
 
     /**
@@ -107,6 +134,30 @@ public class RetryPolicy {
     public Duration getDelay(int attempt) {
         long multiplier = 1L << attempt;
         return baseDelay.multipliedBy(multiplier);
+    }
+
+    /**
+     * Returns how long to wait before retrying when the server asked for {@code retryAfter}.
+     *
+     * @param retryAfter the server-requested wait; must not be {@code null}
+     * @return the wait (a negative value becomes zero), or {@code null} if it exceeds
+     *         {@link #maxRetryAfter()} and the request should not be retried
+     */
+    public @Nullable Duration retryAfterDelay(Duration retryAfter) {
+        Objects.requireNonNull(retryAfter, "retryAfter must not be null");
+        if (retryAfter.isNegative()) {
+            return Duration.ZERO;
+        }
+        return retryAfter.compareTo(maxRetryAfter) > 0 ? null : retryAfter;
+    }
+
+    /**
+     * Returns the longest server-requested {@code Retry-After} wait that is still honoured.
+     *
+     * @return the limit
+     */
+    public Duration maxRetryAfter() {
+        return maxRetryAfter;
     }
 
     /**

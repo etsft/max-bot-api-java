@@ -22,8 +22,14 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import ru.max.botapi.client.MaxBotAPI;
+import ru.max.botapi.core.UpdateHandler;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(OutputCaptureExtension.class)
 class MaxBotModeAutoConfigurationTest {
@@ -79,5 +85,57 @@ class MaxBotModeAutoConfigurationTest {
                     assertThat(output).contains(
                             "bot update delivery is disabled");
                 });
+    }
+
+    @Test
+    void warns_whenModeIsSetButThereIsNoApiOrHandler(CapturedOutput output) {
+        contextRunner
+                .withPropertyValues("max.bot.mode=long-polling")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(output).contains(
+                            "max.bot.mode=longpolling, but there is no MaxBotAPI bean",
+                            "Set max.bot.longpolling.token",
+                            "max.bot.mode=longpolling, but there is no UpdateHandler bean");
+                });
+    }
+
+    @Test
+    void noMissingBeanWarning_whenApiAndHandlerArePresent(CapturedOutput output) {
+        contextRunner
+                .withUserConfiguration(ApiAndHandlerConfig.class)
+                .withPropertyValues("max.bot.mode=webhook")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(output).doesNotContain("updates will not be received");
+                });
+    }
+
+    @Test
+    void noMissingBeanWarning_whenModeIsNone(CapturedOutput output) {
+        contextRunner
+                .withPropertyValues("max.bot.mode=none")
+                .run(context -> assertThat(output).doesNotContain("updates will not be received"));
+    }
+
+    @Test
+    void invalidModeFailsStartup() {
+        contextRunner
+                .withPropertyValues("max.bot.mode=polling")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class ApiAndHandlerConfig {
+
+        @Bean
+        MaxBotAPI maxBotAPI() {
+            return mock(MaxBotAPI.class);
+        }
+
+        @Bean
+        UpdateHandler updateHandler() {
+            return update -> { };
+        }
     }
 }

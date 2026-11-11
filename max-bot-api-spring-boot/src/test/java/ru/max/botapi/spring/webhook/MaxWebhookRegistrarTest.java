@@ -153,6 +153,18 @@ class MaxWebhookRegistrarTest {
     }
 
     @Test
+    void keepsTheSubscriptionOnShutdownByDefault() {
+        // During a rolling deploy the old instance must not remove the shared webhook.
+        MaxBotAPI api = mock(MaxBotAPI.class);
+        MaxWebhookProperties props = new MaxWebhookProperties();
+        props.setUrl("https://example.com/webhook");
+
+        new MaxWebhookRegistrar(api, props).destroy();
+
+        verify(api, never()).unsubscribe(anyString());
+    }
+
+    @Test
     void skipsUnregistrationWhenAutoUnregisterDisabled() {
         MaxBotAPI api = mock(MaxBotAPI.class);
         MaxWebhookProperties props = new MaxWebhookProperties();

@@ -47,7 +47,7 @@ public class SendCommentQuery extends MaxQuery<SendCommentResult> {
      */
     public SendCommentQuery(MaxClient client, NewCommentBody body, String messageId) {
         super(client, "/messages/"
-                        + Objects.requireNonNull(messageId, "messageId must not be null")
+                        + PathSegments.encode(messageId, "messageId")
                         + "/comments",
                 HttpMethod.POST, SendCommentResult.class);
         this.body = Objects.requireNonNull(body, "body must not be null");

@@ -16,6 +16,7 @@
 
 package ru.max.botapi.spring.webhook;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -25,7 +26,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.util.unit.DataSize;
 
 import ru.max.botapi.core.MaxSerializer;
 import ru.max.botapi.core.UpdateHandler;
@@ -34,6 +39,9 @@ import ru.max.botapi.model.Update;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class MaxWebhookControllerTest {
 
@@ -246,5 +254,76 @@ class MaxWebhookControllerTest {
     void constantTimeEquals_bothNull() {
         assertThat(MaxWebhookController.constantTimeEquals(null, null))
                 .isFalse();
+    }
+
+    @Test
+    void receiveWebhook_bodyOverTheLimit_returns413WithoutCallingHandler() throws IOException {
+        List<Update> received = new ArrayList<>();
+        byte[] json = loadFixture("message-created.json").getBytes(StandardCharsets.UTF_8);
+        MaxWebhookProperties props = new MaxWebhookProperties();
+        props.setMaxBodySize(DataSize.ofBytes(json.length - 1));
+        MaxWebhookController controller = new MaxWebhookController(received::add, serializer, props);
+
+        ResponseEntity<Void> response = controller.receiveWebhook(new ByteArrayInputStream(json), null);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONTENT_TOO_LARGE);
+        assertThat(received).isEmpty();
+    }
+
+    @Test
+    void receiveWebhook_bodyExactlyAtTheLimit_isHandled() throws IOException {
+        List<Update> received = new ArrayList<>();
+        byte[] json = loadFixture("message-created.json").getBytes(StandardCharsets.UTF_8);
+        MaxWebhookProperties props = new MaxWebhookProperties();
+        props.setMaxBodySize(DataSize.ofBytes(json.length));
+        MaxWebhookController controller = new MaxWebhookController(received::add, serializer, props);
+
+        ResponseEntity<Void> response = controller.receiveWebhook(new ByteArrayInputStream(json), null);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(received).hasSize(1);
+    }
+
+    @Test
+    void receiveWebhook_wrongSecret_returns401WithoutReadingTheBody() {
+        MaxWebhookProperties props = new MaxWebhookProperties();
+        props.setSecret("my-secret");
+        MaxWebhookController controller = new MaxWebhookController(update -> { }, serializer, props);
+        InputStream unreadable = new InputStream() {
+            @Override
+            public int read() {
+                throw new AssertionError("body must not be read before the secret is checked");
+            }
+        };
+
+        ResponseEntity<Void> response = controller.receiveWebhook(unreadable, "wrong");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void maxBodySizeMustBePositive() {
+        MaxWebhookProperties props = new MaxWebhookProperties();
+        assertThatThrownBy(() -> props.setMaxBodySize(DataSize.ofBytes(0)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void springMvcRoutesThePostAndEnforcesTheLimit() throws Exception {
+        List<Update> received = new ArrayList<>();
+        String json = loadFixture("message-created.json");
+        MaxWebhookProperties props = new MaxWebhookProperties();
+        props.setMaxBodySize(DataSize.ofBytes(json.getBytes(StandardCharsets.UTF_8).length));
+        MockMvc mvc = MockMvcBuilders
+                .standaloneSetup(new MaxWebhookController(received::add, serializer, props))
+                .build();
+
+        mvc.perform(post("/max-bot/webhook").contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isOk());
+        mvc.perform(post("/max-bot/webhook").contentType(MediaType.APPLICATION_JSON)
+                        .content(json + " "))
+                .andExpect(status().isContentTooLarge());
+
+        assertThat(received).hasSize(1);
     }
 }

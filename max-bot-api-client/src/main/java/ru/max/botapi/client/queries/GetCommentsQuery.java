@@ -45,7 +45,7 @@ public class GetCommentsQuery extends MaxQuery<CommentList> {
      */
     public GetCommentsQuery(MaxClient client, String messageId) {
         super(client, "/messages/"
-                        + Objects.requireNonNull(messageId, "messageId must not be null")
+                        + PathSegments.encode(messageId, "messageId")
                         + "/comments",
                 HttpMethod.GET, CommentList.class);
     }

@@ -7,6 +7,9 @@ variables:
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.caching=false"
   GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
 
+# The gradle:* images only provide the JDK and tools (curl, git); every job runs ./gradlew, so the
+# Gradle version always comes from gradle/wrapper/gradle-wrapper.properties.
+
 # Cache Gradle wrapper and dependencies between jobs
 cache:
   key: "$CI_COMMIT_REF_SLUG"
@@ -20,16 +23,18 @@ cache:
 .build_template: &build_template
   stage: build
   script:
-    - gradle build --stacktrace
-    - gradle jacocoTestReport
-    - gradle jacocoTestCoverageVerification
+    - ./gradlew build --stacktrace
+    - ./gradlew jacocoTestReport
+    - ./gradlew jacocoTestCoverageVerification
   artifacts:
     when: always
     paths:
       - "**/build/reports/"
       - "**/build/test-results/"
     reports:
-      junit: "**/build/test-results/test/TEST-*.xml"
+      junit:
+        - "**/build/test-results/test/TEST-*.xml"
+        - "**/build/test-results/testGson/TEST-*.xml"
     expire_in: 7 days
 
 build:jdk21:
@@ -49,7 +54,7 @@ checkstyle:
   needs:
     - build:jdk21
   script:
-    - gradle checkstyleMain checkstyleTest --stacktrace
+    - ./gradlew checkstyleMain checkstyleTest --stacktrace
   artifacts:
     when: always
     paths:
@@ -62,7 +67,7 @@ spotbugs:
   needs:
     - build:jdk21
   script:
-    - gradle spotbugsMain --stacktrace
+    - ./gradlew spotbugsMain --stacktrace
   artifacts:
     when: always
     paths:
@@ -75,7 +80,7 @@ jacoco:
   needs:
     - build:jdk21
   script:
-    - gradle jacocoTestReport testCodeCoverageReport jacocoTestCoverageVerification --stacktrace
+    - ./gradlew jacocoTestReport testCodeCoverageReport jacocoTestCoverageVerification --stacktrace
   artifacts:
     when: always
     reports:
@@ -115,7 +120,7 @@ publish:
         exit 1
       fi
       export ORG_GRADLE_PROJECT_signingInMemoryKey="$(printf '%s' "$SIGNING_KEY_B64" | base64 -d)"
-    - gradle clean centralBundle --stacktrace
+    - ./gradlew clean centralBundle --stacktrace
     - |
       if ! find build/staging-deploy -name '*.jar.asc' | grep -q .; then
         echo "Artifacts are not signed"

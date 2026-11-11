@@ -77,6 +77,10 @@ import ru.max.botapi.model.UpdateType;
  * server.start(ssl);
  * }</pre>
  *
+ * <p>The request body is read only after the secret has been checked, and at most
+ * {@link Builder#maxBodySize(int) maxBodySize} bytes of it (1 MB by default); a larger request
+ * is answered with HTTP 413 instead of being loaded into memory.</p>
+ *
  * <p>This class implements {@link AutoCloseable}; closing it stops the server immediately.</p>
  */
 public class MaxWebhookServer implements AutoCloseable {
@@ -86,6 +90,8 @@ public class MaxWebhookServer implements AutoCloseable {
     private static final String DEFAULT_PATH = "/webhook";
     private static final int DEFAULT_PORT = 8443;
     private static final String SECRET_HEADER = "X-Max-Bot-Api-Secret";
+    private static final int DEFAULT_MAX_BODY_SIZE = 1024 * 1024;
+    private static final int HTTP_CONTENT_TOO_LARGE = 413;
 
     private final UpdateHandler handler;
     private final MaxSerializer serializer;
@@ -93,6 +99,7 @@ public class MaxWebhookServer implements AutoCloseable {
     private final int port;
     private final String path;
     private final @Nullable Executor dispatchExecutor;
+    private final int maxBodySize;
 
     private volatile HttpServer server;
 
@@ -103,6 +110,7 @@ public class MaxWebhookServer implements AutoCloseable {
         this.port = builder.port;
         this.path = builder.path;
         this.dispatchExecutor = builder.dispatchExecutor;
+        this.maxBodySize = builder.maxBodySize;
     }
 
     /**
@@ -232,7 +240,12 @@ public class MaxWebhookServer implements AutoCloseable {
                     return;
                 }
             }
-            byte[] bodyBytes = exchange.getRequestBody().readAllBytes();
+            byte[] bodyBytes = exchange.getRequestBody().readNBytes(maxBodySize + 1);
+            if (bodyBytes.length > maxBodySize) {
+                LOG.warn("Rejected webhook request: body exceeds {} bytes", maxBodySize);
+                exchange.sendResponseHeaders(HTTP_CONTENT_TOO_LARGE, -1);
+                return;
+            }
             String body = new String(bodyBytes, StandardCharsets.UTF_8);
             Update update = serializer.deserialize(body, Update.class);
             if (dispatchExecutor == null) {
@@ -289,8 +302,29 @@ public class MaxWebhookServer implements AutoCloseable {
         private int port = DEFAULT_PORT;
         private String path = DEFAULT_PATH;
         private @Nullable Executor dispatchExecutor;
+        private int maxBodySize = DEFAULT_MAX_BODY_SIZE;
 
         private Builder() {
+        }
+
+        /**
+         * Sets the largest request body accepted, in bytes. Defaults to 1 MB.
+         *
+         * <p>A larger request is answered with HTTP 413 without being read further, so a client
+         * cannot exhaust memory with a huge POST. MAX updates are a few kilobytes.</p>
+         *
+         * @param maxBodySize the limit in bytes; must be positive
+         * @return this builder
+         * @throws IllegalArgumentException if {@code maxBodySize} is not positive
+         */
+        public Builder maxBodySize(int maxBodySize) {
+            if (maxBodySize <= 0 || maxBodySize == Integer.MAX_VALUE) {
+                throw new IllegalArgumentException(
+                        "maxBodySize must be between 1 and " + (Integer.MAX_VALUE - 1)
+                                + ", got: " + maxBodySize);
+            }
+            this.maxBodySize = maxBodySize;
+            return this;
         }
 
         /**

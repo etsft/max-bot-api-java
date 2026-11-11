@@ -33,6 +33,8 @@ import org.springframework.web.servlet.DispatcherServlet;
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.core.MaxSerializer;
 import ru.max.botapi.core.UpdateHandler;
+import ru.max.botapi.spring.ConditionalOnMaxBotMode;
+import ru.max.botapi.spring.MaxBotMode;
 import ru.max.botapi.spring.MaxBotProperties;
 
 /**
@@ -55,12 +57,11 @@ import ru.max.botapi.spring.MaxBotProperties;
  * @see MaxWebhookProperties
  * @see MaxWebhookController
  * @see MaxWebhookRegistrar
- * @see ru.max.botapi.spring.MaxBotMode
+ * @see MaxBotMode
  */
 @AutoConfiguration
 @ConditionalOnClass({DispatcherServlet.class, MaxBotAPI.class})
-@ConditionalOnProperty(prefix = "max.bot", name = "mode",
-        havingValue = "webhook")
+@ConditionalOnMaxBotMode(MaxBotMode.WEBHOOK)
 @EnableConfigurationProperties({MaxBotProperties.class,
         MaxWebhookProperties.class})
 public class MaxWebhookAutoConfiguration {

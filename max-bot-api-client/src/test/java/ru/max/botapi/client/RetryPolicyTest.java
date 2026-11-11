@@ -21,6 +21,7 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests for {@link RetryPolicy}.
@@ -111,5 +112,31 @@ class RetryPolicyTest {
     void zeroRetries() {
         RetryPolicy noRetry = new RetryPolicy(0);
         assertThat(noRetry.maxRetries()).isEqualTo(0);
+    }
+
+    @Test
+    void retryAfterUpToTheLimitIsHonoured() {
+        assertThat(policy.maxRetryAfter()).isEqualTo(Duration.ofSeconds(60));
+        assertThat(policy.retryAfterDelay(Duration.ofSeconds(5))).isEqualTo(Duration.ofSeconds(5));
+        assertThat(policy.retryAfterDelay(Duration.ofSeconds(60))).isEqualTo(Duration.ofSeconds(60));
+    }
+
+    @Test
+    void retryAfterAboveTheLimitMeansDoNotRetry() {
+        assertThat(policy.retryAfterDelay(Duration.ofSeconds(61))).isNull();
+        assertThat(policy.retryAfterDelay(Duration.ofHours(1))).isNull();
+    }
+
+    @Test
+    void negativeRetryAfterBecomesZero() {
+        assertThat(policy.retryAfterDelay(Duration.ofSeconds(-5))).isEqualTo(Duration.ZERO);
+    }
+
+    @Test
+    void retryAfterLimitIsConfigurableButNotNegative() {
+        RetryPolicy strict = new RetryPolicy(3, Duration.ZERO, Duration.ofSeconds(2));
+        assertThat(strict.retryAfterDelay(Duration.ofSeconds(3))).isNull();
+        assertThatThrownBy(() -> new RetryPolicy(3, Duration.ZERO, Duration.ofSeconds(-1)))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

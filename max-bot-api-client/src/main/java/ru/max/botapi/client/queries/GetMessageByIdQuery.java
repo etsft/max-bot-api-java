@@ -16,8 +16,6 @@
 
 package ru.max.botapi.client.queries;
 
-import java.util.Objects;
-
 import ru.max.botapi.client.HttpMethod;
 import ru.max.botapi.client.MaxClient;
 import ru.max.botapi.client.MaxQuery;
@@ -40,7 +38,7 @@ public class GetMessageByIdQuery extends MaxQuery<Message> {
      * @param messageId the message identifier; must not be {@code null}
      */
     public GetMessageByIdQuery(MaxClient client, String messageId) {
-        super(client, "/messages/" + Objects.requireNonNull(messageId, "messageId must not be null"),
+        super(client, "/messages/" + PathSegments.encode(messageId, "messageId"),
                 HttpMethod.GET, Message.class);
     }
 }

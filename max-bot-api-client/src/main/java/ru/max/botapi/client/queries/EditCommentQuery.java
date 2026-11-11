@@ -51,7 +51,7 @@ public class EditCommentQuery extends MaxQuery<SimpleQueryResult> {
     public EditCommentQuery(MaxClient client, NewCommentBody body, String messageId,
             String commentId) {
         super(client, "/messages/"
-                        + Objects.requireNonNull(messageId, "messageId must not be null")
+                        + PathSegments.encode(messageId, "messageId")
                         + "/comments",
                 HttpMethod.PUT, SimpleQueryResult.class);
         this.body = Objects.requireNonNull(body, "body must not be null");

@@ -439,8 +439,9 @@ UpdateHandler updateHandler() {
 | `max.bot.webhook.secret` | — | Shared secret for header validation. |
 | `max.bot.webhook.url` | — | Public URL for webhook auto-registration. |
 | `max.bot.webhook.auto-register` | `true` | Register webhook subscription on startup. |
-| `max.bot.webhook.auto-unregister` | `true` | Unsubscribe on application shutdown. |
+| `max.bot.webhook.auto-unregister` | `false` | Unsubscribe on application shutdown. Keep it off when several instances share the webhook: during a rolling deploy the stopping instance would remove it for the new ones. |
 | `max.bot.webhook.async-dispatch` | `false` | Answer MAX first, then run the `UpdateHandler` on a virtual thread. |
+| `max.bot.webhook.max-body-size` | `1MB` | Largest request body accepted; larger requests get HTTP 413. |
 | `max.bot.webhook.update-types` | — | List of `UpdateType` constants to subscribe to (empty = all). See [update types table](#available-update-types). |
 
 #### Long Polling Mode
@@ -505,7 +506,7 @@ The `max.bot.mode` property selects the update delivery mechanism.
 | `longpolling` | Receive updates by polling the MAX API. No public URL required. |
 | `none` | Explicitly disable all bot update delivery. Neither auto-configuration activates. |
 
-Only one mode can be active at a time. When the property is not set, a WARN log is emitted at startup to remind you to configure it. Setting `max.bot.mode=none` silences the warning and makes the intent explicit — useful for test profiles or applications where the bot starter is on the classpath but not needed.
+Only one mode can be active at a time. When the property is not set, a WARN log is emitted at startup to remind you to configure it. Setting `max.bot.mode=none` silences the warning and makes the intent explicit — useful for test profiles or applications where the bot starter is on the classpath but not needed. A WARN is also logged when a mode is selected but there is no `MaxBotAPI` bean (the token is not set) or no `UpdateHandler` bean; otherwise the application would start and never receive updates.
 
 Both `webhook` and `longpolling` modes use the same `UpdateHandler` interface (`ru.max.botapi.core.UpdateHandler`). Define a single handler bean and switch modes by changing only the `max.bot.mode` property — no code changes required.
 
