@@ -24,7 +24,7 @@
  * <p>Example usage:</p>
  * <pre>{@code
  * MaxBotAPI api = MaxBotAPI.create("my-token");
- * SendMessageResult result = api.sendMessage(new NewMessageBody("Hello!"))
+ * SendMessageResult result = api.sendMessage(NewMessageBody.text("Hello!"))
  *     .chatId(123456789L)
  *     .execute();
  * }</pre>

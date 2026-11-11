@@ -16,10 +16,21 @@
 
 package ru.max.botapi.model;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Request body for sending ({@code POST /messages}) or editing ({@code PUT /messages}) a message.
+ *
+ * <p>Start from {@link #text(String)} and add the rest with the {@code with*} methods:</p>
+ * <pre>{@code
+ * NewMessageBody body = NewMessageBody.text("<b>Pick one</b>")
+ *         .withFormat(TextFormat.HTML)
+ *         .withAttachments(InlineKeyboardAttachmentRequest.builder()
+ *                 .row(CallbackButton.of("Yes", "yes"), CallbackButton.of("No", "no"))
+ *                 .build());
+ * }</pre>
  *
  * @param text        text content of the message
  * @param attachments list of attachment requests
@@ -31,8 +42,6 @@ public record NewMessageBody(
         @Nullable String text,
         @Nullable List<AttachmentRequest> attachments,
         @Nullable NewMessageLink link,
-        // TODO: Jackson adapter must map this field to "notify" in JSON
-        //       via @JsonProperty("notify") or custom naming strategy
         @Nullable Boolean notifyRecipients,
         @Nullable TextFormat format
 ) {
@@ -42,5 +51,77 @@ public record NewMessageBody(
      */
     public NewMessageBody {
         attachments = attachments == null ? null : List.copyOf(attachments);
+    }
+
+    /**
+     * Creates a body with only text; the other fields are {@code null}.
+     *
+     * @param text the message text; must not be {@code null}
+     * @return the new body
+     */
+    public static NewMessageBody text(String text) {
+        return new NewMessageBody(Objects.requireNonNull(text, "text must not be null"),
+                null, null, null, null);
+    }
+
+    /**
+     * Creates a body with text in the given format; the other fields are {@code null}.
+     *
+     * @param text   the message text; must not be {@code null}
+     * @param format the text format; must not be {@code null}
+     * @return the new body
+     */
+    public static NewMessageBody text(String text, TextFormat format) {
+        return text(text).withFormat(Objects.requireNonNull(format, "format must not be null"));
+    }
+
+    /**
+     * Creates a body with only attachments, such as a photo without a caption.
+     *
+     * @param attachments the attachments; must not be {@code null} or contain {@code null}
+     * @return the new body
+     */
+    public static NewMessageBody attachments(AttachmentRequest... attachments) {
+        return new NewMessageBody(null, List.of(attachments), null, null, null);
+    }
+
+    /**
+     * Returns a copy with the given attachments, replacing any present.
+     *
+     * @param attachments the attachments; must not be {@code null} or contain {@code null}
+     * @return the new body
+     */
+    public NewMessageBody withAttachments(AttachmentRequest... attachments) {
+        return new NewMessageBody(text, Arrays.asList(attachments), link, notifyRecipients, format);
+    }
+
+    /**
+     * Returns a copy with the given link, making the message a reply or a forward.
+     *
+     * @param link the link, or {@code null} for none
+     * @return the new body
+     */
+    public NewMessageBody withLink(@Nullable NewMessageLink link) {
+        return new NewMessageBody(text, attachments, link, notifyRecipients, format);
+    }
+
+    /**
+     * Returns a copy with the given notification setting.
+     *
+     * @param notify {@code false} to send silently
+     * @return the new body
+     */
+    public NewMessageBody withNotify(boolean notify) {
+        return new NewMessageBody(text, attachments, link, notify, format);
+    }
+
+    /**
+     * Returns a copy with the given text format.
+     *
+     * @param format the format, or {@code null} for plain text
+     * @return the new body
+     */
+    public NewMessageBody withFormat(@Nullable TextFormat format) {
+        return new NewMessageBody(text, attachments, link, notifyRecipients, format);
     }
 }

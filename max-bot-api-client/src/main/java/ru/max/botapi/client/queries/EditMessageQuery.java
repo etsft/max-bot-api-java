@@ -33,7 +33,7 @@ import ru.max.botapi.model.SimpleQueryResult;
  *
  * <p>Example usage:</p>
  * <pre>{@code
- * api.editMessage(new NewMessageBody("Updated text"), "mid.abc123").execute();
+ * api.editMessage(NewMessageBody.text("Updated text"), "mid.abc123").execute();
  * }</pre>
  */
 public class EditMessageQuery extends MaxQuery<SimpleQueryResult> {

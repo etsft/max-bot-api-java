@@ -16,10 +16,20 @@
 
 package ru.max.botapi.model;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
  * Inline keyboard attachment request for outgoing messages.
+ *
+ * <p>Build one row at a time:</p>
+ * <pre>{@code
+ * InlineKeyboardAttachmentRequest keyboard = InlineKeyboardAttachmentRequest.builder()
+ *         .row(CallbackButton.of("Yes", "yes"), CallbackButton.of("No", "no"))
+ *         .row(new LinkButton("Docs", "https://dev.max.ru"))
+ *         .build();
+ * }</pre>
  *
  * @param payload keyboard payload with button rows
  */
@@ -40,5 +50,53 @@ public record InlineKeyboardAttachmentRequest(
      */
     public InlineKeyboardAttachmentRequest {
         Objects.requireNonNull(payload, "payload must not be null");
+    }
+
+    /**
+     * Returns a builder that collects the keyboard row by row.
+     *
+     * @return a new builder
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Builder for {@link InlineKeyboardAttachmentRequest}.
+     */
+    public static final class Builder {
+
+        private final List<List<Button>> rows = new ArrayList<>();
+
+        private Builder() {
+        }
+
+        /**
+         * Adds a row of buttons below the rows added so far.
+         *
+         * @param buttons the buttons, left to right; at least one, none {@code null}
+         * @return this builder
+         * @throws IllegalArgumentException if no buttons are given
+         */
+        public Builder row(Button... buttons) {
+            if (buttons.length == 0) {
+                throw new IllegalArgumentException("a keyboard row needs at least one button");
+            }
+            rows.add(List.of(buttons));
+            return this;
+        }
+
+        /**
+         * Builds the keyboard.
+         *
+         * @return the keyboard attachment request
+         * @throws IllegalStateException if no row was added
+         */
+        public InlineKeyboardAttachmentRequest build() {
+            if (rows.isEmpty()) {
+                throw new IllegalStateException("a keyboard needs at least one row");
+            }
+            return new InlineKeyboardAttachmentRequest(new InlineKeyboardAttachment.KeyboardPayload(rows));
+        }
     }
 }

@@ -31,7 +31,7 @@ import ru.max.botapi.model.SendMessageResult;
  *
  * <p>Example usage:</p>
  * <pre>{@code
- * SendMessageResult result = api.sendMessage(new NewMessageBody("Hello!"))
+ * SendMessageResult result = api.sendMessage(NewMessageBody.text("Hello!"))
  *     .chatId(123456789L)
  *     .execute();
  * }</pre>

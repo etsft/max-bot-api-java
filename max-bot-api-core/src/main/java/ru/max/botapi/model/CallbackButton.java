@@ -38,6 +38,17 @@ public record CallbackButton(
     }
 
     /**
+     * Creates a callback button with the default style.
+     *
+     * @param text    display text; must not be {@code null}
+     * @param payload callback data sent to the bot; must not be {@code null}
+     * @return the new button
+     */
+    public static CallbackButton of(String text, String payload) {
+        return new CallbackButton(text, payload, null);
+    }
+
+    /**
      * Creates a CallbackButton.
      *
      * @param text    must not be {@code null}
