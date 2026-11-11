@@ -344,12 +344,55 @@ public class MaxClient {
         if (valueStart >= json.length() || json.charAt(valueStart) != '"') {
             return defaultValue;
         }
-        int contentStart = valueStart + 1;
-        int endQuote = json.indexOf('"', contentStart);
-        if (endQuote < 0) {
-            return defaultValue;
+        String value = readJsonString(json, valueStart + 1);
+        return value == null ? defaultValue : value;
+    }
+
+    /**
+     * Reads a JSON string whose opening quote is just before {@code start}, resolving escapes
+     * (quotes, backslashes, control characters and Unicode escapes).
+     *
+     * @return the unescaped string, or {@code null} if it is not terminated or malformed
+     */
+    private static @Nullable String readJsonString(String json, int start) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = start; i < json.length(); i++) {
+            char ch = json.charAt(i);
+            if (ch == '"') {
+                return sb.toString();
+            }
+            if (ch != '\\') {
+                sb.append(ch);
+                continue;
+            }
+            if (++i >= json.length()) {
+                return null;
+            }
+            char esc = json.charAt(i);
+            switch (esc) {
+                case '"', '\\', '/' -> sb.append(esc);
+                case 'b' -> sb.append('\b');
+                case 'f' -> sb.append('\f');
+                case 'n' -> sb.append('\n');
+                case 'r' -> sb.append('\r');
+                case 't' -> sb.append('\t');
+                case 'u' -> {
+                    if (i + 4 >= json.length()) {
+                        return null;
+                    }
+                    try {
+                        sb.append((char) Integer.parseInt(json.substring(i + 1, i + 5), 16));
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                    i += 4;
+                }
+                default -> {
+                    return null;
+                }
+            }
         }
-        return json.substring(contentStart, endQuote);
+        return null;
     }
 
     /**

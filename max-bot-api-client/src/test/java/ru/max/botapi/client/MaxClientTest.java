@@ -316,6 +316,30 @@ class MaxClientTest {
         assertThat(callCount.get()).isEqualTo(2);
     }
 
+    @Test
+    void errorMessageWithEscapedCharactersIsReadWhole() {
+        String body = "{\"code\":\"bad\\\"code\",\"message\":\"Field \\\"text\\\" is \\u0442oo long\\n\"}";
+        MaxClient client = new MaxClient(stubTransport(400, body), stubSerializer,
+                MaxClientConfig.builder().enableRateLimiting(false).build());
+
+        assertThatThrownBy(() -> client.execute(simpleRequest(), String.class))
+                .isInstanceOfSatisfying(MaxApiException.class, e -> {
+                    assertThat(e.errorMessage()).isEqualTo("Field \"text\" is \u0442oo long\n");
+                    assertThat(e.errorCode()).isEqualTo("bad\"code");
+                });
+    }
+
+    @Test
+    void malformedErrorStringFallsBackToTheWholeBody() {
+        String body = "{\"message\":\"unterminated";
+        MaxClient client = new MaxClient(stubTransport(400, body), stubSerializer,
+                MaxClientConfig.builder().enableRateLimiting(false).build());
+
+        assertThatThrownBy(() -> client.execute(simpleRequest(), String.class))
+                .isInstanceOfSatisfying(MaxApiException.class,
+                        e -> assertThat(e.errorMessage()).isEqualTo(body));
+    }
+
     /** Returns a transport that answers {@code firstStatus} once, then 200. */
     private static MaxTransportClient countingTransport(AtomicInteger callCount, int firstStatus) {
         return countingTransport(callCount, firstStatus, Map.of());

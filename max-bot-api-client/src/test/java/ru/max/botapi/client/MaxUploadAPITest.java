@@ -18,8 +18,10 @@ package ru.max.botapi.client;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.http.HttpTimeoutException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -33,9 +35,12 @@ import ru.max.botapi.model.UploadEndpoint;
 import ru.max.botapi.testsupport.TestSerializers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -278,5 +283,59 @@ class MaxUploadAPITest {
         uploadApi.close();
         // Calling close() a second time should not throw
         uploadApi.close();
+    }
+
+    // ===== Configuration and safety =====
+
+    @Test
+    void filenameCannotBreakOutOfTheContentDisposition(WireMockRuntimeInfo wmInfo) {
+        stubFor(post(urlPathEqualTo("/upload"))
+                .willReturn(aResponse().withStatus(200)
+                        .withBody("{\"fileId\": 1, \"token\": \"t\"}")));
+
+        try (MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create())) {
+            UploadEndpoint endpoint = new UploadEndpoint(wmInfo.getHttpBaseUrl() + "/upload", null);
+            uploadApi.uploadFile(endpoint, "x".getBytes(),
+                    "a\"; name=\"evil\r\nX-Injected: 1.txt");
+        }
+
+        verify(postRequestedFor(urlPathEqualTo("/upload"))
+                .withRequestBody(containing(
+                        "filename=\"a%22; name=%22evil%0D%0AX-Injected: 1.txt\"")));
+    }
+
+    @Test
+    void escapeFilenameLeavesOrdinaryNamesAlone() {
+        assertThat(MaxUploadAPI.escapeFilename("фото 1.jpg")).isEqualTo("фото 1.jpg");
+    }
+
+    @Test
+    void uploadIsAbortedAfterTheUploadTimeout(WireMockRuntimeInfo wmInfo) {
+        stubFor(post(urlPathEqualTo("/upload"))
+                .willReturn(aResponse().withStatus(200).withFixedDelay(3000)
+                        .withBody("{\"fileId\": 1, \"token\": \"t\"}")));
+
+        try (MaxUploadAPI uploadApi = new MaxUploadAPI(TestSerializers.create(),
+                MaxClientConfig.defaults(), Duration.ofMillis(200))) {
+            UploadEndpoint endpoint = new UploadEndpoint(wmInfo.getHttpBaseUrl() + "/upload", null);
+            assertThatThrownBy(() -> uploadApi.uploadFile(endpoint, "x".getBytes(), "x.txt"))
+                    .isInstanceOf(MaxClientException.class)
+                    .hasCauseInstanceOf(HttpTimeoutException.class);
+        }
+    }
+
+    @Test
+    void uploadTimeoutMustBePositive() {
+        assertThatThrownBy(() -> new MaxUploadAPI(TestSerializers.create(),
+                MaxClientConfig.defaults(), Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void apiCreatesUploadsWithItsSerializer() {
+        try (MaxBotAPI api = MaxBotAPI.create("token");
+                MaxUploadAPI uploads = api.uploads()) {
+            assertThat(uploads).isNotNull();
+        }
     }
 }

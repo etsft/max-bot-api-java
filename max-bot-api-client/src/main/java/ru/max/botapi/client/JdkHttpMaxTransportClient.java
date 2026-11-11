@@ -103,6 +103,8 @@ public class JdkHttpMaxTransportClient implements MaxTransportClient {
     /** {@inheritDoc} */
     @Override
     public void close() {
+        // Not close(): that would block until in-flight requests, such as a long poll, end.
+        httpClient.shutdown();
         virtualThreadExecutor.shutdown();
     }
 

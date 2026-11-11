@@ -580,6 +580,18 @@ public class MaxBotAPI implements AutoCloseable {
         return new GetUploadUrlQuery(client, type);
     }
 
+    /**
+     * Creates a {@link MaxUploadAPI} with this API's serializer and configuration (connect
+     * timeout and SSL context).
+     *
+     * <p>The caller owns the returned instance and closes it.</p>
+     *
+     * @return a new upload API
+     */
+    public MaxUploadAPI uploads() {
+        return new MaxUploadAPI(client.serializer(), client.config());
+    }
+
     // ===== Video =====
 
     /**

@@ -24,6 +24,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -61,13 +62,18 @@ import ru.max.botapi.model.UploadEndpoint;
  * {@link HttpRequest.BodyPublishers#ofFile(Path)} without loading the entire file into
  * heap memory. This avoids {@code OutOfMemoryError} for large files such as videos.</p>
  *
+ * <p>Connections use the connect timeout and SSL context of the {@link MaxClientConfig} given
+ * to the constructor (the defaults otherwise), and each upload is limited to
+ * {@link #DEFAULT_UPLOAD_TIMEOUT} unless another timeout is given. {@link MaxBotAPI#uploads()}
+ * creates an instance configured like the API client.</p>
+ *
  * <p>This class implements {@link AutoCloseable}; calling {@link #close()} shuts down the
- * internal executor service and releases all resources.</p>
+ * HTTP client and the internal executor service.</p>
  *
  * <p>Example usage:</p>
  * <pre>{@code
  * MaxBotAPI api = MaxBotAPI.create("my-token");
- * try (MaxUploadAPI uploadApi = new MaxUploadAPI()) {
+ * try (MaxUploadAPI uploadApi = api.uploads()) {
  *     UploadEndpoint endpoint = api.getUploadUrl(UploadType.IMAGE).execute();
  *     ImageUploadedInfo info = uploadApi.uploadImage(endpoint, Path.of("photo.jpg"), "photo.jpg");
  *
@@ -80,6 +86,9 @@ import ru.max.botapi.model.UploadEndpoint;
  */
 public class MaxUploadAPI implements AutoCloseable {
 
+    /** Default limit for a single upload, from sending the request to reading the response. */
+    public static final Duration DEFAULT_UPLOAD_TIMEOUT = Duration.ofMinutes(10);
+
     private static final String MULTIPART_BOUNDARY_PREFIX = "----MaxBotApi";
     private static final String CRLF = "\r\n";
 
@@ -90,6 +99,7 @@ public class MaxUploadAPI implements AutoCloseable {
     private final ExecutorService executorService;
     private final HttpClient httpClient;
     private final MaxSerializer serializer;
+    private final Duration uploadTimeout;
 
     /**
      * Creates a {@code MaxUploadAPI} using the serializer of the highest-priority
@@ -111,12 +121,45 @@ public class MaxUploadAPI implements AutoCloseable {
      *                   (file/image); must not be {@code null}
      */
     public MaxUploadAPI(MaxSerializer serializer) {
+        this(serializer, MaxClientConfig.defaults());
+    }
+
+    /**
+     * Creates a {@code MaxUploadAPI} that connects with the given configuration's connect timeout
+     * and SSL context and limits each upload to {@link #DEFAULT_UPLOAD_TIMEOUT}.
+     *
+     * @param serializer the JSON serializer for upload responses; must not be {@code null}
+     * @param config     the client configuration; must not be {@code null}
+     */
+    public MaxUploadAPI(MaxSerializer serializer, MaxClientConfig config) {
+        this(serializer, config, DEFAULT_UPLOAD_TIMEOUT);
+    }
+
+    /**
+     * Creates a {@code MaxUploadAPI} with an explicit limit for each upload.
+     *
+     * @param serializer    the JSON serializer for upload responses; must not be {@code null}
+     * @param config        the client configuration; must not be {@code null}
+     * @param uploadTimeout the limit for a single upload; must be positive. Large videos on a
+     *                      slow link need a generous value
+     * @throws IllegalArgumentException if {@code uploadTimeout} is not positive
+     */
+    public MaxUploadAPI(MaxSerializer serializer, MaxClientConfig config, Duration uploadTimeout) {
         this.serializer = Objects.requireNonNull(serializer, "serializer must not be null");
+        Objects.requireNonNull(config, "config must not be null");
+        this.uploadTimeout = Objects.requireNonNull(uploadTimeout, "uploadTimeout must not be null");
+        if (uploadTimeout.isNegative() || uploadTimeout.isZero()) {
+            throw new IllegalArgumentException("uploadTimeout must be positive, got: " + uploadTimeout);
+        }
         this.executorService = Executors.newVirtualThreadPerTaskExecutor();
-        this.httpClient = HttpClient.newBuilder()
+        HttpClient.Builder builder = HttpClient.newBuilder()
                 .executor(executorService)
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
+                .connectTimeout(config.connectTimeout())
+                .followRedirects(HttpClient.Redirect.NORMAL);
+        if (config.sslContext() != null) {
+            builder.sslContext(config.sslContext());
+        }
+        this.httpClient = builder.build();
     }
 
     // ===== FILE =====
@@ -279,15 +322,23 @@ public class MaxUploadAPI implements AutoCloseable {
     }
 
     /**
-     * Shuts down the internal executor service, releasing resources held by the
-     * underlying {@link HttpClient}.
+     * Shuts down the HTTP client and the internal executor service.
      *
      * <p>Initiates an orderly shutdown and waits up to 5 seconds for any in-flight
-     * uploads to complete. If the timeout expires, remaining tasks are cancelled.
+     * uploads to complete. If the timeout expires, remaining uploads are aborted.
      * After calling this method the upload API instance must not be used.</p>
      */
     @Override
     public void close() {
+        httpClient.shutdown();
+        try {
+            if (!httpClient.awaitTermination(Duration.ofSeconds(5))) {
+                httpClient.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            httpClient.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
         executorService.shutdown();
         try {
             if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -329,6 +380,7 @@ public class MaxUploadAPI implements AutoCloseable {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(uploadUrl))
                 .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                .timeout(uploadTimeout)
                 .POST(bodyPublisher)
                 .build();
 
@@ -355,6 +407,7 @@ public class MaxUploadAPI implements AutoCloseable {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(uploadUrl))
                 .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                .timeout(uploadTimeout)
                 .POST(HttpRequest.BodyPublishers.ofByteArray(multipartBody))
                 .build();
 
@@ -430,9 +483,19 @@ public class MaxUploadAPI implements AutoCloseable {
         }
     }
 
+    /**
+     * Escapes a filename for the quoted {@code filename} parameter the way browsers do
+     * (WHATWG HTML multipart encoding): {@code "} becomes {@code %22} and line breaks
+     * {@code %0D}/{@code %0A}, so a name cannot end the parameter or inject a header line.
+     */
+    static String escapeFilename(String filename) {
+        return filename.replace("\"", "%22").replace("\r", "%0D").replace("\n", "%0A");
+    }
+
     private static byte[] buildPartHeader(String boundary, String filename) {
         String header = "--" + boundary + CRLF
-                + "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\""
+                + "Content-Disposition: form-data; name=\"file\"; filename=\""
+                + escapeFilename(filename) + "\""
                 + CRLF
                 + "Content-Type: application/octet-stream" + CRLF
                 + CRLF;
