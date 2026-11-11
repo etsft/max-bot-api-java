@@ -17,7 +17,6 @@
 package ru.max.botapi.model;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Result of {@code POST /chats/{chatId}/members}.
@@ -44,7 +43,7 @@ public record AddMembersResult(
      * Creates an AddMembersResult.
      */
     public AddMembersResult {
-        failedUserIds = failedUserIds == null ? null : List.copyOf(failedUserIds);
-        failedUserDetails = failedUserDetails == null ? null : List.copyOf(failedUserDetails);
+        failedUserIds = ModelLists.withoutNullsOrNull(failedUserIds);
+        failedUserDetails = ModelLists.withoutNullsOrNull(failedUserDetails);
     }
 }

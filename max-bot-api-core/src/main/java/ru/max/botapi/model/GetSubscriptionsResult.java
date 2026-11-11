@@ -17,7 +17,6 @@
 package ru.max.botapi.model;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Result of listing webhook subscriptions.
@@ -32,7 +31,6 @@ public record GetSubscriptionsResult(List<Subscription> subscriptions) {
      * @param subscriptions must not be {@code null}
      */
     public GetSubscriptionsResult {
-        Objects.requireNonNull(subscriptions, "subscriptions must not be null");
-        subscriptions = List.copyOf(subscriptions);
+        subscriptions = ModelLists.withoutNulls(subscriptions, "subscriptions");
     }
 }

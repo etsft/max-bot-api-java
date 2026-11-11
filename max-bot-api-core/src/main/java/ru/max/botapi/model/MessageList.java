@@ -17,7 +17,6 @@
 package ru.max.botapi.model;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Paginated list of messages.
@@ -36,7 +35,6 @@ public record MessageList(
      * @param messages must not be {@code null}
      */
     public MessageList {
-        Objects.requireNonNull(messages, "messages must not be null");
-        messages = List.copyOf(messages);
+        messages = ModelLists.withoutNulls(messages, "messages");
     }
 }

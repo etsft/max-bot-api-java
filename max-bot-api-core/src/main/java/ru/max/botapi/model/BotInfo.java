@@ -17,7 +17,6 @@
 package ru.max.botapi.model;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Extended bot information returned by {@code GET /me}.
@@ -58,6 +57,6 @@ public record BotInfo(
      * Creates a BotInfo.
      */
     public BotInfo {
-        commands = commands == null ? null : List.copyOf(commands);
+        commands = ModelLists.withoutNullsOrNull(commands);
     }
 }

@@ -43,7 +43,7 @@ public record MessageBody(
      */
     public MessageBody {
         Objects.requireNonNull(mid, "mid must not be null");
-        attachments = attachments == null ? null : List.copyOf(attachments);
-        markup = markup == null ? null : List.copyOf(markup);
+        attachments = ModelLists.withoutNullsOrNull(attachments);
+        markup = ModelLists.withoutNullsOrNull(markup);
     }
 }

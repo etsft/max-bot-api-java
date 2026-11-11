@@ -44,6 +44,6 @@ public record CommentMessageBody(
      */
     public CommentMessageBody {
         Objects.requireNonNull(mid, "mid must not be null");
-        markup = markup == null ? null : List.copyOf(markup);
+        markup = ModelLists.withoutNullsOrNull(markup);
     }
 }

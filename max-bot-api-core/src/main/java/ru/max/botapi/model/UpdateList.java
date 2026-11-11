@@ -17,7 +17,6 @@
 package ru.max.botapi.model;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Paginated list of updates (used by long polling).
@@ -36,7 +35,6 @@ public record UpdateList(
      * @param updates must not be {@code null}
      */
     public UpdateList {
-        Objects.requireNonNull(updates, "updates must not be null");
-        updates = List.copyOf(updates);
+        updates = ModelLists.withoutNulls(updates, "updates");
     }
 }

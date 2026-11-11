@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -35,8 +36,11 @@ import ru.max.botapi.model.Button;
 import ru.max.botapi.model.CallbackButton;
 import ru.max.botapi.model.Chat;
 import ru.max.botapi.model.ChatMember;
+import ru.max.botapi.model.ChatMembersList;
 import ru.max.botapi.model.ChatPatch;
+import ru.max.botapi.model.ChatPermission;
 import ru.max.botapi.model.FileUploadedInfo;
+import ru.max.botapi.model.GetSubscriptionsResult;
 import ru.max.botapi.model.InlineKeyboardAttachment;
 import ru.max.botapi.model.InlineKeyboardAttachmentRequest;
 import ru.max.botapi.model.LocationAttachmentRequest;
@@ -187,7 +191,15 @@ class SerializerParityTest {
 
     static Stream<Arguments> edgeCases() {
         String location = "{\"type\":\"location\",\"latitude\":%s,\"longitude\":0}";
+        String msg = "{\"recipient\":{\"chat_id\":1},\"timestamp\":1,\"body\":{\"mid\":\"m\",\"seq\":1,"
+                + "\"attachments\":[null,{\"type\":\"zz\"}],\"markup\":[null]}}";
         return Stream.of(
+                // null and unknown elements inside response lists are dropped
+                Arguments.of("{\"messages\":[null," + msg + "]}", MessageList.class),
+                Arguments.of("{\"members\":[null,{\"user_id\":5,\"permissions\":[\"write\",\"levitate\",null]}]}",
+                        ChatMembersList.class),
+                Arguments.of("{\"subscriptions\":[null]}", GetSubscriptionsResult.class),
+                Arguments.of("{\"updates\":[null],\"marker\":1}", UpdateList.class),
                 // documents
                 Arguments.of("null", User.class),
                 Arguments.of("", User.class),
@@ -390,6 +402,18 @@ class SerializerParityTest {
                 Arguments.of("{\"type\":\"hologram\",\"payload\":{\"d\":3}}", Attachment.class),
                 Arguments.of("{\"type\":\"teleport\",\"text\":\"Go\",\"to\":7}", Button.class),
                 Arguments.of("{\"type\":\"hologram\",\"payload\":{\"d\":3}}", AttachmentRequest.class));
+    }
+
+    @Test
+    void nullAndUnknownElementsInResponseListsAreDropped() {
+        String json = "{\"members\":[null,{\"user_id\":5,\"permissions\":[\"write\",\"levitate\",null]}]}";
+        for (MaxSerializer serializer : List.of(JACKSON, GSON)) {
+            ChatMembersList list = serializer.deserialize(json, ChatMembersList.class);
+            assertThat(list.members()).singleElement()
+                    .satisfies(m -> assertThat(m.permissions()).containsExactly(ChatPermission.WRITE));
+            MessageList messages = serializer.deserialize("{\"messages\":[null]}", MessageList.class);
+            assertThat(messages.messages()).isEmpty();
+        }
     }
 
     private static Arguments fixture(String path, Class<?> type) {

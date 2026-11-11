@@ -46,7 +46,6 @@ public record AddMemberFailure(
      */
     public AddMemberFailure {
         Objects.requireNonNull(errorCode, "errorCode must not be null");
-        Objects.requireNonNull(userIds, "userIds must not be null");
-        userIds = List.copyOf(userIds);
+        userIds = ModelLists.withoutNulls(userIds, "userIds");
     }
 }

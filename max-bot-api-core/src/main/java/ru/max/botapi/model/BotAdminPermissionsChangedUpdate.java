@@ -17,7 +17,6 @@
 package ru.max.botapi.model;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Update: the bot's administrator permissions in a chat changed.
@@ -57,10 +56,6 @@ public record BotAdminPermissionsChangedUpdate(
      * are dropped.</p>
      */
     public BotAdminPermissionsChangedUpdate {
-        if (permissions != null) {
-            permissions = permissions.stream()
-                    .filter(Objects::nonNull)
-                    .toList();
-        }
+        permissions = ModelLists.withoutNullsOrNull(permissions);
     }
 }

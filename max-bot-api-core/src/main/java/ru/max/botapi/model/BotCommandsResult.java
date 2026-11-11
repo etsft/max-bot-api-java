@@ -29,6 +29,6 @@ public record BotCommandsResult(@Nullable List<BotCommand> commands) {
      * Creates a BotCommandsResult.
      */
     public BotCommandsResult {
-        commands = commands == null ? null : List.copyOf(commands);
+        commands = ModelLists.withoutNullsOrNull(commands);
     }
 }

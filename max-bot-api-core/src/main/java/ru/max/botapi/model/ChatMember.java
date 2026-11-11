@@ -17,7 +17,6 @@
 package ru.max.botapi.model;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * A member of a chat with extended role information.
@@ -76,10 +75,6 @@ public record ChatMember(
      * clean list of known permissions without {@code NullPointerException}s.</p>
      */
     public ChatMember {
-        if (permissions != null) {
-            permissions = permissions.stream()
-                    .filter(Objects::nonNull)
-                    .toList();
-        }
+        permissions = ModelLists.withoutNullsOrNull(permissions);
     }
 }

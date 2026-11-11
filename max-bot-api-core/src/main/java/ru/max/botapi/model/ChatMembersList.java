@@ -17,7 +17,6 @@
 package ru.max.botapi.model;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Paginated list of chat members.
@@ -36,7 +35,6 @@ public record ChatMembersList(
      * @param members must not be {@code null}
      */
     public ChatMembersList {
-        Objects.requireNonNull(members, "members must not be null");
-        members = List.copyOf(members);
+        members = ModelLists.withoutNulls(members, "members");
     }
 }

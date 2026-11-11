@@ -54,9 +54,8 @@ public record InlineKeyboardAttachment(KeyboardPayload payload) implements Attac
          * @param buttons must not be {@code null}
          */
         public KeyboardPayload {
-            Objects.requireNonNull(buttons, "buttons must not be null");
-            buttons = buttons.stream()
-                    .map(List::copyOf)
+            buttons = ModelLists.withoutNulls(buttons, "buttons").stream()
+                    .map(row -> ModelLists.withoutNulls(row, "row"))
                     .toList();
         }
     }

@@ -17,7 +17,6 @@
 package ru.max.botapi.model;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Result of {@code GET /messages/{messageId}/comments}.
@@ -32,7 +31,6 @@ public record CommentList(List<CommentMessage> messages) {
      * @param messages must not be {@code null}
      */
     public CommentList {
-        Objects.requireNonNull(messages, "messages must not be null");
-        messages = List.copyOf(messages);
+        messages = ModelLists.withoutNulls(messages, "messages");
     }
 }
