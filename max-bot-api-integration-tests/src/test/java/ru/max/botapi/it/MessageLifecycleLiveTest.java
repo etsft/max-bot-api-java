@@ -245,7 +245,7 @@ class MessageLifecycleLiveTest extends LiveTestBase {
         for (String leftover : List.of(nullSafe(messageId), nullSafe(replyMessageId),
                 nullSafe(dialogMessageId))) {
             if (!leftover.isEmpty()) {
-                cleanUp("delete message " + leftover,
+                cleanUpResult("delete message " + leftover,
                         () -> api().deleteMessage(leftover).execute());
             }
         }

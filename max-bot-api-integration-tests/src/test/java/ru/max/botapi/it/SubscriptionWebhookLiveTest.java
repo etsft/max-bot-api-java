@@ -43,10 +43,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Webhook delivery end to end, using a public URL the operator proxies to this machine.
  *
- * <p>Runs last on purpose. A subscription changes how MAX delivers updates for the whole bot,
- * and it is not established whether {@code getUpdates} keeps working while one is active — so
- * every earlier class gets to finish first, and the subscription is removed in teardown even
- * when the test fails.</p>
+ * <p>Runs after the long-polling classes ({@code UpdatesLiveTest}, {@code CallbackLiveTest})
+ * on purpose. A subscription changes how MAX delivers updates for the whole bot, and it is not
+ * established whether {@code getUpdates} keeps working while one is active. The subscription
+ * is removed in teardown even when the test fails, and the later classes that read updates
+ * over long polling ({@code CommentsLiveTest}, {@code SuccessFalseLiveTest}) first clear any
+ * leftover subscription of this suite.</p>
  */
 @Order(8)
 @DisplayName("Live: webhook subscription")
@@ -176,7 +178,7 @@ class SubscriptionWebhookLiveTest extends LiveTestBase {
     @AfterAll
     void removeSubscription() {
         if (subscribedUrl != null) {
-            cleanUp("unsubscribe " + subscribedUrl,
+            cleanUpResult("unsubscribe " + subscribedUrl,
                     () -> api().unsubscribe(subscribedUrl).execute());
         }
         if (server != null) {

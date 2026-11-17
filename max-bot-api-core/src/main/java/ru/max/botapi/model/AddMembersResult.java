@@ -27,14 +27,26 @@ import java.util.List;
  * {@link #failedUserIds()} lists the affected user IDs with per-user error details
  * in {@link #failedUserDetails()}.</p>
  *
+ * <p>When the request as a whole is refused, tell the reason by {@link #code()}, not by
+ * {@link #message()}. Neither is guaranteed with {@code success:false}: a failure for
+ * individual users (partial or complete) may carry only {@link #failedUserIds()} and
+ * {@link #failedUserDetails()}, whose entries have their own
+ * {@link AddMemberFailure#errorCode()}.</p>
+ *
  * @param success           {@code true} if all users were added successfully
  * @param message           error message explaining an unsuccessful request
+ * @param code              machine-readable reason of an unsuccessful request, for example
+ *                          {@code chat.denied} (observed from {@code removeMember}, which
+ *                          returns {@code SimpleQueryResult}, the schema this result
+ *                          extends); may be {@code null} even when
+ *                          {@code success} is {@code false}
  * @param failedUserIds     IDs of users that could not be added; empty on full success
  * @param failedUserDetails per-error details for failed users; empty on full success
  */
 public record AddMembersResult(
         boolean success,
         @Nullable String message,
+        @Nullable String code,
         @Nullable List<Long> failedUserIds,
         @Nullable List<AddMemberFailure> failedUserDetails
 ) {
@@ -45,5 +57,19 @@ public record AddMembersResult(
     public AddMembersResult {
         failedUserIds = ModelLists.withoutNullsOrNull(failedUserIds);
         failedUserDetails = ModelLists.withoutNullsOrNull(failedUserDetails);
+    }
+
+    /**
+     * Creates an AddMembersResult without a code.
+     *
+     * @param success           {@code true} if all users were added successfully
+     * @param message           error message explaining an unsuccessful request
+     * @param failedUserIds     IDs of users that could not be added; empty on full success
+     * @param failedUserDetails per-error details for failed users; empty on full success
+     */
+    public AddMembersResult(boolean success, @Nullable String message,
+                            @Nullable List<Long> failedUserIds,
+                            @Nullable List<AddMemberFailure> failedUserDetails) {
+        this(success, message, null, failedUserIds, failedUserDetails);
     }
 }

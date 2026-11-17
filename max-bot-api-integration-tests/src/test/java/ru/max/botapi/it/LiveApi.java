@@ -22,20 +22,23 @@ import ru.max.botapi.client.JdkHttpMaxTransportClient;
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.MaxClient;
 import ru.max.botapi.client.MaxClientConfig;
+import ru.max.botapi.client.MaxTransportClient;
 import ru.max.botapi.core.MaxSerializer;
 
 /**
  * A live {@link MaxBotAPI} plus the transport that has to be closed with it.
  *
  * <p>Assembled by hand rather than through {@code MaxBotAPI.create(token)} because the suite
- * needs its own {@link RecordingSerializer}. That has a consequence worth stating: the public
- * {@code MaxBotAPI(MaxClient)} constructor leaves the transport unowned, so {@code api.close()}
- * does nothing and the transport must be closed through {@link #close()}.</p>
+ * needs its own {@link RecordingSerializer} and {@link RecordingTransport}. That has a
+ * consequence worth stating: the public {@code MaxBotAPI(MaxClient)} constructor leaves the
+ * transport unowned, so {@code api.close()} does nothing and the transport must be closed
+ * through {@link #close()}.</p>
  *
  * @param api       the assembled facade
- * @param transport the transport backing it, owned by this record
+ * @param transport the transport backing it, a {@link RecordingTransport} around the real one,
+ *                  owned by this record
  */
-public record LiveApi(MaxBotAPI api, JdkHttpMaxTransportClient transport) implements AutoCloseable {
+public record LiveApi(MaxBotAPI api, MaxTransportClient transport) implements AutoCloseable {
 
     /** Retries cost 1s + 2s + 4s each; a hand-run suite should surface the error instead. */
     private static final int MAX_RETRIES = 1;
@@ -69,7 +72,8 @@ public record LiveApi(MaxBotAPI api, JdkHttpMaxTransportClient transport) implem
         MaxClientConfig config = builder.build();
 
         MaxSerializer serializer = new RecordingSerializer();
-        JdkHttpMaxTransportClient transport = new JdkHttpMaxTransportClient(token, config);
+        MaxTransportClient transport =
+                new RecordingTransport(new JdkHttpMaxTransportClient(token, config));
         return new LiveApi(new MaxBotAPI(new MaxClient(transport, serializer, config)), transport);
     }
 

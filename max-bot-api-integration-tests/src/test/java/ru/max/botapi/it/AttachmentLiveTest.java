@@ -190,7 +190,7 @@ class AttachmentLiveTest extends LiveTestBase {
     @AfterAll
     void cleanUpUploads() {
         sentMessageIds.forEach(mid ->
-                cleanUp("delete message " + mid, () -> api().deleteMessage(mid).execute()));
+                cleanUpResult("delete message " + mid, () -> api().deleteMessage(mid).execute()));
         // Not routed through cleanUp: the upload client is built with the test instance, so it
         // exists even when the class was skipped before the API was opened.
         try {

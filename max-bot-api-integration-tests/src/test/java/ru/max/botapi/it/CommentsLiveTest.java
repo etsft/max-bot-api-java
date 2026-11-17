@@ -256,8 +256,7 @@ class CommentsLiveTest extends LiveTestBase {
 
         consumer.start();
         try {
-            Prompts.step("the test CHANNEL - " + IntegrationConfig.CHANNEL_ID + " = "
-                            + IntegrationConfig.channelId(),
+            Prompts.step(Prompts.channel(),
                     "Open the comments of post " + IntegrationConfig.postId()
                     + " and delete the bot's comment \"" + text + "\" yourself, as a channel "
                     + "administrator. MAX does not tell a bot about its own deletions.");
@@ -344,7 +343,7 @@ class CommentsLiveTest extends LiveTestBase {
     void removeLeftoverComment() {
         String leftover = removableCommentId;
         if (leftover != null) {
-            cleanUp("delete comment " + leftover,
+            cleanUpResult("delete comment " + leftover,
                     () -> api().deleteComment(IntegrationConfig.postId(), leftover).execute());
         }
     }

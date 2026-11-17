@@ -29,6 +29,7 @@ import ru.max.botapi.core.MaxSerializer;
 import ru.max.botapi.core.TypeReference;
 import ru.max.botapi.jackson.JacksonMaxSerializer;
 import ru.max.botapi.model.ActionRequestBody;
+import ru.max.botapi.model.AddMembersResult;
 import ru.max.botapi.model.Attachment;
 import ru.max.botapi.model.AttachmentRequest;
 import ru.max.botapi.model.BotInfo;
@@ -51,6 +52,7 @@ import ru.max.botapi.model.NewMessageBody;
 import ru.max.botapi.model.PhotoAttachmentRequestPayload;
 import ru.max.botapi.model.PinMessageBody;
 import ru.max.botapi.model.SenderAction;
+import ru.max.botapi.model.SimpleQueryResult;
 import ru.max.botapi.model.TextFormat;
 import ru.max.botapi.model.UnknownAttachment;
 import ru.max.botapi.model.UnknownButton;
@@ -88,6 +90,8 @@ class SerializerParityTest {
                 fixture("message.json", Message.class),
                 fixture("message-with-attachments.json", Message.class),
                 fixture("new-message-body.json", NewMessageBody.class),
+                fixture("simple-result-failure.json", SimpleQueryResult.class),
+                fixture("add-members-not-found.json", AddMembersResult.class),
                 fixture("attachments/audio.json", Attachment.class),
                 fixture("attachments/contact.json", Attachment.class),
                 fixture("attachments/file.json", Attachment.class),

@@ -1,0 +1,5 @@
+{
+  "success": false,
+  "message": "Subscription https://example.invalid/max-bot/live-test is not found",
+  "code": "not.found"
+}

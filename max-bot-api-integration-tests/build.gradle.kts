@@ -29,9 +29,19 @@ tasks.register<JavaExec>("liveTest") {
     classpath = sourceSets.test.get().runtimeClasspath
     mainClass.set("org.junit.platform.console.ConsoleLauncher")
 
+    // One class instead of the whole package, by simple name:
+    //   ./gradlew :max-bot-api-integration-tests:liveTest -Pit.class=SuccessFalseLiveTest
+    val selector = (project.findProperty("it.class") as String?)?.let { name ->
+        require(name.matches(Regex("[A-Za-z_][A-Za-z0-9_]*"))) {
+            "it.class must be a simple class name in ru.max.botapi.it, got: $name"
+        }
+        "--select-class=ru.max.botapi.it.$name"
+    } ?: "--select-package=ru.max.botapi.it"
+
     args(
         "execute",
-        "--select-package=ru.max.botapi.it",
+        selector,
+        "--fail-if-no-tests",
         "--details=tree",
         "--disable-ansi-colors",
         "--reports-dir=${layout.buildDirectory.get().asFile}/test-results/liveTest"

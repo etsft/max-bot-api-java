@@ -31,14 +31,23 @@ import ru.max.botapi.model.UserIdsList;
  * When some or all users could not be added (e.g. due to privacy settings),
  * {@link AddMembersResult#success()} is {@code false} and
  * {@link AddMembersResult#failedUserIds()} lists the affected users with
- * per-user error details in {@link AddMembersResult#failedUserDetails()}.</p>
+ * per-user error details in {@link AddMembersResult#failedUserDetails()}. A refusal of the
+ * whole request is identified by {@link AddMembersResult#code()}, not by its message.</p>
  *
  * <p>Example usage:</p>
  * <pre>{@code
  * AddMembersResult result = api.addMembers(new UserIdsList(List.of(111L, 222L)), 123456789L).execute();
  * if (!result.success()) {
- *     result.failedUserDetails().forEach(f ->
- *         System.out.println(f.errorCode() + " for " + f.userIds()));
+ *     // code() names a refusal of the whole request, e.g. "chat.denied" (as MAX answers
+ *     // removeMember, which returns SimpleQueryResult, the schema this result extends);
+ *     // it may be null
+ *     if (result.code() != null) {
+ *         System.out.println("refused: " + result.code());
+ *     }
+ *     if (result.failedUserDetails() != null) {
+ *         result.failedUserDetails().forEach(f ->
+ *             System.out.println(f.errorCode() + " for " + f.userIds()));
+ *     }
  * }
  * }</pre>
  *

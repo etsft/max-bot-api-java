@@ -364,7 +364,7 @@ server.register(api, "https://example.com/webhook",
 
 MAX доставляет webhook только на HTTPS-адреса. Либо терминируйте TLS перед сервером обратным прокси (nginx, балансировщик) и вызывайте `start()`, либо передайте в `start(sslContext)` `SSLContext` с вашим сертификатом. `register()` отправляет в MAX настроенный секрет вместе с подпиской, поэтому MAX добавляет его в каждую доставку.
 
-`register()` и `unregister()` выбрасывают `IllegalStateException`, если MAX отвечает `success: false`. Полный пример бота, который подписывается при запуске и отписывается при остановке, — [`WebhookBot`](max-bot-api-examples/src/main/java/ru/max/botapi/examples/WebhookBot.java).
+`register()` и `unregister()` выбрасывают `MaxOperationFailedException` (наследник `IllegalStateException`), если MAX отвечает `success: false`; причину показывает его `errorCode()`, например `not.found` при отписке URL, на который бот не подписан. Полный пример бота, который подписывается при запуске и отписывается при остановке, — [`WebhookBot`](max-bot-api-examples/src/main/java/ru/max/botapi/examples/WebhookBot.java).
 
 #### Срок подтверждения доставки
 
@@ -690,10 +690,34 @@ MaxClientConfig config = MaxClientConfig.defaults();
 ```
 RuntimeException
 ├── MaxClientException                — сбой транспорта/сети (ошибка I/O, таймаут)
-└── MaxApiException                   — API вернул 4xx или 5xx
-    ├── MaxRateLimitException         — 429 Too Many Requests
-    ├── MaxMethodNotAllowedException  — 405 Method Not Allowed
-    └── AttachmentNotReadyException   — вложение всё ещё обрабатывается после attachmentReadyTimeout
+├── MaxApiException                   — API вернул 4xx или 5xx
+│   ├── MaxRateLimitException         — 429 Too Many Requests
+│   ├── MaxMethodNotAllowedException  — 405 Method Not Allowed
+│   └── AttachmentNotReadyException   — вложение всё ещё обрабатывается после attachmentReadyTimeout
+└── IllegalStateException
+    └── MaxOperationFailedException   — webhook register()/unregister() отклонён с success: false
+```
+
+### Отказы: HTTP 200 с `success: false` и HTTP 4xx
+
+MAX отказывает в операции одним из двух способов, и библиотека сообщает о них по-разному:
+
+| Ответ | Что вы получаете | Где код |
+|---|---|---|
+| HTTP 200, `{"success": false, ...}` | обычный результат, без исключения | `SimpleQueryResult.code()`, `AddMembersResult.code()` |
+| HTTP 4xx | выбрасывается `MaxApiException` | `MaxApiException.errorCode()` |
+
+Любой метод, возвращающий `SimpleQueryResult`, — например `subscribe`/`unsubscribe`, `pinMessage`/`unpinMessage`, `sendAction`, `editMessage`/`deleteMessage`, `answerOnCallback`, `postAdmins`/`deleteAdmins`, `removeMember`, `leaveChat`, `deleteChat`, `editComment`/`deleteComment`, — а также `addMembers` могут ответить HTTP 200 с `success: false`, поэтому всегда проверяйте `success()`. Причину определяйте по машиночитаемому коду, а не по тексту сообщения: текст может измениться. Коды, которые встречались у MAX: `not.found` (например, открепление, когда ничего не закреплено, или отписка URL, на который бот не подписан), `chat.denied`, `access.denied` (редактирование чужого сообщения) и, при HTTP 400, `proto.payload` (недопустимое поле запроса). `code()` может быть `null` и при `success: false`: `addMembers` сообщает о том, что не удалось добавить отдельных пользователей (некоторых или всех), только через `failedUserIds()` и `failedUserDetails()`.
+
+```java
+SimpleQueryResult result = api.unpinMessage(chatId).execute();
+if (!result.success()) {
+    if ("not.found".equals(result.code())) {
+        // ничего не было закреплено
+    } else {
+        System.err.println("открепление отклонено: " + result.code() + " " + result.message());
+    }
+}
 ```
 
 ### `MaxApiException`

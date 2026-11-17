@@ -24,11 +24,26 @@ set -a; source .env.local; set +a
 `--console=plain` matters: without it Gradle buffers the output and the interactive prompts are
 not visible. The task is never up-to-date, so it re-runs every time.
 
+Prompts name the chat by its title as well as by its id. The titles of the configured chats
+are looked up once, when the first class starts, and printed once in a `Live suite chats:` line; a
+chat that cannot be looked up is shown by id only.
+
+Input typed before a prompt appears — say, an Enter pressed after the previous prompt had
+already timed out — is discarded, so it cannot confirm the next prompt unread.
+
 Each interactive prompt waits 30 seconds for Enter. Raise it for a run when that is not enough
 to reach the phone:
 
 ```bash
 ./gradlew :max-bot-api-integration-tests:liveTest --console=plain -Pit.promptTimeout=90
+```
+
+To run a single class rather than the whole package, name it with `-Pit.class=<SimpleName>`
+(a class in `ru.max.botapi.it`). Without it every class runs, including `DestructiveLiveTest`
+when `MAX_IT_DESTRUCTIVE=true`:
+
+```bash
+./gradlew :max-bot-api-integration-tests:liveTest --console=plain -Pit.class=SuccessFalseLiveTest
 ```
 
 It is not part of `./gradlew build` and never runs in CI — the module's `test` task is disabled
@@ -92,6 +107,27 @@ on its own. The schema lists it as an alternative, but MAX refuses such a button
 `Field 'webApp' cannot be null`, so the library no longer builds one. Any refusal fails the test
 with MAX's own error message.
 
+## Refusals with `success: false`
+
+`SuccessFalseLiveTest` provokes a refusal from the methods that can answer HTTP 200 with
+`success: false` and checks each one against the raw response: `code()` must be exactly the
+`code` in the body (or `null` when it has none), and a body field beyond `success`, `message`,
+`code`, `failed_user_ids` and `failed_user_details` is printed as a warning. The deterministic
+cases are checked for their answer as well — unpinning with nothing pinned and unsubscribing a
+URL that was never subscribed give `not.found`; editing or deleting a missing message gives some
+code; editing someone else's message gives `access.denied` — and for them a 4xx instead is a
+failure. The other cases (`sendAction` to a missing chat, `subscribe` with a plain-HTTP URL,
+deleting someone else's message, which an administrator bot is allowed to do, the bot
+temporarily demoted) have no fixed answer: only the general check applies, and a 4xx there is
+printed rather than failed. A 401, a 429, a 5xx, a response the model cannot read, or a
+transport failure fails the scenario in either case: none of them is an answer about the
+operation. Every response is printed for diagnosis. If the bot has a webhook subscription that
+does not belong to this suite, only the `subscribe` probe is skipped; the `unsubscribe` check
+and the comparison of subscriptions before and after always run, and the step is then reported
+as skipped. `leaveChat` is not probed, since its success cannot be undone; `addMembers` and
+`removeMember` of a nonexistent user are checked the same way in
+`DestructiveLiveTest`, before it leaves the disposable chat.
+
 ## Destructive operations
 
 `MAX_IT_DESTRUCTIVE=true` enables `addMembers`/`removeMember`, `postAdmins`/`deleteAdmins`,
@@ -110,17 +146,53 @@ documentation, and it answers `success=false, "Insufficient access rights to per
 action"` for a bot that holds every right it can be granted — verified in a group chat and in a
 channel, where `edit` and `delete` are also available. The call appears to require ownership,
 which a bot cannot have: the Bot API has no method that creates a chat. The step still makes the
-call and prints whatever MAX answers, so the day that changes, the suite will notice.
+call and prints whatever MAX answers, so the day that changes, the suite will notice. The step
+is skipped only when the refusal is recognised as one for lack of rights. MAX answers it with
+`{"success":false,"message":"Insufficient access rights to perform this action","code":"chat.denied"}`,
+so the rule is: `code` is `chat.denied` and the message does not mention "Invalid chatId". The
+same code also comes with "Invalid chatId: 0" — a wrong id, whether from the configuration or
+from a broken `DeleteChatQuery` — and that must fail, not skip. Before calling `deleteChat` the
+step also checks that `MAX_IT_DELETABLE_CHAT_ID` is not 0 and reads the chat with `getChat`; a
+403 or 404 there fails the step with an explanation, any other error as it is. A response
+without a code is recognised by "access rights" in the message, as before. Any other
+`success=false` fails the step with its code and message.
 
 ## Ordering and cleanup
 
-Classes run in a fixed order, ending with the webhook subscription — a subscription changes how
-MAX delivers updates for the whole bot, and whether long polling keeps working alongside one is
-not documented, so everything else finishes first. The subscription is removed in teardown even
-when the test fails.
+Classes run in the fixed order of their `@Order` annotations:
+
+0. `ModelAssertionsSelfTest`
+1. `BotInfoLiveTest`
+2. `ChatLiveTest`
+3. `MessageLifecycleLiveTest`
+4. `AttachmentLiveTest`
+5. `UpdatesLiveTest`
+6. `CallbackLiveTest`
+7. `ErrorHandlingLiveTest`
+8. `SubscriptionWebhookLiveTest`
+9. `DestructiveLiveTest`
+10. `CommentsLiveTest`
+11. `KeyboardButtonsLiveTest`
+12. `SuccessFalseLiveTest`
+
+A webhook subscription changes how MAX delivers updates for the whole bot, and whether long
+polling keeps working alongside one is not documented, so the long-polling classes `Updates` and
+`Callback` run before `SubscriptionWebhookLiveTest`. It removes its subscription in teardown even
+when the test fails, and the classes after it that read updates over long polling
+(`CommentsLiveTest`, `SuccessFalseLiveTest`) first clear any leftover subscription of this suite.
+`DestructiveLiveTest` ends with `leaveChat`, so no later class uses the disposable chat.
 
 Each class restores what it changed: the bot profile, the chat title, posted messages, the pin,
-the subscription. Cleanup failures are printed and swallowed so they never mask the real error.
+the subscription, and the bot's administrator rights in `MAX_IT_CHAT_ID`, which
+`SuccessFalseLiveTest` asks the operator to take away for one step. Its rights are recorded
+before the demotion and compared after the operator restores them; a restore prompt that times
+out, or rights that do not match, fail that step with the missing rights listed, so that they
+can be given back by hand. If the demotion prompt itself timed out and the rights are still
+intact, nothing is asked, but the failure reminds you to restore them if you demote the bot
+afterwards; the class checks the rights once more when it finishes and prints a loud warning
+listing anything missing. Cleanup failures are printed and swallowed so they never mask the real
+error, and a cleanup that MAX refuses with `success=false` is printed as a warning with its code
+and message.
 
 An interrupted run can still leave a subscription behind, and while one exists MAX delivers
 updates to it instead of to long polling — which looks like a broken consumer, not like a

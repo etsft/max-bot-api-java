@@ -17,6 +17,7 @@
 package ru.max.botapi.it;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import ru.max.botapi.client.MaxBotAPI;
+import ru.max.botapi.model.SimpleQueryResult;
 import ru.max.botapi.model.Subscription;
 
 /**
@@ -59,6 +61,7 @@ abstract class LiveTestBase {
         System.out.println("Live suite: token=" + IntegrationConfig.maskedToken()
                 + ", interactive=" + IntegrationConfig.interactive()
                 + ", destructive=" + IntegrationConfig.destructive());
+        Prompts.loadChatTitles(api());
     }
 
     /**
@@ -70,6 +73,7 @@ abstract class LiveTestBase {
             live.close();
         }
         RecordingSerializer.reset();
+        RecordingTransport.reset();
     }
 
     /**
@@ -100,7 +104,7 @@ abstract class LiveTestBase {
             if (url.endsWith(IntegrationConfig.WEBHOOK_PATH)) {
                 System.out.println("Removing a leftover subscription from an earlier run: " + url
                         + " (it would divert updates away from long polling)");
-                cleanUp("unsubscribe " + url, () -> api().unsubscribe(url).execute());
+                cleanUpResult("unsubscribe " + url, () -> api().unsubscribe(url).execute());
             } else {
                 System.out.println("WARNING: " + url + " is subscribed to this bot's updates. "
                         + "MAX may deliver there instead of to long polling, in which case the "
@@ -129,5 +133,26 @@ abstract class LiveTestBase {
         } catch (RuntimeException e) {
             System.out.println("Cleanup failed (" + what + "): " + e);
         }
+    }
+
+    /**
+     * Runs a cleanup call that answers with a {@link SimpleQueryResult}, reporting a refusal.
+     *
+     * <p>MAX refuses with HTTP 200 and {@code success:false} rather than with an exception, so
+     * {@link #cleanUp(String, Runnable)} alone would let a cleanup that did nothing pass
+     * silently. Here a refusal is printed as a warning with its code and message, so that
+     * whatever was left behind can be removed by hand. Like {@code cleanUp}, it never throws.</p>
+     *
+     * @param what human-readable description, used if the step fails or is refused
+     * @param step the cleanup call
+     */
+    protected void cleanUpResult(String what, Supplier<SimpleQueryResult> step) {
+        cleanUp(what, () -> {
+            SimpleQueryResult result = step.get();
+            if (result != null && !result.success()) {
+                System.out.println("WARNING: cleanup refused by MAX (" + what + "): code="
+                        + result.code() + ", message=" + result.message());
+            }
+        });
     }
 }

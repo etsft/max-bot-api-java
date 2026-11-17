@@ -28,6 +28,7 @@ import java.util.Objects;
  * <p>Example error codes observed from the API:</p>
  * <ul>
  *   <li>{@code "add.participant.privacy"} — user's privacy settings prevent being added by a bot</li>
+ *   <li>{@code "add.participant.not.found"} — no user has this ID</li>
  * </ul>
  *
  * @param errorCode error code describing why the users could not be added

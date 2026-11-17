@@ -102,8 +102,8 @@ public class MaxWebhookRegistrar
             if (result.success()) {
                 LOG.info("Webhook registered with MAX API: url={}", webhookUrl);
             } else {
-                LOG.error("MAX API rejected webhook registration: url={}, message={}",
-                        webhookUrl, result.message());
+                LOG.error("MAX API rejected webhook registration: url={}, code={}, message={}",
+                        webhookUrl, result.code(), result.message());
             }
         } catch (Exception e) {
             LOG.error("Failed to register webhook with MAX API: url={}",
@@ -122,8 +122,8 @@ public class MaxWebhookRegistrar
             if (result.success()) {
                 LOG.info("Webhook unregistered from MAX API: url={}", webhookUrl);
             } else {
-                LOG.warn("MAX API rejected webhook unregistration: url={}, message={}",
-                        webhookUrl, result.message());
+                LOG.warn("MAX API rejected webhook unregistration: url={}, code={}, message={}",
+                        webhookUrl, result.code(), result.message());
             }
         } catch (Exception e) {
             LOG.warn("Failed to unregister webhook from MAX API: url={}",

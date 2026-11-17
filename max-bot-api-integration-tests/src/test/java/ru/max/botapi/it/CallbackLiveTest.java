@@ -141,7 +141,7 @@ class CallbackLiveTest extends LiveTestBase {
     @AfterAll
     void removeKeyboardMessage() {
         if (messageId != null) {
-            cleanUp("delete keyboard message",
+            cleanUpResult("delete keyboard message",
                     () -> api().deleteMessage(messageId).execute());
         }
     }

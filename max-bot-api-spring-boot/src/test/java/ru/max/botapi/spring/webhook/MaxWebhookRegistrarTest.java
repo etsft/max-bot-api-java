@@ -20,7 +20,10 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.queries.SubscribeQuery;
@@ -38,6 +41,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(OutputCaptureExtension.class)
 class MaxWebhookRegistrarTest {
 
     @Test
@@ -242,5 +246,58 @@ class MaxWebhookRegistrarTest {
 
         assertThatCode(registrar::destroy).doesNotThrowAnyException();
         verify(unsubscribeQuery).execute();
+    }
+
+    @Test
+    void rejectedRegistration_logsCodeAndMessage(CapturedOutput output) {
+        MaxBotAPI api = mock(MaxBotAPI.class);
+        SubscribeQuery subscribeQuery = mock(SubscribeQuery.class);
+        when(api.subscribe(any(SubscriptionRequestBody.class))).thenReturn(subscribeQuery);
+        when(subscribeQuery.execute())
+                .thenReturn(new SimpleQueryResult(false, "Registration denied", "access.denied"));
+
+        MaxWebhookProperties props = new MaxWebhookProperties();
+        props.setUrl("https://example.com/webhook");
+
+        new MaxWebhookRegistrar(api, props).onApplicationEvent(mock(ApplicationReadyEvent.class));
+
+        assertThat(output).contains("MAX API rejected webhook registration: "
+                + "url=https://example.com/webhook, code=access.denied, message=Registration denied");
+    }
+
+    @Test
+    void rejectedUnregistration_logsCodeAndMessage(CapturedOutput output) {
+        // The body MAX answers with for a URL that was never subscribed.
+        MaxBotAPI api = mock(MaxBotAPI.class);
+        UnsubscribeQuery unsubscribeQuery = mock(UnsubscribeQuery.class);
+        when(api.unsubscribe(anyString())).thenReturn(unsubscribeQuery);
+        when(unsubscribeQuery.execute()).thenReturn(new SimpleQueryResult(false,
+                "Subscription https://example.com/webhook is not found", "not.found"));
+
+        MaxWebhookProperties props = new MaxWebhookProperties();
+        props.setUrl("https://example.com/webhook");
+        props.setAutoUnregister(true);
+
+        new MaxWebhookRegistrar(api, props).destroy();
+
+        assertThat(output).contains("MAX API rejected webhook unregistration: "
+                + "url=https://example.com/webhook, code=not.found, "
+                + "message=Subscription https://example.com/webhook is not found");
+    }
+
+    @Test
+    void rejectedUnregistrationWithoutCode_logsNullCode(CapturedOutput output) {
+        MaxBotAPI api = mock(MaxBotAPI.class);
+        UnsubscribeQuery unsubscribeQuery = mock(UnsubscribeQuery.class);
+        when(api.unsubscribe(anyString())).thenReturn(unsubscribeQuery);
+        when(unsubscribeQuery.execute()).thenReturn(new SimpleQueryResult(false, "Not subscribed"));
+
+        MaxWebhookProperties props = new MaxWebhookProperties();
+        props.setUrl("https://example.com/webhook");
+        props.setAutoUnregister(true);
+
+        new MaxWebhookRegistrar(api, props).destroy();
+
+        assertThat(output).contains("code=null, message=Not subscribed");
     }
 }

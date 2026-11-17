@@ -168,7 +168,7 @@ class KeyboardButtonsLiveTest extends LiveTestBase {
     @AfterAll
     void removeButtonMessages() {
         for (String messageId : sentMessageIds) {
-            cleanUp("delete button message " + messageId,
+            cleanUpResult("delete button message " + messageId,
                     () -> api().deleteMessage(messageId).execute());
         }
     }

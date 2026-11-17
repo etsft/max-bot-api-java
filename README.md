@@ -364,7 +364,7 @@ See the [update types table](#available-update-types) above.
 
 MAX delivers webhooks only to HTTPS URLs. Either terminate TLS in front of the server with a reverse proxy (nginx, a load balancer) and call `start()`, or pass an `SSLContext` loaded with your certificate to `start(sslContext)`. `register()` sends the configured secret to MAX with the subscription, so MAX includes it in every delivery.
 
-`register()` and `unregister()` throw `IllegalStateException` when MAX answers with `success: false`. A complete bot that subscribes on startup and unsubscribes on shutdown is in [`WebhookBot`](max-bot-api-examples/src/main/java/ru/max/botapi/examples/WebhookBot.java).
+`register()` and `unregister()` throw `MaxOperationFailedException` (an `IllegalStateException`) when MAX answers with `success: false`; its `errorCode()` tells why, for example `not.found` when unregistering a URL that is not subscribed. A complete bot that subscribes on startup and unsubscribes on shutdown is in [`WebhookBot`](max-bot-api-examples/src/main/java/ru/max/botapi/examples/WebhookBot.java).
 
 #### Delivery deadline
 
@@ -689,10 +689,34 @@ All exceptions are unchecked and extend `RuntimeException`.
 ```
 RuntimeException
 ├── MaxClientException                — transport/network failure (I/O error, timeout)
-└── MaxApiException                   — API returned 4xx or 5xx
-    ├── MaxRateLimitException         — 429 Too Many Requests
-    ├── MaxMethodNotAllowedException  — 405 Method Not Allowed
-    └── AttachmentNotReadyException   — attachment still processing after attachmentReadyTimeout
+├── MaxApiException                   — API returned 4xx or 5xx
+│   ├── MaxRateLimitException         — 429 Too Many Requests
+│   ├── MaxMethodNotAllowedException  — 405 Method Not Allowed
+│   └── AttachmentNotReadyException   — attachment still processing after attachmentReadyTimeout
+└── IllegalStateException
+    └── MaxOperationFailedException   — webhook register()/unregister() refused with success: false
+```
+
+### Refusals: HTTP 200 with `success: false` vs HTTP 4xx
+
+MAX refuses an operation in one of two ways, and the library reports them differently:
+
+| Response | What you get | Where the code is |
+|---|---|---|
+| HTTP 200, `{"success": false, ...}` | a normal result, no exception | `SimpleQueryResult.code()`, `AddMembersResult.code()` |
+| HTTP 4xx | `MaxApiException` is thrown | `MaxApiException.errorCode()` |
+
+Every method that returns `SimpleQueryResult` — for example `subscribe`/`unsubscribe`, `pinMessage`/`unpinMessage`, `sendAction`, `editMessage`/`deleteMessage`, `answerOnCallback`, `postAdmins`/`deleteAdmins`, `removeMember`, `leaveChat`, `deleteChat`, `editComment`/`deleteComment` — and `addMembers` can answer HTTP 200 with `success: false`, so always check `success()`. Tell the reason by the machine-readable code, not by the message text, which may change. Codes seen from MAX include `not.found` (for example, unpinning when nothing is pinned, or unsubscribing a URL that is not subscribed), `chat.denied`, `access.denied` (editing someone else's message) and, on HTTP 400, `proto.payload` (an invalid request field). `code()` may be `null` even with `success: false`: `addMembers` reports a failure for individual users (partial or complete) only through `failedUserIds()` and `failedUserDetails()`.
+
+```java
+SimpleQueryResult result = api.unpinMessage(chatId).execute();
+if (!result.success()) {
+    if ("not.found".equals(result.code())) {
+        // nothing was pinned
+    } else {
+        System.err.println("unpin refused: " + result.code() + " " + result.message());
+    }
+}
 ```
 
 ### `MaxApiException`

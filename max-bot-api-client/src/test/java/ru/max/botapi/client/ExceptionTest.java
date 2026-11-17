@@ -22,6 +22,7 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests for the exception hierarchy.
@@ -75,5 +76,34 @@ class ExceptionTest {
                 400, "Key: errors.process.attachment.file.not.processed", "attachment.not.ready");
         assertThat(ex.statusCode()).isEqualTo(400);
         assertThat(ex).isInstanceOf(MaxApiException.class);
+    }
+
+    @Test
+    void maxOperationFailedExceptionWithCodeAndMessage() {
+        var ex = new MaxOperationFailedException("webhook unregistration", "not.found",
+                "Subscription https://example.com/hook is not found");
+        assertThat(ex).isInstanceOf(IllegalStateException.class)
+                .isNotInstanceOf(MaxApiException.class);
+        assertThat(ex.errorCode()).isEqualTo("not.found");
+        assertThat(ex.errorMessage()).isEqualTo("Subscription https://example.com/hook is not found");
+        assertThat(ex.getMessage()).isEqualTo("MAX API rejected webhook unregistration: "
+                + "code=not.found, message=Subscription https://example.com/hook is not found");
+    }
+
+    @Test
+    void maxOperationFailedExceptionLeavesOutWhatMaxDidNotSend() {
+        assertThat(new MaxOperationFailedException("webhook registration", null, "Denied"))
+                .hasMessage("MAX API rejected webhook registration: message=Denied");
+        assertThat(new MaxOperationFailedException("webhook registration", "chat.denied", null))
+                .hasMessage("MAX API rejected webhook registration: code=chat.denied");
+        assertThat(new MaxOperationFailedException("webhook registration", null, null))
+                .hasMessage("MAX API rejected webhook registration");
+    }
+
+    @Test
+    void maxOperationFailedExceptionRequiresTheOperation() {
+        assertThatThrownBy(() -> new MaxOperationFailedException(null, "x", "y"))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("operation");
     }
 }

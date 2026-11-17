@@ -35,7 +35,9 @@ import com.sun.net.httpserver.HttpsServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import ru.max.botapi.client.MaxApiException;
 import ru.max.botapi.client.MaxBotAPI;
+import ru.max.botapi.client.MaxOperationFailedException;
 import ru.max.botapi.core.MaxSerializer;
 import ru.max.botapi.core.UpdateHandler;
 import ru.max.botapi.model.Nullable;
@@ -162,7 +164,10 @@ public class MaxWebhookServer implements AutoCloseable {
      * @param api         the {@link MaxBotAPI} instance to use for registration; must not be {@code null}
      * @param webhookUrl  the publicly reachable URL MAX should call; must not be {@code null}
      * @param updateTypes optional set of update types to subscribe to; {@code null} means all types
-     * @throws IllegalStateException if MAX answers but refuses the subscription
+     * @throws MaxOperationFailedException if MAX answers HTTP 200 with {@code success:false};
+     *                                     its {@code errorCode()} tells why
+     * @throws MaxApiException             if MAX answers with an HTTP error status, e.g. 400
+     *                                     {@code proto.payload} for a plain-HTTP URL
      */
     public void register(MaxBotAPI api, String webhookUrl, @Nullable Set<UpdateType> updateTypes) {
         Objects.requireNonNull(api, "api must not be null");
@@ -172,8 +177,8 @@ public class MaxWebhookServer implements AutoCloseable {
         // MAX can refuse with HTTP 200 and success=false, which is not an exception.
         SimpleQueryResult result = api.subscribe(body).execute();
         if (!result.success()) {
-            throw new IllegalStateException(
-                    "MAX API rejected webhook registration: " + result.message());
+            throw new MaxOperationFailedException(
+                    "webhook registration", result.code(), result.message());
         }
         LOG.info("Webhook registered: url={}", webhookUrl);
     }
@@ -183,15 +188,18 @@ public class MaxWebhookServer implements AutoCloseable {
      *
      * @param api        the {@link MaxBotAPI} instance to use; must not be {@code null}
      * @param webhookUrl the webhook URL to unregister; must not be {@code null}
-     * @throws IllegalStateException if MAX answers but refuses to remove the subscription
+     * @throws MaxOperationFailedException if MAX answers HTTP 200 with {@code success:false},
+     *                                     for example with {@code not.found}; its
+     *                                     {@code errorCode()} tells why
+     * @throws MaxApiException             if MAX answers with an HTTP error status
      */
     public void unregister(MaxBotAPI api, String webhookUrl) {
         Objects.requireNonNull(api, "api must not be null");
         Objects.requireNonNull(webhookUrl, "webhookUrl must not be null");
         SimpleQueryResult result = api.unsubscribe(webhookUrl).execute();
         if (!result.success()) {
-            throw new IllegalStateException(
-                    "MAX API rejected webhook unregistration: " + result.message());
+            throw new MaxOperationFailedException(
+                    "webhook unregistration", result.code(), result.message());
         }
         LOG.info("Webhook unregistered: url={}", webhookUrl);
     }

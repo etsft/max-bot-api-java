@@ -24,6 +24,8 @@ import org.junit.jupiter.api.Test;
 
 import ru.max.botapi.core.TypeReference;
 import ru.max.botapi.model.ActionRequestBody;
+import ru.max.botapi.model.AddMemberFailure;
+import ru.max.botapi.model.AddMembersResult;
 import ru.max.botapi.model.Attachment;
 import ru.max.botapi.model.AttachmentRequest;
 import ru.max.botapi.model.AudioAttachment;
@@ -809,6 +811,100 @@ class AdditionalSerializationTest {
             SimpleQueryResult result = serializer.deserialize(json, SimpleQueryResult.class);
             assertThat(result.success()).isTrue();
             assertThat(result.message()).isNull();
+            assertThat(result.code()).isNull();
+        }
+
+        @Test
+        void simpleQueryResult_failureWithCode_fromFixture() {
+            // Recorded from DELETE /subscriptions for a URL that was never subscribed.
+            String json = FixtureLoader.loadFixture("simple-result-failure.json");
+            SimpleQueryResult result = serializer.deserialize(json, SimpleQueryResult.class);
+            assertThat(result.success()).isFalse();
+            assertThat(result.code()).isEqualTo("not.found");
+            assertThat(result.message())
+                    .isEqualTo("Subscription https://example.invalid/max-bot/live-test is not found");
+        }
+
+        @Test
+        void simpleQueryResult_failureWithoutCode() {
+            String json = """
+                    {"success": false, "message": "Chat not found"}
+                    """;
+            SimpleQueryResult result = serializer.deserialize(json, SimpleQueryResult.class);
+            assertThat(result.code()).isNull();
+        }
+
+        @Test
+        void simpleQueryResult_explicitNullCode() {
+            String json = """
+                    {"success": false, "message": "Chat not found", "code": null}
+                    """;
+            SimpleQueryResult result = serializer.deserialize(json, SimpleQueryResult.class);
+            assertThat(result.success()).isFalse();
+            assertThat(result.code()).isNull();
+        }
+
+        @Test
+        void simpleQueryResult_withCode_roundTrip() {
+            var result = new SimpleQueryResult(false, "Invalid chatId: 0", "chat.denied");
+            String json = serializer.serialize(result);
+            assertThatJson(json).node("code").isEqualTo("chat.denied");
+            assertThat(serializer.deserialize(json, SimpleQueryResult.class)).isEqualTo(result);
+        }
+    }
+
+    // ===== AddMembersResult variations =====
+
+    @Nested
+    class AddMembersResultVariations {
+
+        @Test
+        void addMembersResult_withCode() {
+            // The shape MAX answers removeMember with; schema 0.0.34 gives addMembers the same field.
+            String json = """
+                    {"success": false,
+                     "message": "The user has already been deleted or you do not have sufficient rights",
+                     "code": "chat.denied"}
+                    """;
+            AddMembersResult result = serializer.deserialize(json, AddMembersResult.class);
+            assertThat(result.success()).isFalse();
+            assertThat(result.code()).isEqualTo("chat.denied");
+            assertThat(result.message()).startsWith("The user has already been deleted");
+            assertThat(result.failedUserIds()).isNull();
+            assertThat(result.failedUserDetails()).isNull();
+        }
+
+        @Test
+        void addMembersResult_failureWithoutCode_fromFixture() {
+            // Recorded from POST /chats/{chatId}/members with a user id nobody has:
+            // success=false with neither code nor message.
+            String json = FixtureLoader.loadFixture("add-members-not-found.json");
+            AddMembersResult result = serializer.deserialize(json, AddMembersResult.class);
+            assertThat(result.success()).isFalse();
+            assertThat(result.code()).isNull();
+            assertThat(result.message()).isNull();
+            assertThat(result.failedUserIds()).containsExactly(Long.MAX_VALUE);
+            assertThat(result.failedUserDetails()).singleElement()
+                    .satisfies(f -> assertThat(f.errorCode()).isEqualTo("add.participant.not.found"));
+        }
+
+        @Test
+        void addMembersResult_explicitNullCode() {
+            String json = """
+                    {"success": false, "message": null, "code": null, "failed_user_ids": []}
+                    """;
+            AddMembersResult result = serializer.deserialize(json, AddMembersResult.class);
+            assertThat(result.code()).isNull();
+            assertThat(result.failedUserIds()).isEmpty();
+        }
+
+        @Test
+        void addMembersResult_withCode_roundTrip() {
+            var result = new AddMembersResult(false, "Error", "chat.denied",
+                    List.of(7L), List.of(new AddMemberFailure("add.participant.privacy", List.of(7L))));
+            String json = serializer.serialize(result);
+            assertThatJson(json).node("code").isEqualTo("chat.denied");
+            assertThat(serializer.deserialize(json, AddMembersResult.class)).isEqualTo(result);
         }
     }
 }

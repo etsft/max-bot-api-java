@@ -19,11 +19,33 @@ package ru.max.botapi.model;
 /**
  * Simple result with success flag and optional message.
  *
+ * <p>MAX answers some refusals with HTTP 200 and {@code success:false} rather than with an
+ * error status, so such a result is not an exception. Tell refusals apart by {@link #code()},
+ * not by {@link #message()}: the code is a stable machine-readable value such as
+ * {@code not.found} or {@code chat.denied}, while the message is free text that may change.
+ * The code is not guaranteed even when {@code success} is {@code false}, so it may be
+ * {@code null}. Errors answered with an HTTP 4xx status are reported as
+ * {@code MaxApiException} instead, with the code in its {@code errorCode()}.</p>
+ *
  * @param success whether the operation was successful
  * @param message optional human-readable message
+ * @param code    machine-readable reason of an unsuccessful request, for example
+ *                {@code not.found} or {@code chat.denied}; {@code null} on success and
+ *                possibly also when {@code success} is {@code false}
  */
 public record SimpleQueryResult(
         boolean success,
-        @Nullable String message
+        @Nullable String message,
+        @Nullable String code
 ) {
+
+    /**
+     * Creates a SimpleQueryResult without a code.
+     *
+     * @param success whether the operation was successful
+     * @param message optional human-readable message
+     */
+    public SimpleQueryResult(boolean success, @Nullable String message) {
+        this(success, message, null);
+    }
 }

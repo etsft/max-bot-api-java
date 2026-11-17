@@ -16,6 +16,7 @@
 
 package ru.max.botapi.model;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -187,6 +188,21 @@ class CommentTypesTest {
         assertThat(result.failedUserIds()).isNull();
         assertThat(result.failedUserDetails()).isNull();
         assertThat(result.message()).isNull();
+    }
+
+    @Test
+    void addMembersResult_fourArgConstructorLeavesCodeNull() {
+        var result = new AddMembersResult(true, null, null, null);
+        assertThat(result.code()).isNull();
+        assertThat(result).isEqualTo(new AddMembersResult(true, null, null, null, null));
+    }
+
+    @Test
+    void addMembersResult_canonicalConstructorKeepsCodeAndDropsNullElements() {
+        var result = new AddMembersResult(false, "denied", "chat.denied",
+                Arrays.asList(7L, null), null);
+        assertThat(result.code()).isEqualTo("chat.denied");
+        assertThat(result.failedUserIds()).containsExactly(7L);
     }
 
     @Test

@@ -1,0 +1,14 @@
+{
+  "success": false,
+  "failed_user_ids": [
+    9223372036854775807
+  ],
+  "failed_user_details": [
+    {
+      "error_code": "add.participant.not.found",
+      "user_ids": [
+        9223372036854775807
+      ]
+    }
+  ]
+}

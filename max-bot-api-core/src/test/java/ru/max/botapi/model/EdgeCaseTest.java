@@ -229,6 +229,13 @@ class EdgeCaseTest {
         assertThat(result.message()).isEqualTo("Something went wrong");
     }
 
+    @Test
+    void simpleQueryResult_twoArgConstructorLeavesCodeNull() {
+        var result = new SimpleQueryResult(false, "x");
+        assertThat(result.code()).isNull();
+        assertThat(result).isEqualTo(new SimpleQueryResult(false, "x", null));
+    }
+
     // ===== CallbackAnswer =====
 
     @Test

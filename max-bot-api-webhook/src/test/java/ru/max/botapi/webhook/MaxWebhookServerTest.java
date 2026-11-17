@@ -38,6 +38,7 @@ import ru.max.botapi.client.JdkHttpMaxTransportClient;
 import ru.max.botapi.client.MaxBotAPI;
 import ru.max.botapi.client.MaxClient;
 import ru.max.botapi.client.MaxClientConfig;
+import ru.max.botapi.client.MaxOperationFailedException;
 import ru.max.botapi.core.MaxSerializer;
 import ru.max.botapi.model.Update;
 import ru.max.botapi.testsupport.TestSerializers;
@@ -51,6 +52,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import static ru.max.botapi.testsupport.FixtureLoader.loadFixture;
 
 /**
  * Tests for {@link MaxWebhookServer}.
@@ -333,7 +336,11 @@ class MaxWebhookServerTest {
 
         assertThatThrownBy(() -> server.register(api, "https://example.com/webhook", null))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Registration denied");
+                .hasMessage("MAX API rejected webhook registration: message=Registration denied")
+                .isInstanceOfSatisfying(MaxOperationFailedException.class, e -> {
+                    assertThat(e.errorCode()).isNull();
+                    assertThat(e.errorMessage()).isEqualTo("Registration denied");
+                });
     }
 
     @Test
@@ -354,6 +361,32 @@ class MaxWebhookServerTest {
         assertThatThrownBy(() -> server.unregister(api, "https://example.com/webhook"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Not subscribed");
+    }
+
+    @Test
+    void unregisterRefusalCarriesTheCode(WireMockRuntimeInfo wmInfo) {
+        // Recorded from MAX for a URL that was never subscribed.
+        stubFor(delete(urlPathEqualTo("/subscriptions"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody(loadFixture("simple-result-failure.json"))));
+
+        MaxBotAPI api = createApi(wmInfo);
+        server = MaxWebhookServer.builder()
+                .handler(update -> {
+                })
+                .serializer(TestSerializers.create())
+                .port(0)
+                .build();
+
+        assertThatThrownBy(() -> server.unregister(api, "https://example.invalid/max-bot/live-test"))
+                .isInstanceOfSatisfying(MaxOperationFailedException.class, e -> {
+                    assertThat(e.errorCode()).isEqualTo("not.found");
+                    assertThat(e.errorMessage())
+                            .isEqualTo("Subscription https://example.invalid/max-bot/live-test is not found");
+                    assertThat(e).hasMessageContaining("MAX API rejected webhook unregistration")
+                            .hasMessageContaining("code=not.found");
+                });
     }
 
     @Test

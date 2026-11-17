@@ -70,6 +70,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import static ru.max.botapi.testsupport.FixtureLoader.loadFixture;
+
 /**
  * WireMock integration tests for {@link MaxBotAPI} — covers all supported API methods
  * plus error scenarios.
@@ -339,6 +341,41 @@ class MaxBotAPITest {
         AddMemberFailure failure = result.failedUserDetails().get(0);
         assertThat(failure.errorCode()).isEqualTo("add.participant.privacy");
         assertThat(failure.userIds()).containsExactly(217690268L);
+    }
+
+    @Test
+    void addMembers_failureWithoutCode_userNotFound() {
+        // Recorded from MAX: success=false carries neither code nor message here.
+        stubFor(post(urlPathEqualTo("/chats/123/members"))
+                .withHeader(AUTH_HEADER, equalTo(TOKEN))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody(loadFixture("add-members-not-found.json"))));
+
+        AddMembersResult result = api.addMembers(new UserIdsList(List.of(Long.MAX_VALUE)), 123L)
+                .execute();
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.code()).isNull();
+        assertThat(result.message()).isNull();
+        assertThat(result.failedUserDetails()).singleElement()
+                .satisfies(f -> assertThat(f.errorCode()).isEqualTo("add.participant.not.found"));
+    }
+
+    @Test
+    void addMembers_refusedWithCode() {
+        // The body MAX answers removeMember with; addMembers shares the result schema.
+        stubFor(post(urlPathEqualTo("/chats/123/members"))
+                .withHeader(AUTH_HEADER, equalTo(TOKEN))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody("{\"success\":false,\"message\":\"The user has already been "
+                                + "deleted or you do not have sufficient rights\",\"code\":\"chat.denied\"}")));
+
+        AddMembersResult result = api.addMembers(new UserIdsList(List.of(111L)), 123L).execute();
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.code()).isEqualTo("chat.denied");
     }
 
     @Test
@@ -684,6 +721,7 @@ class MaxBotAPITest {
         SimpleQueryResult result = api.subscribe(body).execute();
 
         assertThat(result.success()).isTrue();
+        assertThat(result.code()).isNull();
     }
 
     @Test
@@ -697,6 +735,62 @@ class MaxBotAPITest {
         SimpleQueryResult result = api.unsubscribe("https://example.com/webhook").execute();
 
         assertThat(result.success()).isTrue();
+    }
+
+    @Test
+    void unsubscribe_refusedWithCode() {
+        stubFor(delete(urlPathEqualTo("/subscriptions"))
+                .withHeader(AUTH_HEADER, equalTo(TOKEN))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody(loadFixture("simple-result-failure.json"))));
+
+        SimpleQueryResult result = api.unsubscribe("https://example.invalid/max-bot/live-test")
+                .execute();
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.code()).isEqualTo("not.found");
+        assertThat(result.message()).contains("is not found");
+    }
+
+    @Test
+    void subscribe_refusedWithCode() {
+        // HTTP 200 with success=false is a result, not an exception. Synthetic body shaped by
+        // the schema (SimpleQueryResult): no live subscribe refusal with HTTP 200 was observed.
+        stubFor(post(urlPathEqualTo("/subscriptions"))
+                .withHeader(AUTH_HEADER, equalTo(TOKEN))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody("{\"success\":false,\"message\":\"Subscriptions limit exceeded\","
+                                + "\"code\":\"access.denied\"}")));
+
+        SimpleQueryResult result = api.subscribe(
+                new SubscriptionRequestBody("https://example.com/webhook", null, null)).execute();
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.code()).isEqualTo("access.denied");
+        assertThat(result.message()).isEqualTo("Subscriptions limit exceeded");
+    }
+
+    @Test
+    void subscribe_invalidUrl_isMaxApiExceptionWithErrorCode() {
+        // Recorded from MAX for a plain-HTTP webhook URL: a 4xx, not success=false.
+        stubFor(post(urlPathEqualTo("/subscriptions"))
+                .withHeader(AUTH_HEADER, equalTo(TOKEN))
+                .willReturn(aResponse()
+                        .withStatus(400)
+                        .withHeader("Content-Type", CONTENT_JSON)
+                        .withBody("{\"code\":\"proto.payload\",\"message\":\"Field 'url' is not a valid URL\"}")));
+
+        SubscriptionRequestBody body =
+                new SubscriptionRequestBody("http://example.invalid/max-bot/live-test", null, null);
+
+        assertThatThrownBy(() -> api.subscribe(body).execute())
+                .isInstanceOfSatisfying(MaxApiException.class, e -> {
+                    assertThat(e.statusCode()).isEqualTo(400);
+                    assertThat(e.errorCode()).isEqualTo("proto.payload");
+                    assertThat(e.errorMessage()).isEqualTo("Field 'url' is not a valid URL");
+                });
     }
 
     // ===== Updates =====

@@ -49,6 +49,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SuppressWarnings("deprecation") // exercises the endpoints MAX no longer documents
 class DestructiveLiveTest extends LiveTestBase {
 
+    /** No user has this id, so adding or removing them cannot affect anyone. */
+    private static final long MISSING_USER_ID = Long.MAX_VALUE;
+
+    /**
+     * The code of a {@code deleteChat} refusal for lack of rights. Observed answer:
+     * {@code {"success":false,"message":"Insufficient access rights to perform this action",
+     * "code":"chat.denied"}}. MAX also answers {@code chat.denied} for {@code "Invalid chatId: 0"},
+     * which is a wrong id — a configuration error or a broken {@code DeleteChatQuery} — and must
+     * fail, so a message mentioning {@link #INVALID_CHAT_ID} is never a refusal.
+     */
+    private static final String CHAT_DENIED = "chat.denied";
+
+    /** What the message of a refusal for lack of rights contains, for a response without a code. */
+    private static final String ACCESS_RIGHTS = "access rights";
+
+    /** What the message contains when {@code chat.denied} means a wrong chat id instead. */
+    private static final String INVALID_CHAT_ID = "Invalid chatId";
+
+    private static final int HTTP_FORBIDDEN = 403;
+
+    private static final int HTTP_NOT_FOUND = 404;
+
     private long chatId;
 
     private ChatMember botMembership;
@@ -165,7 +187,7 @@ class DestructiveLiveTest extends LiveTestBase {
                     .isTrue();
         } finally {
             if (invited) {
-                cleanUp("remove member " + userId, () -> api()
+                cleanUpResult("remove member " + userId, () -> api()
                         .removeMember(chatId, userId).block(false).execute());
             }
         }
@@ -196,13 +218,74 @@ class DestructiveLiveTest extends LiveTestBase {
 
     @Test
     @Order(3)
+    @DisplayName("addMembers and removeMember of a missing user answer success=false")
+    void membershipOfMissingUser() {
+        // Before leaveChat, which takes the bot out of the disposable chat for good.
+        requireDisposableChat();
+        requireRight(ChatPermission.ADD_REMOVE_MEMBERS);
+
+        AddMembersResult added = RefusalChecks.probe(
+                "addMembers(" + MISSING_USER_ID + ") to " + chatId,
+                () -> api().addMembers(new UserIdsList(List.of(MISSING_USER_ID)), chatId)
+                        .execute());
+        try {
+            // As MAX answers it: success=false, no code or message, the user in failed_user_ids
+            // with add.participant.not.found.
+            assertThat(added)
+                    .as("addMembers of a missing user threw instead of answering; see the output")
+                    .isNotNull();
+            assertThat(added.success()).as("addMembers of a missing user: success").isFalse();
+            assertThat(added.failedUserIds()).as("failedUserIds").contains(MISSING_USER_ID);
+            assertThat(added.failedUserDetails())
+                    .as("failedUserDetails")
+                    .anySatisfy(failure -> {
+                        assertThat(failure.errorCode()).isEqualTo("add.participant.not.found");
+                        assertThat(failure.userIds()).contains(MISSING_USER_ID);
+                    });
+
+            SimpleQueryResult removed = RefusalChecks.probe(
+                    "removeMember(" + MISSING_USER_ID + ") from " + chatId,
+                    () -> api().removeMember(chatId, MISSING_USER_ID).block(false).execute());
+
+            RefusalChecks.assertRefusedWithCode(removed, "removeMember of a missing user");
+        } finally {
+            if (added != null && added.success()) {
+                cleanUpResult("remove member " + MISSING_USER_ID, () -> api()
+                        .removeMember(chatId, MISSING_USER_ID).block(false).execute());
+            }
+        }
+    }
+
+    @Test
+    @Order(4)
     @DisplayName("deleteChat removes a separate deletable chat")
     void deleteChat() {
         // A separate chat on purpose: leaveChat below costs the bot its access to `chatId`,
         // after which it could no longer delete it. One chat cannot verify both endpoints.
         long deletableChatId = IntegrationConfig.deletableChatId();
+        // chat.denied also answers a wrong chat id ("Invalid chatId: 0"). Ruling that out here
+        // lets the code alone identify a refusal for lack of rights below.
+        assertThat(deletableChatId)
+                .as("%s must name a chat, not 0", IntegrationConfig.DELETABLE_CHAT_ID)
+                .isNotZero();
+        try {
+            api().getChat(deletableChatId).execute();
+        } catch (MaxApiException e) {
+            // Only "this chat is not there for the bot" is about the variable; a bad token, a
+            // rate limit or a server failure is reported as it is.
+            if (e.statusCode() != HTTP_FORBIDDEN && e.statusCode() != HTTP_NOT_FOUND) {
+                throw e;
+            }
+            throw new AssertionError(IntegrationConfig.DELETABLE_CHAT_ID + " (" + deletableChatId
+                    + ") is not a chat the bot can see: " + e.getMessage() + ". Point it at a "
+                    + "chat the bot is a member of.", e);
+        }
 
+        RecordingTransport.reset();
         SimpleQueryResult result = api().deleteChat(deletableChatId).execute();
+        // Kept for diagnosis: the raw body shows what MAX actually sent with a refusal.
+        System.out.println("deleteChat -> HTTP " + RecordingTransport.lastStatus()
+                + " body=" + RecordingTransport.lastBody());
 
         // MAX answers HTTP 200 with success=false — a refusal, not an error — and the only
         // refusal that is about the environment rather than about this library is the one on
@@ -211,19 +294,47 @@ class DestructiveLiveTest extends LiveTestBase {
         // pin_message, edit_link, can_call) and in a channel, which adds edit and delete —
         // refused both times. What it lacks is ownership, and a bot cannot obtain that: the
         // Bot API has no method that creates a chat.
-        if (!result.success() && String.valueOf(result.message()).contains("access rights")) {
+        if (isRefusal(result)) {
             Assumptions.abort("deleteChat was refused for " + IntegrationConfig.DELETABLE_CHAT_ID
-                    + " (" + deletableChatId + "): " + result.message()
+                    + " (" + deletableChatId + "): code=" + result.code()
+                    + ", message=" + result.message()
                     + ". The endpoint is undocumented and needs chat ownership, which a bot "
                     + "cannot obtain: no admin right unlocks it, in a chat or in a channel.");
         }
         assertThat(result.success())
-                .withFailMessage("deleteChat failed: %s", result.message())
+                .withFailMessage("deleteChat failed: code=%s, message=%s",
+                        result.code(), result.message())
                 .isTrue();
     }
 
+    /**
+     * Tells whether {@code deleteChat} was refused for lack of rights, the one refusal that is
+     * about the environment rather than about this library.
+     *
+     * <p>MAX answers it with {@code code} {@code chat.denied} and the message
+     * {@code "Insufficient access rights to perform this action"}. The same code also comes with
+     * {@code "Invalid chatId: 0"} — a wrong id, from the configuration or from a broken
+     * {@code DeleteChatQuery} — which must fail rather than skip, so {@code chat.denied} counts
+     * only when the message does not mention an invalid chat id. A response without a code, as
+     * before schema 0.0.34, is recognised by "access rights" in the message. Any other
+     * {@code success:false} fails the test with its code and message.</p>
+     *
+     * @param result the deleteChat result
+     * @return {@code true} if it is a refusal to skip the test on
+     */
+    private static boolean isRefusal(SimpleQueryResult result) {
+        if (result.success()) {
+            return false;
+        }
+        if (result.code() != null) {
+            return CHAT_DENIED.equals(result.code())
+                    && (result.message() == null || !result.message().contains(INVALID_CHAT_ID));
+        }
+        return result.message() != null && result.message().contains(ACCESS_RIGHTS);
+    }
+
     @Test
-    @Order(4)
+    @Order(5)
     @DisplayName("leaveChat removes the bot from the disposable chat")
     void leaveChat() {
         // Last: the bot loses access to `chatId` here, so nothing else can use it afterwards.
