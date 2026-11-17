@@ -5,7 +5,10 @@
 [семантическому версионированию](https://semver.org/lang/ru/) (до 1.0 минорный релиз может
 ломать совместимость).
 
-## [Unreleased]
+## [0.7.0]
+
+Инструкции по переходу — в README: [на русском](README_RU.md#переход-на-070),
+[на английском](README.md#migrating-to-070).
 
 ### Добавлено
 
@@ -14,29 +17,22 @@
   `not.found` или `chat.denied`. Определять отказ нужно по коду, а не по тексту `message`. При
   `success:false` кода может и не быть: если не удалось добавить отдельных пользователей
   (некоторых или всех), `addMembers` сообщает об этом только через `failedUserIds` и
-  `failedUserDetails`. Отказ с HTTP 4xx, как и раньше, — `MaxApiException`
-  с кодом в `errorCode()`.
+  `failedUserDetails`. Отказ с HTTP 4xx, как и раньше, — `MaxApiException` с кодом в
+  `errorCode()`.
 - `MaxOperationFailedException` (`max-bot-api-client`, наследник `IllegalStateException`) с
   `errorCode()` и `errorMessage()`. Его выбрасывают `MaxWebhookServer.register()` и
   `unregister()`, когда MAX отвечает `success:false`.
-- Живые тесты: свойство `-Pit.class=<Имя>` запускает один класс вместо всего пакета;
-  `SuccessFalseLiveTest` и новый шаг `DestructiveLiveTest` сверяют `code()` с сырым ответом
-  MAX. `DestructiveLiveTest.deleteChat`, как и раньше, пропускается при отказе из-за прав.
-  Раньше отказ узнавался по «access rights» в `message`; теперь, если в ответе есть `code`, —
-  по коду `chat.denied` (так MAX отвечает на этот отказ), если только в `message` нет
-  «Invalid chatId»: тот же код приходит на неверный идентификатор чата, и такой ответ — провал,
-  а не skip. Кроме того, до вызова шаг проверяет, что `MAX_IT_DELETABLE_CHAT_ID` не 0 и чат
-  читается через `getChat` (403/404 — провал с пояснением). Ответ без `code` по-прежнему
-  узнаётся по тексту. Любой другой `success:false` — провал. В подсказках оператору рядом с
-  идентификатором чата печатается его название; `liveTest` запускается с `--fail-if-no-tests`.
+- Живые тесты (`max-bot-api-integration-tests`): свойство `-Pit.class=<Имя>` запускает один
+  класс; `SuccessFalseLiveTest` сверяет `code()` с реальными ответами MAX; в подсказках
+  оператору печатается название чата.
 
 ### Изменено
 
 - У record `SimpleQueryResult` и `AddMembersResult` появился компонент `code` (третьим по
   счёту). Прежние конструкторы сохранены, но деконструирующие паттерны вида
   `SimpleQueryResult(var success, var message)` и `AddMembersResult(var s, var m, var ids,
-  var details)` перестанут компилироваться. Изменились также `toString()`, а `equals()` и
-  `hashCode()` учитывают `code`.
+  var details)` перестанут компилироваться. `equals()`, `hashCode()` и `toString()` учитывают
+  `code`.
 - `MaxWebhookServer.register()` и `unregister()` выбрасывают `MaxOperationFailedException`
   вместо `IllegalStateException`. Это подкласс, поэтому существующие `catch` продолжат работать.
   Изменился текст `getMessage()`: после префикса `MAX API rejected webhook registration` (или
@@ -111,6 +107,6 @@
 
 См. [теги](https://github.com/etsft/max-bot-api-java/tags) и разделы о переходе в README.
 
-[Unreleased]: https://github.com/etsft/max-bot-api-java/compare/v0.6.0...HEAD
+[0.7.0]: https://github.com/etsft/max-bot-api-java/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/etsft/max-bot-api-java/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/etsft/max-bot-api-java/releases/tag/v0.5.0

@@ -40,18 +40,18 @@ This library provides a complete, idiomatic Java 21 interface to supported MAX B
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("ru.etsft.max:max-bot-api-client:0.6.0")
+    implementation("ru.etsft.max:max-bot-api-client:0.7.0")
     // The default serializer: MaxBotAPI.create(...) looks it up on the classpath
-    implementation("ru.etsft.max:max-bot-api-jackson:0.6.0")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.7.0")
     // ...or, instead of Jackson, the Gson adapter
-    // implementation("ru.etsft.max:max-bot-api-gson:0.6.0")
-    implementation("ru.etsft.max:max-bot-api-longpolling:0.6.0")
+    // implementation("ru.etsft.max:max-bot-api-gson:0.7.0")
+    implementation("ru.etsft.max:max-bot-api-longpolling:0.7.0")
 
     // Optional: webhook support
-    // implementation("ru.etsft.max:max-bot-api-webhook:0.6.0")
+    // implementation("ru.etsft.max:max-bot-api-webhook:0.7.0")
 
     // Optional: Spring Boot auto-configuration (webhook + long polling)
-    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.6.0")
+    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.7.0")
 }
 ```
 
@@ -62,24 +62,24 @@ dependencies {
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-client</artifactId>
-        <version>0.6.0</version>
+        <version>0.7.0</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-jackson</artifactId>
-        <version>0.6.0</version>
+        <version>0.7.0</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-longpolling</artifactId>
-        <version>0.6.0</version>
+        <version>0.7.0</version>
     </dependency>
     <!-- Optional: webhook support -->
     <!--
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-webhook</artifactId>
-        <version>0.6.0</version>
+        <version>0.7.0</version>
     </dependency>
     -->
     <!-- Optional: Spring Boot auto-configuration (webhook + long polling) -->
@@ -87,7 +87,7 @@ dependencies {
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-spring-boot</artifactId>
-        <version>0.6.0</version>
+        <version>0.7.0</version>
     </dependency>
     -->
 </dependencies>
@@ -391,8 +391,8 @@ The starter targets Spring Boot 4.x. It builds `MaxBotAPI` with `MaxBotAPI.creat
 
 ```kotlin
 dependencies {
-    implementation("ru.etsft.max:max-bot-api-spring-boot:0.6.0")
-    implementation("ru.etsft.max:max-bot-api-jackson:0.6.0")
+    implementation("ru.etsft.max:max-bot-api-spring-boot:0.7.0")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.7.0")
     implementation("org.springframework.boot:spring-boot-starter-webmvc") // webhook mode only
 }
 ```
@@ -755,6 +755,19 @@ try {
     System.err.println("Transport error: " + e.getMessage());
 }
 ```
+
+---
+
+## Migrating to 0.7.0
+
+0.7.0 follows MAX Bot API schema 0.0.34: a response of HTTP 200 with `success: false` now carries a machine-readable `code`. Most code compiles unchanged; check the points below. The full list is in [CHANGELOG.md](CHANGELOG.md).
+
+| Before | After |
+|---|---|
+| `SimpleQueryResult(success, message)`, `AddMembersResult(success, message, failedUserIds, failedUserDetails)` | a `code` component is added third; the old constructors remain, but deconstruction patterns such as `SimpleQueryResult(var s, var m)` or `AddMembersResult(var s, var m, var ids, var details)` no longer compile; `equals()`, `hashCode()` and `toString()` now include `code` |
+| `MaxWebhookServer.register()` / `unregister()` throw `IllegalStateException` | they throw `MaxOperationFailedException`, a subclass, so existing `catch` blocks still work |
+| its `getMessage()` is `MAX API rejected webhook registration: <message>` (or `unregistration`) | `…: code=…, message=…`, leaving out what MAX did not send; code that parses the message should use `errorCode()` instead |
+| a refusal is told apart by `message()` | tell it apart by `code()` (`MaxOperationFailedException.errorCode()`, `MaxApiException.errorCode()` for HTTP 4xx); the message text may change |
 
 ---
 

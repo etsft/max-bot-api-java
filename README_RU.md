@@ -40,18 +40,18 @@
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("ru.etsft.max:max-bot-api-client:0.6.0")
+    implementation("ru.etsft.max:max-bot-api-client:0.7.0")
     // Сериализатор по умолчанию: MaxBotAPI.create(...) ищет его в classpath
-    implementation("ru.etsft.max:max-bot-api-jackson:0.6.0")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.7.0")
     // ...или вместо Jackson — адаптер Gson
-    // implementation("ru.etsft.max:max-bot-api-gson:0.6.0")
-    implementation("ru.etsft.max:max-bot-api-longpolling:0.6.0")
+    // implementation("ru.etsft.max:max-bot-api-gson:0.7.0")
+    implementation("ru.etsft.max:max-bot-api-longpolling:0.7.0")
 
     // Опционально: поддержка webhook
-    // implementation("ru.etsft.max:max-bot-api-webhook:0.6.0")
+    // implementation("ru.etsft.max:max-bot-api-webhook:0.7.0")
 
     // Опционально: автоконфигурация Spring Boot (webhook + long polling)
-    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.6.0")
+    // implementation("ru.etsft.max:max-bot-api-spring-boot:0.7.0")
 }
 ```
 
@@ -62,24 +62,24 @@ dependencies {
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-client</artifactId>
-        <version>0.6.0</version>
+        <version>0.7.0</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-jackson</artifactId>
-        <version>0.6.0</version>
+        <version>0.7.0</version>
     </dependency>
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-longpolling</artifactId>
-        <version>0.6.0</version>
+        <version>0.7.0</version>
     </dependency>
     <!-- Опционально: поддержка webhook -->
     <!--
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-webhook</artifactId>
-        <version>0.6.0</version>
+        <version>0.7.0</version>
     </dependency>
     -->
     <!-- Опционально: автоконфигурация Spring Boot (webhook + long polling) -->
@@ -87,7 +87,7 @@ dependencies {
     <dependency>
         <groupId>ru.etsft.max</groupId>
         <artifactId>max-bot-api-spring-boot</artifactId>
-        <version>0.6.0</version>
+        <version>0.7.0</version>
     </dependency>
     -->
 </dependencies>
@@ -391,8 +391,8 @@ MaxWebhookServer server = MaxWebhookServer.builder()
 
 ```kotlin
 dependencies {
-    implementation("ru.etsft.max:max-bot-api-spring-boot:0.6.0")
-    implementation("ru.etsft.max:max-bot-api-jackson:0.6.0")
+    implementation("ru.etsft.max:max-bot-api-spring-boot:0.7.0")
+    implementation("ru.etsft.max:max-bot-api-jackson:0.7.0")
     implementation("org.springframework.boot:spring-boot-starter-webmvc") // только для режима webhook
 }
 ```
@@ -756,6 +756,19 @@ try {
     System.err.println("Ошибка транспорта: " + e.getMessage());
 }
 ```
+
+---
+
+## Переход на 0.7.0
+
+0.7.0 соответствует схеме MAX Bot API 0.0.34: ответ HTTP 200 с `success: false` теперь несёт машиночитаемый `code`. Большая часть кода компилируется без изменений; проверьте пункты ниже. Полный список — в [CHANGELOG.md](CHANGELOG.md).
+
+| Было | Стало |
+|---|---|
+| `SimpleQueryResult(success, message)`, `AddMembersResult(success, message, failedUserIds, failedUserDetails)` | третьим добавлен компонент `code`; старые конструкторы остались, но деконструирующие паттерны вроде `SimpleQueryResult(var s, var m)` или `AddMembersResult(var s, var m, var ids, var details)` перестают компилироваться; `equals()`, `hashCode()` и `toString()` теперь учитывают `code` |
+| `MaxWebhookServer.register()` / `unregister()` выбрасывают `IllegalStateException` | выбрасывают `MaxOperationFailedException` — это подкласс, существующие `catch` продолжают работать |
+| его `getMessage()` — `MAX API rejected webhook registration: <message>` (или `unregistration`) | `…: code=…, message=…` без частей, которых MAX не прислал; код, разбирающий текст сообщения, переведите на `errorCode()` |
+| отказ определяется по `message()` | определяйте по `code()` (`MaxOperationFailedException.errorCode()`, для HTTP 4xx — `MaxApiException.errorCode()`): текст сообщения может меняться |
 
 ---
 
